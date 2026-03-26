@@ -937,33 +937,31 @@ class SimpleClientLLM(ClientAgent):
             return 0.0, 0.0, []
 
         rules: List[Tuple[str, float, float, str]] = [
-            # Empathy / acceptance (like up, tension down)
-            ("大変", +0.60, -0.30, "empathy"),
-            ("つら", +0.60, -0.30, "empathy"),
-            ("しんど", +0.60, -0.30, "empathy"),
-            ("そうなんですね", +0.40, -0.20, "reflect"),
-            ("なんですね", +0.20, -0.10, "reflect"),
-            ("わかります", +0.70, -0.30, "empathy"),
-            ("理解できます", +0.70, -0.30, "empathy"),
-            ("ありがとうございます", +0.40, -0.20, "respect"),
-            ("良いですね", +0.70, -0.30, "affirm"),
-            ("素晴らしい", +0.90, -0.40, "affirm"),
-            ("工夫", +0.50, -0.20, "affirm"),
-            ("頑張", +0.50, -0.20, "affirm"),
-            # Negation / criticism / condescension (like down, tension up)
-            ("努力が足り", -1.40, +1.00, "blame"),
-            ("言い訳", -1.10, +0.80, "blame"),
-            ("迷惑", -1.60, +1.20, "hostile"),
-            ("グダグダ", -1.20, +0.90, "dismiss"),
-            ("無理", -0.80, +0.60, "dismiss"),
-            ("理解できません", -1.30, +1.00, "reject"),
-            ("理解できない", -1.30, +1.00, "reject"),
-            ("バカ", -2.00, +2.00, "insult"),
-            ("甘えるな", -1.60, +1.40, "insult"),
-            # Commands / imposition (light tension increase)
-            ("すべき", -0.60, +0.40, "directive"),
-            ("しかない", -0.40, +0.30, "directive"),
-            ("しなさい", -0.80, +0.60, "directive"),
+            # Empathy / acceptance (like↑ tension↓)
+            ("that's tough", +0.60, -0.30, "empathy"),
+            ("that's hard", +0.60, -0.30, "empathy"),
+            ("that sounds hard", +0.60, -0.30, "empathy"),
+            ("i get it", +0.70, -0.30, "empathy"),
+            ("i understand", +0.70, -0.30, "empathy"),
+            ("thank you", +0.40, -0.20, "respect"),
+            ("that's good", +0.70, -0.30, "affirm"),
+            ("great", +0.90, -0.40, "affirm"),
+            ("effort", +0.50, -0.20, "affirm"),
+            ("trying hard", +0.50, -0.20, "affirm"),
+            # Denial / criticism / contempt (like↓ tension↑)
+            ("not trying hard enough", -1.40, +1.00, "blame"),
+            ("excuse", -1.10, +0.80, "blame"),
+            ("trouble", -1.60, +1.20, "hostile"),
+            ("messy", -1.20, +0.90, "dismiss"),
+            ("impossible", -0.80, +0.60, "dismiss"),
+            ("i don't understand", -1.30, +1.00, "reject"),
+            ("can't understand", -1.30, +1.00, "reject"),
+            ("idiot", -2.00, +2.00, "insult"),
+            ("stop being weak", -1.60, +1.40, "insult"),
+            # Commands / pressure (light tension increase)
+            ("should", -0.60, +0.40, "directive"),
+            ("have no choice", -0.40, +0.30, "directive"),
+            ("must", -0.80, +0.60, "directive"),
         ]
 
         dl = 0.0
@@ -1124,40 +1122,40 @@ class SimpleClientLLM(ClientAgent):
 
         if transition == "after_listen":
             transition_instruction = (
-                "遷移種別: after_listen（カウンセラー発話を聞いた直後）。\n"
-                "直近のカウンセラー発話を踏まえて、更新後の internal_state を推定してください。"
+                "Transition type: after_listen (right after hearing the counselor).\n"
+                "Infer the updated internal_state based on the most recent counselor utterance."
             )
             trigger_role = "user"
         else:
             transition_instruction = (
-                "遷移種別: after_speak（クライアント発話を言語化した直後）。\n"
-                "あなたが今発したクライアント発話を踏まえて、自己認識や感情の微小な変化を反映した internal_state を推定してください。"
+                "Transition type: after_speak (right after verbalizing the client's own utterance).\n"
+                "Infer an internal_state that reflects small changes in self-perception and emotion based on the utterance you just produced."
             )
             trigger_role = "assistant"
 
         state_system = (
             (self.persona or "")
             + "\n\n"
-            "【あなたの内部状態スコアについて】\n"
-            "あなたには、次の6つの内部状態スコアがあります（0〜10）。\n"
+            "[About your internal state scores]\n"
+            "You have the following six internal state scores (0-10).\n"
             "- pos_affect / neg_affect / importance_change / confidence_change / like_counselor / tension_counselor\n"
-            "- 現時点のスコア、特性、遷移種別は user メッセージで与えられる。\n\n"
-            "【出力（状態のみ）】\n"
-            "更新後の internal_state と、必要なら理由を JSON で返してください。\n"
-            "出力は次の形式のみ: {\n"
-            "  \"internal_state\": {6項目の数値},\n"
-            "  \"internal_state_reason\": {...(省略可)}\n"
+            "- The current scores, traits, and transition type are provided in the user message.\n\n"
+            "[Output (state only)]\n"
+            "Return the updated internal_state, and a reason if needed, as JSON.\n"
+            "Output only the following format: {\n"
+            "  \"internal_state\": {six numeric fields},\n"
+            "  \"internal_state_reason\": {...(optional)}\n"
             "}\n"
-            "reply など他のフィールドは出さないでください。\n"
+            "Do not output any other fields such as reply.\n"
         )
         state_context_user = (
-            "【実行時コンテキスト（毎ターン更新）】\n"
-            f"現時点のスコア: {json.dumps(state_dict_before, ensure_ascii=False)}\n"
-            "【スコアの出やすさの特性（-1:出にくい, 0:標準, +1:出やすい）】\n"
+            "[Runtime context (updated every turn)]\n"
+            f"Current scores: {json.dumps(state_dict_before, ensure_ascii=False)}\n"
+            "[Score expression tendencies (-1: hard to surface, 0: neutral, +1: easy to surface)]\n"
             f"{json.dumps(trait_dict, ensure_ascii=False)}\n"
             f"{transition_instruction}\n"
-            f"【今回のトリガー発話】{trigger_text}\n"
-            "上記を踏まえて internal_state のみを JSON で返してください。"
+            f"[Current trigger utterance] {trigger_text}\n"
+            "Based on the above, return only the internal_state as JSON."
         )
 
         messages_state: List[Dict[str, str]] = [{"role": "system", "content": state_system}]
@@ -1199,7 +1197,7 @@ class SimpleClientLLM(ClientAgent):
         return parsed_state, state_reason, meta, str(raw_state)
 
     def _respond_two_stage(self, counselor_text: str, history: List[Any]) -> str:
-        # 1) 聞いた直後の状態更新（state-only JSON）
+        # 1) State update right after listening (state-only JSON)
         state_dict_before = self.internal_state.to_dict()
         trait_dict = self.internal_state.to_traits_dict()
         listen_state_dict, state_reason_listen, meta_listen, raw_state_listen = self._infer_state_from_trigger(
@@ -1213,9 +1211,9 @@ class SimpleClientLLM(ClientAgent):
         self.internal_state = ClientInternalState.from_dict(listen_state_dict, base=self.internal_state)
         state_after_listen = self.internal_state.to_full_dict()
 
-        # 2) 応答生成（replyのみ、テキスト）
+        # 2) Reply generation (reply only, plain text)
         state_dict_after = self.internal_state.to_dict()
-        # 内部状態に基づく「緩いガイド」を作成
+        # Build a soft guide based on the internal state.
         soft_guide = self._build_motivation_soft_guide(state_dict_after)
         turn_hint = ""
         if isinstance(self.prompt_profile, Mapping):
@@ -1224,29 +1222,29 @@ class SimpleClientLLM(ClientAgent):
         reply_system = (
             (self.persona or "")
             + "\n\n"
-            "【あなたの現在の状態】\n"
-            "- 現時点のスコアと発話トーンガイドは user メッセージで与えられる。\n"
-            "【発話トーンのゆるいガイド（自動反映）】\n"
-            "- user メッセージのガイドを優先して反映する。\n"
-            "【お願い】\n"
-            f"- この更新後の internal_state と一貫した内容・トーンで、クライアントとしての次の発話を {REPLY_SENTENCE_MIN}〜{REPLY_SENTENCE_MAX}文で返してください。\n"
-            "- JSON は使わず、テキストのみを返してください。\n"
-            "- 出力直前に、internal_state と矛盾がないかを自分で確認し、断定の強さを状態に合わせてください。\n"
-            "- 返答本文は自然な日本語のみで書いてください。固有名詞・一般的な略語を除き、英単語・ローマ字・プレースホルダ・内部ラベルを混ぜないでください。\n"
-            "- 直前発話に英単語混入や崩れた語があっても、その表記をオウム返しせず、意味が分かる場合は自然な日本語に直し、曖昧ならその語を使わず周辺の体験だけを書いてください。\n"
+            "[Your current state]\n"
+            "- The current scores and the utterance tone guide are provided in the user message.\n"
+            "[Soft utterance tone guide (applied automatically)]\n"
+            "- Prioritize and reflect the guide in the user message.\n"
+            "[Request]\n"
+            f"- Return the client's next utterance in {REPLY_SENTENCE_MIN}-{REPLY_SENTENCE_MAX} sentences, with content and tone consistent with the updated internal_state.\n"
+            "- Do not use JSON; return text only.\n"
+            "- Before outputting, check that the reply does not conflict with internal_state and match the strength of the statement to the state.\n"
+            "- Write only natural English in the reply body. Do not mix in slang, romanization, placeholders, or internal labels except proper nouns or common abbreviations.\n"
+            "- If the immediate prior utterance contains mixed or broken wording, do not echo it verbatim; rewrite it naturally in English when possible, and if it is unclear, focus only on the surrounding experience.\n"
         )
         reply_context_user = (
-            "【実行時コンテキスト（毎ターン更新）】\n"
-            f"現時点のスコア: {json.dumps(state_dict_after, ensure_ascii=False)}\n"
-            "【発話トーンのゆるいガイド（自動反映）】\n"
+            "[Runtime context (updated every turn)]\n"
+            f"Current scores: {json.dumps(state_dict_after, ensure_ascii=False)}\n"
+            "[Soft utterance tone guide (applied automatically)]\n"
             f"{soft_guide}\n"
-            "【このターンで使ってよい具体のヒント】\n"
+            "[Concrete hints allowed in this turn]\n"
             f"{turn_hint}\n"
-            "- 抽象的な気分だけで終わらせず、可能なら仕事・生活・相手・時間帯の具体場面を1つ入れる\n"
-            "- 具体事実は1つまで、具体場面は1つまでに留める\n"
-            "- 専門語や分析語ではなく、本人の言い方で述べる\n"
-            f"【今回受け取ったカウンセラー発話】{counselor_text}\n"
-            "上記と矛盾しない、クライアントとしての自然な返答本文のみを日本語で返してください。"
+            "- Do not end with only abstract feelings; if possible, include one concrete scene from work, life, another person, or a time of day.\n"
+            "- Limit yourself to one concrete fact and one concrete scene.\n"
+            "- Use the person's own wording rather than technical or analytical language.\n"
+            f"[Counselor utterance received this turn] {counselor_text}\n"
+            "Return only the body of a natural client response that is consistent with the above."
         )
 
         messages_reply: List[Dict[str, str]] = [{"role": "system", "content": reply_system}]
@@ -1268,20 +1266,20 @@ class SimpleClientLLM(ClientAgent):
         except (TypeError, ValueError):
             raw_reply = self.llm.generate(messages_reply)
         except Exception as e:
-            # 応答LLMの失敗時は安全な短文にフォールバック
+            # Fall back to a safe short response if the reply LLM fails.
             raw_reply = ""
             fallback = self._fallback_reply(counselor_text, state_dict_after)
             reply_text = fallback
         else:
             reply_text = str(raw_reply or "").strip().strip("`\"")
 
-        # JSON断片が混入した場合のサニタイズ
+        # Sanitize any JSON fragments that slip into the reply.
         reply_text = self._strip_json_fragments(reply_text)
 
-        # 返信と internal_state の整合性を軽く後処理（断定→控えめ など最小限の言い換え）
+        # Lightly post-process the reply for consistency with internal_state (minimal rewording, e.g. strong -> softer).
         reply_text, consistency_meta = self._postprocess_reply_consistency(reply_text, state_dict_after)
 
-        # 3) 発話した直後の状態更新（self-talk）
+        # 3) State update right after speaking (self-talk)
         speak_state_before = self.internal_state.to_dict()
         speak_trait_dict = self.internal_state.to_traits_dict()
         speak_state_dict, state_reason_speak, meta_speak, raw_state_speak = self._infer_state_from_trigger(
@@ -1301,7 +1299,7 @@ class SimpleClientLLM(ClientAgent):
         final_meta["pipeline"] = "two_stage"
         final_meta["consistency"] = consistency_meta
 
-        # デバッグ情報を保持
+        # Store debug information.
         self._last_debug_info = {
             "raw_state": str(raw_state_speak or raw_state_listen),
             "raw_state_after_listen": str(raw_state_listen),
@@ -1323,16 +1321,16 @@ class SimpleClientLLM(ClientAgent):
         return reply_text
 
     # ------------------------------
-    # 緩いルール（モチベーション／自信に応じた発話ヒント）
+    # Soft rules: speaking hints based on motivation and confidence
     # ------------------------------
     def _build_motivation_soft_guide(self, state: Dict[str, float]) -> str:
         """
-        importance と confidence の閾値に基づく、軽量なトーン調整ヒントを生成。
-        ルールは「誘導的すぎない」ことを重視し、固定語彙の押し付けを避ける。
+        Generate lightweight tone-adjustment hints based on importance and confidence thresholds.
+        The rules prioritize not being too directive and avoid forcing fixed vocabulary.
 
-        既定閾値:
-          - importance: 低<=3, 中=4-7, 高>=8
-          - confidence: 低<=3, 中=4-7, 高>=8
+        Default thresholds:
+          - importance: low<=3, mid=4-7, high>=8
+          - confidence: low<=3, mid=4-7, high>=8
         """
         try:
             imp = float(state.get("importance_change", 3.0))
@@ -1343,7 +1341,7 @@ class SimpleClientLLM(ClientAgent):
         except Exception:
             conf = 2.0
 
-        # 閾値（必要なら将来 .env で調整可能に）
+        # Thresholds (can be adjusted via .env in the future if needed).
         IMP_LOW, IMP_HIGH = 3.0, 8.0
         CONF_LOW, CONF_HIGH = 3.0, 8.0
 
@@ -1359,30 +1357,30 @@ class SimpleClientLLM(ClientAgent):
 
         hints: List[str] = []
 
-        # confidence に基づくヒント
+        # Hints based on confidence.
         if conf_b == "low":
-            hints.append("自信が低め（≤3）: 言い切りを減らし、迷い・条件付き・保留の表現を自然に含める。")
-            hints.append("同じ保留語を繰り返さず、語尾や導入の言い方を少しずつ変える。")
+            hints.append("Low confidence (≤3): reduce definitive statements and naturally include hesitation, conditional language, and hold-back expressions.")
+            hints.append("Do not repeat the same hesitation words; vary endings and openings a little each time.")
         elif conf_b == "mid":
-            hints.append("自信が中程度（4〜7）: 小さく試す・条件付きで進めるニュアンスを中心にする。")
+            hints.append("Medium confidence (4-7): emphasize trying something small and moving forward conditionally.")
         else:  # high
-            hints.append("自信が高め（≥8）: 実行の意思や具体化を、ややはっきり表現してよい。")
+            hints.append("High confidence (≥8): it is fine to express intent to act and concretize things more clearly.")
 
-        # importance に基づくヒント
+        # Hints based on importance.
         if imp_b == "low":
-            hints.append("重要度が低め（≤3）: 優先度の低さや迷いを含め、急ぎや義務感の強い言い方は弱める。")
+            hints.append("Low importance (≤3): include low priority and hesitation, and soften urgent or duty-heavy wording.")
         elif imp_b == "mid":
-            hints.append("重要度が中程度（4〜7）: 小さな理由付けや価値を示しつつ、規模は控えめにする。")
+            hints.append("Medium importance (4-7): show a small reason or value while keeping the scale modest.")
         else:  # high
-            hints.append("重要度が高め（≥8）: 取り組む価値や意味を、比較的はっきり述べてよい。")
+            hints.append("High importance (≥8): it is okay to state the value or meaning of the effort more clearly.")
 
         return "\n".join("- " + h for h in hints)
 
     @staticmethod
     def _pick_variant(candidates: List[str], anchor: str) -> str:
         """
-        テキストに基づいて決定的に候補を選ぶ。
-        ランダム性は使わず、同一入力なら同一出力にする。
+        Deterministically choose a candidate based on the text.
+        No randomness: the same input always yields the same output.
         """
         if not candidates:
             return ""
@@ -1391,8 +1389,8 @@ class SimpleClientLLM(ClientAgent):
 
     def _get_style_state_baseline(self, style: str) -> Dict[str, float]:
         """
-        CLIENT_STYLE（cooperative/ambivalent/resistant）に応じた初期内部状態の既定値を返す。
-        未知の値は cooperative と同等にフォールバック。
+        Return the default initial internal state for the given CLIENT_STYLE
+        (cooperative / ambivalent / resistant). Unknown values fall back to cooperative.
         """
         s = (style or "cooperative").strip().lower()
         if s == "cooperative":
@@ -1422,7 +1420,7 @@ class SimpleClientLLM(ClientAgent):
                 "like_counselor": 1.0,
                 "tension_counselor": 5.0,
             }
-        # フォールバック
+        # Fallback
         return {
             "pos_affect": 5.0,
             "neg_affect": 3.0,
@@ -1434,8 +1432,8 @@ class SimpleClientLLM(ClientAgent):
 
     def _strip_json_fragments(self, text: str) -> str:
         """
-        返信内にうっかり JSON オブジェクト/配列が混ざった場合に除去する簡易フィルタ。
-        行全体が {…} / […] の場合は落とし、残りを繋ぐ。
+        Simple filter that removes accidental JSON objects/arrays from the reply.
+        Drop lines that are entirely {…} / […] and join the rest back together.
         """
         lines = [ln for ln in re.split(r"[\r\n]+", text) if ln.strip()]
         cleaned: List[str] = []
@@ -1448,21 +1446,21 @@ class SimpleClientLLM(ClientAgent):
 
     def _fallback_reply(self, counselor_text: str, state: Dict[str, float]) -> str:
         """
-        応答LLMに失敗したときの安全な短文フォールバック。
-        confidence と importance の帯域に応じた“控えめ”な言い回しで 1〜2文。
+        Safe short fallback when the reply LLM fails.
+        Uses a modest 1-2 sentence phrasing based on confidence and importance ranges.
         """
         imp = float(state.get("importance_change", 3.0) or 3.0)
         conf = float(state.get("confidence_change", 2.0) or 2.0)
         if conf <= 3.0 and imp <= 3.0:
-            return "うーん、まだはっきり決められない感じです。小さく様子を見ながら考えたいです。"
+            return "Hmm, I still cannot decide clearly. I want to think while watching things on a small scale."
         if conf <= 3.0 and imp > 3.0:
-            return "やってみたい気持ちは少しありますが、決めきれずにいます。無理のない範囲で試せるところから考えたいです。"
+            return "I do have some desire to try, but I cannot quite decide. I want to start by looking for something I can try without pushing too hard."
         if conf > 7.5 and imp > 7.5:
-            return "まずは小さく一つだけ試してみます。続けられるか様子を見たいです。"
-        return "少し前向きな気持ちはありますが、無理のない範囲で試せることを探したいです。"
+            return "I will try just one small thing first. I want to see whether I can keep it up."
+        return "I do feel a little more positive, but I want to look for something I can try within a reasonable range."
 
     def _shorten_to_max_sentences(self, text: str, max_sentences: int = REPLY_SENTENCE_MAX) -> str:
-        # ざっくり句点で区切って最大文数に丸める（日本語向けの簡易処理）
+        # Roughly split on sentence endings and trim to the maximum number of sentences (simple processing).
         s = re.split(r"[。！？\n]+", text)
         s = [x.strip() for x in s if x.strip()]
         if not s:
@@ -1475,10 +1473,10 @@ class SimpleClientLLM(ClientAgent):
 
     def _postprocess_reply_consistency(self, reply: str, state: Dict[str, float]) -> tuple[str, Dict[str, Any]]:
         """
-        内部状態と矛盾が強い表現を『軽く言い換える』ポストフィルタ。
-        - confidence<=3 なのに強いコミット（やってみます/実行します/決めました 等）→ 控えめ表現に。
-        - importance<=3 で急ぎ・断定・義務感が強い語（必ず/すぐ/絶対 等）→ 和らげる。
-        置換は最小限に留め、文数は最大4文に整える。
+        Post-filter that lightly rephrases expressions that strongly conflict with internal state.
+        - confidence<=3 with strong commitment (e.g. "I'll try it", "I'll do it", "I've decided") -> soften.
+        - importance<=3 with urgent / definitive / duty-heavy wording (e.g. "must", "immediately", "absolutely") -> soften.
+        Keep replacements minimal and trim to at most four sentences.
         """
         meta: Dict[str, Any] = {"applied": False, "rules": [], "original": reply}
         text = reply
@@ -1491,43 +1489,43 @@ class SimpleClientLLM(ClientAgent):
         except Exception:
             conf = 2.0
 
-        # 自信が低いときの強いコミット表現の緩和
+        # Soften strong commitment language when confidence is low.
         if conf <= 3.0:
             patterns: Dict[str, List[str]] = {
-                "やってみます": [
-                    "やってみるかは、もう少し考えたいです",
-                    "できる範囲で試せるかを見極めたいです",
-                    "まずは小さく試せるか考えます",
+                "i'll try": [
+                    "I want to think about whether I can really try it a little more.",
+                    "I want to see whether I can test it within a range that feels manageable.",
+                    "I want to think about trying it in a very small way first.",
                 ],
-                "実行します": [
-                    "実行できるかは、まだ迷いがあります",
-                    "実行するなら、無理のない範囲で考えたいです",
-                    "実行するかどうかは、いったん保留したいです",
+                "i'll do it": [
+                    "I am still unsure whether I can really do it.",
+                    "If I do it, I want to think about it within a range that does not push too hard.",
+                    "I want to hold off on deciding for now.",
                 ],
-                "取り入れます": [
-                    "取り入れるかは、まだ決めきれていません",
-                    "取り入れるなら、まずは一部だけ試したいです",
-                    "取り入れるかどうかは、もう少し様子を見たいです",
+                "i'll incorporate it": [
+                    "I have not fully decided whether I can bring it in yet.",
+                    "If I bring it in, I want to try only part of it first.",
+                    "I want to watch and see a little longer before deciding.",
                 ],
-                "決めました": [
-                    "まだ決めきれていません",
-                    "方向は考えていますが、最終的には迷っています",
-                    "決めるには、もう少し時間がほしいです",
+                "i've decided": [
+                    "I have not fully decided yet.",
+                    "I have a direction in mind, but I am still uncertain about the final choice.",
+                    "I need a little more time before deciding.",
                 ],
-                "続けます": [
-                    "続けられるかは、まだ自信がありません",
-                    "続けるなら、負担の少ない形にしたいです",
-                    "続けるかどうかは、少し様子を見たいです",
+                "i'll continue": [
+                    "I am not yet confident I can keep it up.",
+                    "If I continue, I want to do it in a lighter way.",
+                    "I want to watch how it goes a little before deciding whether to continue.",
                 ],
-                "進めます": [
-                    "進められるかは、もう少し見極めたいです",
-                    "進めるなら、無理のないペースで考えたいです",
-                    "進めるかどうかは、まだ迷っています",
+                "i'll move forward": [
+                    "I want to think a little more about whether I can really move forward with it.",
+                    "If I move forward, I want to do it at a pace that does not feel too heavy.",
+                    "I am still wavering about whether to move forward.",
                 ],
-                "取り組みます": [
-                    "取り組めるかは、まだ分からない部分があります",
-                    "取り組むなら、まずは小さく始めたいです",
-                    "取り組むかどうかは、いったん保留したいです",
+                "i'll work on it": [
+                    "There are still parts I do not fully understand yet.",
+                    "If I work on it, I want to start very small.",
+                    "I want to leave the decision open for now.",
                 ],
             }
             applied_local = False
@@ -1540,14 +1538,14 @@ class SimpleClientLLM(ClientAgent):
                 meta["applied"] = True
                 meta["rules"].append("confidence_low_soften_commit")
 
-        # 重要度が低いときの強い義務・急ぎ表現の緩和
+        # Soften strong duty or urgency language when importance is low.
         if imp <= 3.0:
             replacements: Dict[str, List[str]] = {
-                "必ず": ["できれば", "可能なら", "無理のない範囲で"],
-                "絶対": ["なるべく", "できるだけ", "可能なら"],
-                "すぐ": ["まずは", "いったん", "少し様子を見てから"],
-                "早く": ["早めにできれば", "可能なら早めに", "急がずに"],
-                "やるべき": ["やってもよいかもしれない", "必要なら検討したい", "できそうなら試したい"],
+                "must": ["if possible", "if it fits", "within a range that feels manageable"],
+                "absolutely": ["as much as possible", "if I can", "if it fits"],
+                "right away": ["first", "for now", "after watching a little"],
+                "soon": ["if I can do it early", "as early as possible", "without rushing"],
+                "should": ["might be worth trying", "I would want to consider it if needed", "I could try it if it feels possible"],
             }
             applied_local = False
             for k, variants in replacements.items():
@@ -1559,10 +1557,10 @@ class SimpleClientLLM(ClientAgent):
                 meta["applied"] = True
                 meta["rules"].append("importance_low_soften_obligation")
 
-        # クライアントらしさ（カウンセラー口調の混入抑止）
+        # Client-like voice (suppress counselor-like phrasing).
         text, voice_meta = self._enforce_client_voice(text)
 
-        # 文数を上限で丸める
+        # Trim to the maximum number of sentences.
         new_text = self._shorten_to_max_sentences(text, REPLY_SENTENCE_MAX)
         if new_text != reply:
             meta["applied"] = True
@@ -1577,22 +1575,22 @@ class SimpleClientLLM(ClientAgent):
 
     def _enforce_client_voice(self, text: str) -> tuple[str, Dict[str, Any]]:
         """
-        カウンセラーらしい口調（許可取り・提案・要約箇条書き・メタ説明など）が混入した場合、
-        クライアントらしい一人称の短い発話に軽く言い換える。
-        - 置換は最小限。意味の過度な変換は避ける。
-        - 明確にカウンセラー調が検出された場合のみ、強い正規化を行う。
+        If counselor-like phrasing (permission-seeking, suggestions, summary bullets, meta explanations, etc.) slips in,
+        lightly rewrite it into a short first-person client utterance.
+        - Keep replacements minimal. Avoid over-transforming the meaning.
+        - Only apply strong normalization when counselor-like phrasing is clearly detected.
         """
         original = text
         applied = False
         notes: List[str] = []
         counselor_like_score = 0
 
-        # 明らかなメタ行・役割表示の除去
+        # Remove obvious meta lines and role labels.
         lines = [ln for ln in re.split(r"[\r\n]+", text) if ln.strip()]
         list_marker_count = 0
         clean_lines: List[str] = []
         for ln in lines:
-            if re.search(r"^(meta:|T:|セラピスト:|カウンセラー:)", ln.strip(), flags=re.IGNORECASE):
+            if re.search(r"^(meta:|T:|therapist:|counselor:)", ln.strip(), flags=re.IGNORECASE):
                 applied = True
                 counselor_like_score += 2
                 notes.append("remove_meta_role_lines")
@@ -1601,7 +1599,7 @@ class SimpleClientLLM(ClientAgent):
                 list_marker_count += 1
             clean_lines.append(ln)
 
-        # 箇条書きが複数行ある場合のみ除去（単発の記号は温存）
+        # Remove bullets only when there are multiple bullet lines (keep isolated markers).
         if list_marker_count >= 2:
             counselor_like_score += 1
             stripped_lines: List[str] = []
@@ -1615,43 +1613,43 @@ class SimpleClientLLM(ClientAgent):
         if clean_lines:
             text = "。".join([s.strip("。 ") for s in clean_lines])
 
-        # カウンセラー定型の検出
+        # Detect counselor-style stock phrases.
         counselor_markers = [
-            "許可をいただければ",
-            "進めてよろしいですか",
-            "一緒に整理します",
-            "一緒に整理しましょう",
-            "提案します",
-            "まとめると",
-            "要約すると",
+            "may i",
+            "shall we proceed",
+            "let's sort it out together",
+            "i can help organize it",
+            "i suggest",
+            "to summarize",
+            "in short",
         ]
         counselor_like_score += sum(1 for marker in counselor_markers if marker in text)
 
-        # 強い正規化は、カウンセラー調シグナルが複数ある場合だけ実施
+        # Apply stronger normalization only when multiple counselor-like signals are present.
         if counselor_like_score >= 2:
             replacements: Dict[str, List[str]] = {
-                "許可をいただければ": [
-                    "もし大丈夫なら少し話してみたいです",
-                    "話してよいか少し迷っています",
+                "may i": [
+                    "If it is okay, I would like to talk about it a little.",
+                    "I am a little unsure about whether I should talk about it.",
                 ],
-                "進めてよろしいですか": [
-                    "今は少し迷いがあります",
-                    "どう進めるかは、まだ決めきれていません",
+                "shall we proceed": [
+                    "I am a little unsure right now.",
+                    "I have not fully decided how to move forward yet.",
                 ],
-                "一緒に整理します": [
-                    "まだ整理がつきません",
-                    "うまく整理できずにいます",
+                "let's sort it out together": [
+                    "I still cannot sort it out clearly.",
+                    "I am having trouble organizing it well.",
                 ],
-                "一緒に整理しましょう": [
-                    "うまく整理できていません",
-                    "整理したい気持ちはありますが、迷っています",
+                "i can help organize it": [
+                    "I am not organizing it very well yet.",
+                    "I do want to sort it out, but I am still wavering.",
                 ],
-                "提案します": [
-                    "まだ決めきれていません",
-                    "考えはありますが、はっきりとは言えません",
+                "i suggest": [
+                    "I have not decided yet.",
+                    "I have some thoughts, but I cannot say them clearly yet.",
                 ],
-                "まとめると": ["今のところ", "いま感じているのは"],
-                "要約すると": ["今のところ", "いま感じているのは"],
+                "to summarize": ["for now", "what I am feeling right now is"],
+                "in short": ["for now", "what I am feeling right now is"],
             }
             local_applied = False
             for k, variants in replacements.items():
@@ -1663,14 +1661,14 @@ class SimpleClientLLM(ClientAgent):
                 applied = True
                 notes.append("replace_counselor_phrases")
 
-            # 典型のコーチング指示『〜しましょう』→ クライアントの逡巡に
-            if re.search(r"しましょう[。\s]*$", text) and not re.search(r"[?？]$", text):
+            # Typical coaching directive "let's do it" -> a client's hesitation.
+            if re.search(r"\blet(?:'s| us)\b[.\s]*$", text, flags=re.IGNORECASE) and not re.search(r"[?؟?]$", text):
                 tail_variants = [
-                    "かどうかは、もう少し様子を見たいです。",
-                    "と言い切るほど、まだ気持ちが固まっていません。",
+                    "I want to watch and see a little longer before deciding.",
+                    "I am not ready to say that with confidence yet.",
                 ]
                 replacement = self._pick_variant(tail_variants, f"{original}|let_us")
-                text = re.sub(r"しましょう[。\s]*$", replacement, text)
+                text = re.sub(r"\blet(?:'s| us)\b[.\s]*$", replacement, text, flags=re.IGNORECASE)
                 applied = True
                 notes.append("soften_let_us_do")
 
@@ -1684,8 +1682,8 @@ class SimpleClientLLM(ClientAgent):
         max_state_step_override: Optional[float] = None,
     ) -> tuple[Dict[str, float], Dict[str, str], Dict[str, Any]]:
         """
-        状態のみの JSON をパースし、変換・上限・クリップを適用した新しい状態を返す。
-        エラー時は変更なし（現状態）を返す。
+        Parse state-only JSON and return a new state after applying conversion, limits, and clipping.
+        On error, return the current state unchanged.
         """
         text = str(raw).strip()
         meta: Dict[str, Any] = {"parse_status": "ok_state"}
@@ -1722,7 +1720,7 @@ class SimpleClientLLM(ClientAgent):
 
         meta["state_keys_provided"] = provided_keys
 
-        # ここからは状態更新の共通計算（クリップ・歪み・上限等）
+        # From here on, shared state-update calculations (clipping, distortion, limits, etc.).
         max_step = self.max_state_step if max_state_step_override is None else max_state_step_override
         current = self.internal_state.to_dict()
 
@@ -1795,10 +1793,10 @@ class SimpleClientLLM(ClientAgent):
         return merged_full, state_reason, meta
 
     # ------------------------------
-    # 返答＋内部状態更新
+    # Reply + internal state update
     # ------------------------------
     def respond(self, counselor_text: str, history: List[Any]) -> str:
         """
-        常に two_stage（状態→応答）で返答する。
+        Always respond using the two-stage pipeline (state -> reply).
         """
         return self._respond_two_stage(counselor_text, history)

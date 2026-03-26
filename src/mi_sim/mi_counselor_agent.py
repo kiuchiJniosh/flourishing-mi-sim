@@ -19,18 +19,18 @@ import yaml
 
 
 # ============================
-# 9フェーズ（最終目標の定義）
+# Nine phases
 # ============================
 class Phase(str, Enum):
-    GREETING = "あいさつ"
-    PURPOSE_CONFIRMATION = "目的確認"
-    CURRENT_STATUS_CHECK = "現状確認"
-    FOCUSING_TARGET_BEHAVIOR = "標的行動焦点化"
-    IMPORTANCE_PROMOTION = "重要度促進"
-    CONFIDENCE_PROMOTION = "自信度促進"
-    NEXT_STEP_DECISION = "次の一歩決定"
-    REVIEW_REFLECTION = "振り返り"
-    CLOSING = "クロージング"
+    GREETING = "Greeting"
+    PURPOSE_CONFIRMATION = "Purpose Confirmation"
+    CURRENT_STATUS_CHECK = "Current Status Check"
+    FOCUSING_TARGET_BEHAVIOR = "Focus Target Behavior"
+    IMPORTANCE_PROMOTION = "Importance Promotion"
+    CONFIDENCE_PROMOTION = "Confidence Promotion"
+    NEXT_STEP_DECISION = "Next Step Decision"
+    REVIEW_REFLECTION = "Review Reflection"
+    CLOSING = "Closing"
 
 
 _PHASE_SLOT_SCHEMA: Dict[Phase, Tuple[str, ...]] = {
@@ -46,32 +46,32 @@ _PHASE_SLOT_SCHEMA: Dict[Phase, Tuple[str, ...]] = {
 }
 
 _PHASE_SLOT_LABELS: Dict[str, str] = {
-    "greeting_exchange": "挨拶交換",
-    "rapport_cue": "労い/安心の糸口",
-    "presenting_problem_raw": "初期主訴",
-    "process_need": "話しやすさ/進め方の希望",
-    "today_focus_topic": "今日扱う中身",
-    "current_situation": "現状の事実",
-    "problem_scene": "具体的な問題場面",
-    "emotion_state": "感情",
-    "background_context": "背景/文脈",
-    "target_behavior": "標的行動",
-    "change_direction": "変化の方向",
-    "focus_agreement": "焦点の合意",
-    "importance_reasons": "重要な理由",
-    "core_values": "価値/大事にしていること",
-    "importance_scale": "重要度スケール",
-    "barrier_coping_strategy": "障壁への対処方法",
-    "supports_strengths": "資源/強み",
-    "past_success_experience": "過去の成功体験",
-    "confidence_scale": "自信度スケール",
-    "next_step_action": "次の一歩",
-    "execution_context": "実行の文脈(いつ/どこで)",
-    "commitment_level": "実行意思/確度",
-    "session_learning": "今日の気づき/学び",
-    "key_takeaway": "印象に残った要点",
-    "carry_forward_intent": "今後に活かす意図",
-    "closing_end_signal": "別れの挨拶/終了合意の示唆",
+    "greeting_exchange": "Greeting exchange",
+    "rapport_cue": "Rapport cue / reassurance",
+    "presenting_problem_raw": "Initial presenting concern",
+    "process_need": "Preference for pace / process",
+    "today_focus_topic": "Today's focus topic",
+    "current_situation": "Current facts",
+    "problem_scene": "Concrete problem scene",
+    "emotion_state": "Emotion",
+    "background_context": "Background / context",
+    "target_behavior": "Target behavior",
+    "change_direction": "Direction of change",
+    "focus_agreement": "Focus agreement",
+    "importance_reasons": "Reasons it matters",
+    "core_values": "Core values / what matters",
+    "importance_scale": "Importance scale",
+    "barrier_coping_strategy": "Barrier coping strategy",
+    "supports_strengths": "Supports / strengths",
+    "past_success_experience": "Past success experience",
+    "confidence_scale": "Confidence scale",
+    "next_step_action": "Next step",
+    "execution_context": "Execution context (when / where)",
+    "commitment_level": "Commitment / likelihood",
+    "session_learning": "Today's insight / learning",
+    "key_takeaway": "Key takeaway",
+    "carry_forward_intent": "Intent to carry forward",
+    "closing_end_signal": "Farewell / implied closing agreement",
 }
 _PHASE_BY_SLOT_KEY: Dict[str, Phase] = {
     slot_key: phase
@@ -120,8 +120,8 @@ def _init_phase_slot_meta() -> Dict[str, Dict[str, Dict[str, Any]]]:
 @lru_cache(maxsize=1)
 def _load_phase_slot_quality_rubrics() -> Dict[str, Any]:
     """
-    config/phase_slot_quality_rubrics.yaml を読み込み、フェーズ別評価基準を返す。
-    読み込み失敗時は空辞書を返す（プロンプト側でフォールバック表示）。
+    Load `config/phase_slot_quality_rubrics.yaml` and return the phase-specific rubric.
+    Return an empty dict on failure so prompt construction can fall back safely.
     """
     try:
         if not _PHASE_SLOT_QUALITY_RUBRIC_PATH.exists():
@@ -137,9 +137,8 @@ def _load_phase_slot_quality_rubrics() -> Dict[str, Any]:
 @lru_cache(maxsize=1)
 def _load_layer_action_prompts() -> Dict[str, Any]:
     """
-    config/layer3_layer4_action_prompts.yaml を読み込み、
-    Layer3/Layer4 のアクション別プロンプト定義を返す。
-    読み込み失敗時は空辞書を返す。
+    Load `config/layer3_layer4_action_prompts.yaml` and return the Layer3/Layer4
+    action prompt definitions. Return an empty dict on failure.
     """
     try:
         if not _LAYER_ACTION_PROMPT_PATH.exists():
@@ -239,14 +238,14 @@ def _build_phase_slot_quality_rubric_prompt_text(phase: Phase) -> str:
     if isinstance(rubrics, Mapping):
         phase_raw = rubrics.get(phase.name) or rubrics.get(phase.value)
     if not isinstance(phase_raw, Mapping):
-        return "- 評価基準ファイル未設定（暫定: 根拠整合・具体性・実行可能性で評価）"
+        return "- Rubric file unavailable (temporary fallback: judge grounding, specificity, and feasibility)."
 
     lines: List[str] = []
     for slot_key in _PHASE_SLOT_SCHEMA.get(phase, ()):
         slot_label = _PHASE_SLOT_LABELS.get(slot_key, slot_key)
         raw = phase_raw.get(slot_key)
         if not isinstance(raw, Mapping):
-            lines.append(f"- {slot_label} ({slot_key}): 基準未定義")
+            lines.append(f"- {slot_label} ({slot_key}): rubric not defined")
             continue
         min_condition = _normalize_slot_text(raw.get("min_condition") or raw.get("minimum_condition"))
         min_example = _normalize_slot_text(raw.get("min_example") or raw.get("minimum_example"))
@@ -255,13 +254,13 @@ def _build_phase_slot_quality_rubric_prompt_text(phase: Phase) -> str:
         lines.append(
             (
                 f"- {slot_label} ({slot_key})\n"
-                f"  最低条件: {min_condition or '未定義'}\n"
-                f"  最低例: {min_example or '未定義'}\n"
-                f"  最高条件: {max_condition or '未定義'}\n"
-                f"  最高例: {max_example or '未定義'}"
+                f"  Minimum condition: {min_condition or 'undefined'}\n"
+                f"  Minimum example: {min_example or 'undefined'}\n"
+                f"  Maximum condition: {max_condition or 'undefined'}\n"
+                f"  Maximum example: {max_example or 'undefined'}"
             )
         )
-    return "\n".join(lines) if lines else "- 評価基準未定義"
+    return "\n".join(lines) if lines else "- Rubric not defined"
 
 
 def _rubric_hint_for_slot(*, phase: Phase, slot_key: str) -> str:
@@ -272,7 +271,7 @@ def _rubric_hint_for_slot(*, phase: Phase, slot_key: str) -> str:
     if isinstance(phase_raw, Mapping):
         slot_raw = phase_raw.get(slot_key)
         if isinstance(slot_raw, Mapping):
-            # Layer1 には軽量定義だけを渡すため、最高条件を優先して1文ヒントとして使う。
+            # Layer 1 only needs a lightweight hint, so prefer the maximum condition.
             hint = _normalize_slot_text(slot_raw.get("max_condition") or slot_raw.get("min_condition"))
             if hint:
                 return hint
@@ -283,8 +282,9 @@ def _append_numeric_scale_explicitness_guard(*, slot_key: str, hint: str) -> str
     normalized_hint = _normalize_slot_text(hint)
     if slot_key == "commitment_level":
         guard_text = (
-            "commitment_level は数値必須ではない。0-10数値でも、low/medium/high（低/中/高）などの"
-            "定性表現でもよい。数値の高低ではなく、実行条件や上げ下げ要因の明確さを重視する。"
+            "commitment_level does not have to be numeric. A 0-10 score or a qualitative"
+            " expression such as low/medium/high is acceptable. Focus on how clearly the"
+            " execution conditions and up/down factors are described, rather than the number itself."
         )
         if not normalized_hint:
             return guard_text
@@ -298,8 +298,9 @@ def _append_numeric_scale_explicitness_guard(*, slot_key: str, hint: str) -> str
     guard_text = ""
     if slot_key in {"importance_scale", "confidence_scale"}:
         guard_text = (
-            "数値は、ユーザ発話で0-10が明示された場合、または直前assistantの数値提示に対する"
-            "ユーザ明示承諾（assent_bridge）で確認できる場合のみ入力する。"
+            "Only populate the numeric value when the user explicitly states a 0-10 score,"
+            " or when it can be confirmed through explicit assent to the assistant's immediately"
+            " preceding scale prompt."
         )
     if not guard_text:
         return normalized_hint
@@ -344,7 +345,7 @@ def _build_lightweight_slot_definition_text(
                 lines.append(f"  - {slot_key}({slot_label}): {hint}")
             else:
                 lines.append(f"  - {slot_key}({slot_label})")
-    return "\n".join(lines) if lines else "- なし"
+    return "\n".join(lines) if lines else "- none"
 
 
 def _build_current_phase_slot_quality_context(state: "DialogueState") -> Dict[str, Dict[str, Any]]:
@@ -368,16 +369,16 @@ def _build_current_phase_slot_quality_context(state: "DialogueState") -> Dict[st
 
 
 class MainAction(str, Enum):
-    REFLECT = "REFLECT"                # 聞き返し（言い換え）
-    REFLECT_SIMPLE = "REFLECT_SIMPLE"  # 事実中心の短い反射
-    REFLECT_COMPLEX = "REFLECT_COMPLEX"  # 言外の意味を1段推測する反射
-    REFLECT_DOUBLE = "REFLECT_DOUBLE"  # 両価性を同時に扱う反射
-    QUESTION = "QUESTION"              # 質問
-    SCALING_QUESTION = "SCALING_QUESTION"  # 0〜10のスケーリング質問
-    CLARIFY_PREFERENCE = "CLARIFY_PREFERENCE"  # 許可不明時の選好確認（反射＋二択質問）
-    SUMMARY = "SUMMARY"                # 要約
-    ASK_PERMISSION_TO_SHARE_INFO = "ASK_PERMISSION_TO_SHARE_INFO"  # EPEのElicit: 情報共有の許可確認
-    PROVIDE_INFO = "PROVIDE_INFO"      # EPEのProvide+Elicit: 中立的に共有し反応確認
+    REFLECT = "REFLECT"                # reflective listening / paraphrase
+    REFLECT_SIMPLE = "REFLECT_SIMPLE"  # short reflection centered on explicit facts
+    REFLECT_COMPLEX = "REFLECT_COMPLEX"  # one-step inference of implied meaning
+    REFLECT_DOUBLE = "REFLECT_DOUBLE"  # double-sided reflection for ambivalence
+    QUESTION = "QUESTION"              # question
+    SCALING_QUESTION = "SCALING_QUESTION"  # 0-10 scaling question
+    CLARIFY_PREFERENCE = "CLARIFY_PREFERENCE"  # preference check when permission is unclear
+    SUMMARY = "SUMMARY"                # summary
+    ASK_PERMISSION_TO_SHARE_INFO = "ASK_PERMISSION_TO_SHARE_INFO"  # EPE elicit: ask permission to share information
+    PROVIDE_INFO = "PROVIDE_INFO"      # EPE provide+elicit: share neutrally and check response
 
 
 class InfoMode(str, Enum):
@@ -387,9 +388,9 @@ class InfoMode(str, Enum):
 
 
 class ReflectionStyle(str, Enum):
-    SIMPLE = "simple"        # 事実の言い換え中心
-    COMPLEX = "complex"      # 感情や価値を織り込む
-    DOUBLE_SIDED = "double"  # 両価性（やりたい/やりたくない両方）をまとめる
+    SIMPLE = "simple"        # mainly paraphrases explicit facts
+    COMPLEX = "complex"      # weaves in emotion or value
+    DOUBLE_SIDED = "double"  # holds both sides of ambivalence together
 
 
 class AffirmationMode(str, Enum):
@@ -418,7 +419,7 @@ def _reflection_style_from_action(action: MainAction) -> ReflectionStyle:
         return ReflectionStyle.SIMPLE
     if action == MainAction.REFLECT_DOUBLE:
         return ReflectionStyle.DOUBLE_SIDED
-    # REFLECT / REFLECT_COMPLEX は複雑反射として扱う
+    # Treat REFLECT / REFLECT_COMPLEX as complex reflections.
     return ReflectionStyle.COMPLEX
 
 
@@ -484,7 +485,7 @@ class OutputEvaluation:
 
 
 class LLMClient(Protocol):
-    """LLM呼び出しは環境に合わせて差し替えてください。"""
+    """Replace the LLM call implementation to match the runtime environment."""
 
     def generate(self, messages: List[Dict[str, str]], *, temperature: float = 0.2) -> str:
         ...
@@ -493,65 +494,60 @@ class LLMClient(Protocol):
 @dataclass
 class PlannerConfig:
     """
-    ルールベースの調整ノブ（DsPy最適化前のベースライン）。
-    - stochastic=False なら決定論で再現性重視（ログ収集・評価向き）
-    - reflect_* は反射の連打を抑えるノブ
-    - summary_* は要約の頻度・トリガー
-    - allow_override_* は「チェンジトーク/抵抗/新情報」時に反射上限を緩める条件
+    Rule-based tuning knobs used as the pre-DsPy baseline.
+    - `stochastic=False` favors deterministic, reproducible behavior
+    - `reflect_*` controls suppress repetitive reflections
+    - `summary_*` controls summary timing and triggers
+    - `allow_override_*` relaxes reflection caps when change talk / resistance / novelty is high
     """
-    # softmax温度（stochastic=False でも重み計算には効く）
+    # Softmax temperature. Still affects weighting even when stochastic=False.
     temperature: float = 0.7
-    # スコアから確率を作ったあと、サンプリングするか（False=常にargmaxで再現性優先）
+    # Whether to sample after converting scores to probabilities.
     stochastic: bool = False
-    # 乱数シード（stochastic=True 時の揺らぎ再現用）
+    # Random seed for reproducible variation when stochastic=True.
     seed: int = 42
 
-    # 連続聞き返しペナルティ：3回目以降に掛ける減衰率（0〜1、小さいほど強い抑制）
+    # Consecutive-reflection penalty starting from the third reflection.
     reflect_decay_base: float = 0.65
-    # 連続聞き返しが多いときの上限（例：0.15=15%まで）
+    # Upper cap when the reflection streak gets long.
     reflect_prob_cap_after_streak: float = 0.15
     reflect_streak_cap_threshold: int = 5
 
-    # 要約を促す閾値（最後の要約からのターン数）
+    # Threshold for encouraging a summary.
     summary_interval_turns: int = 9
-    # 連続反射がこの回数以上なら要約/質問を押す
+    # If reflection streak reaches this count, push toward summary/question.
     summary_reflect_streak_trigger: int = 3
 
-    # 「例外で反射上限を解除」判定の閾値（0〜1）
+    # Thresholds for temporarily lifting reflection caps.
     allow_override_change_talk: float = 0.6
     allow_override_resistance: float = 0.6
     allow_override_novelty: float = 0.7
-    # フェーズ進行を一時停止する関係シグナルの閾値
+    # Relationship-signal thresholds that temporarily pause phase progression.
     phase_hold_resistance_threshold: float = 0.6
     phase_hold_discord_threshold: float = 0.6
-    # フェーズ遷移のスロット評価ゲート
+    # Slot-based phase transition gates.
     phase_slot_fill_rate_threshold: float = 1.0
-    # quality_mean は診断用途として保持（遷移ゲートには使わない）
+    # Keep quality_mean for diagnostics only.
     phase_slot_quality_mean_threshold: float = 0.62
-    # 遷移ゲートで使う実効閾値（必須スロットの最低品質）
+    # Effective threshold used by the transition gate.
     phase_slot_quality_min_threshold: float = 0.8
-    # CLOSING フェーズの最大滞在ターン数（到達時はスロット未充足でも終了）
+    # Maximum number of turns allowed in CLOSING.
     closing_max_turns: int = 3
 
-    # 反射スタイル制御
-    # 言外の意味を推測して複雑反射へ寄せる確信度の閾値（0〜1）
+    # Reflection-style control
     complex_reflection_confidence_threshold: float = 0.58
-    # 両価性が明確とみなす閾値（0〜1）
     ambivalence_reflection_threshold: float = 0.68
-    # 両面反射の上限比率（反射全体に対する割合）
     double_sided_max_ratio: float = 1.0 / 3.0
-    # いきなり両面反射を多用しないため、最低限の反射回数がたまってから許可
     double_sided_min_reflections_before_use: int = 2
-    # REFLECT_DOUBLE を連発しないための最小間隔（前回からの経過ターン）
     double_sided_min_turn_gap: int = 3
 
-    # 出力検証の扱い:
-    # - "warn": 警告ログのみ（出力はそのまま採用）
-    # - "strict": ルール違反もログに残すが、本文の再生成は行わない
+    # Output-validation mode:
+    # - "warn": log warnings only
+    # - "strict": still log rule violations, but do not regenerate text
     output_validation_mode: str = "warn"
-    # Layer1/2/3 の JSON パース方針:
-    # - "loose": JSON断片抽出を許容（従来互換）
-    # - "strict": 厳密JSONのみ受理。壊れていたらそのレイヤ更新を適用しない
+    # JSON parsing policy for Layer1/2/3:
+    # - "loose": allow JSON fragment extraction
+    # - "strict": accept only strict JSON
     layer1_json_mode: str = "loose"
     layer2_json_mode: str = "loose"
     layer3_json_mode: str = "loose"
@@ -559,22 +555,22 @@ class PlannerConfig:
 
 @dataclass
 class DialogueState:
-    # 9フェーズの初期値：最初は「あいさつ」から開始
+    # Initial phase for the nine-phase flow.
     phase: Phase = Phase.GREETING
-    # 現フェーズ内で消費したカウンセラー発話ターン数（出力ごとに+1）
+    # Counselor turns spent inside the current phase.
     phase_turns: int = 0
 
-    # リズム制御のための状態
-    r_since_q: int = 0              # 最後の質問から何回「非質問」が続いたか
-    reflect_streak: int = 0         # 連続でREFLECTした回数（単調さ抑制用）
-    turns_since_summary: int = 0    # 最後の要約から何ターンか
-    turns_since_affirm: int = 0     # 最後に是認を入れてから何ターンか
-    turns_since_complex_affirm: int = 99  # 最後の複雑是認から何ターンか（高頻度抑制）
+    # Rhythm-control state
+    r_since_q: int = 0              # non-question turns since the last question
+    reflect_streak: int = 0         # consecutive REFLECT count
+    turns_since_summary: int = 0    # turns since the last summary
+    turns_since_affirm: int = 0     # turns since the last affirmation
+    turns_since_complex_affirm: int = 99  # turns since the last complex affirmation
 
-    # 情報共有（EPE: Elicit-Provide-Elicit）管理
+    # Information-sharing state (EPE: Elicit-Provide-Elicit)
     info_mode: InfoMode = InfoMode.NONE
 
-    # 参照用
+    # Reference fields
     last_user_text: str = ""
     last_substantive_user_text: str = ""
     turn_index: int = 0
@@ -583,23 +579,20 @@ class DialogueState:
     double_sided_reflection_count: int = 0
     turns_since_double_sided_reflection: int = 99
     last_reflection_styles: List[ReflectionStyle] = field(default_factory=list)
-    # スケーリング質問フォローアップ（理由/1点アップ）制御
+    # Scaling-question follow-up control (reason / plus-one)
     scale_followup_pending_phase: Optional[Phase] = None
     scale_followup_score: Optional[float] = None
-    scale_followup_pending_step: Optional[str] = None  # reason / plus_one
-    scale_followup_last_asked_step: Optional[str] = None  # 直前に実施した follow-up 質問
+    scale_followup_pending_step: Optional[str] = None
+    scale_followup_last_asked_step: Optional[str] = None
     scale_followup_done_in_phase: Dict[str, bool] = field(default_factory=dict)
 
-    # フェーズ別スロット（Layer1 の phase_slot_filler が抽出して更新）
+    # Phase-slot state
     phase_slots: Dict[str, Dict[str, str]] = field(default_factory=_init_phase_slot_memory)
-    # フェーズ別スロットの監査メタ（reviewer 反映後の状態）
     phase_slot_meta: Dict[str, Dict[str, Dict[str, Any]]] = field(default_factory=_init_phase_slot_meta)
-    # フェーズ別スロット候補（今回ターンの監査結果。確定採用前の保留レイヤ）
     phase_slot_pending: Dict[str, Dict[str, str]] = field(default_factory=_init_phase_slot_memory)
-    # 保留候補の監査メタ（reject/needs_confirmation を保持）
     phase_slot_pending_meta: Dict[str, Dict[str, Dict[str, Any]]] = field(default_factory=_init_phase_slot_meta)
 
-    # 安全関連のメモ
+    # Safety-related notes
     risk_level: RiskLevel = RiskLevel.NONE
     last_risk_reason: Optional[str] = None
 
@@ -608,17 +601,17 @@ class DialogueState:
 class PlannerFeatures:
     user_is_question: bool
     user_requests_info: bool
-    has_permission: Optional[bool]  # None=不明, True/False=明確
-    resistance: float               # 0〜1（高いほど抵抗っぽい）
-    change_talk: float              # 0〜1（高いほどチェンジトークっぽい）
-    novelty: float                  # 0〜1（高いほど新情報）
-    is_short_reply: bool            # 非常に短い返答かどうか
+    has_permission: Optional[bool]  # None=unknown, True/False=explicit
+    resistance: float               # 0-1, higher means more resistance-like
+    change_talk: float              # 0-1, higher means more change-talk-like
+    novelty: float                  # 0-1, higher means more novel information
+    is_short_reply: bool
     topic_shift: bool
     need_summary: bool
     allow_reflect_override: bool
-    discord: float = 0.0            # 0〜1（高いほど不協和/関係のずれ）
-    importance_estimate: Optional[float] = None  # 0〜1（推定不能時はNone）
-    confidence_estimate: Optional[float] = None  # 0〜1（推定不能時はNone）
+    discord: float = 0.0            # 0-1, higher means more discord / relationship strain
+    importance_estimate: Optional[float] = None  # 0-1, or None if unavailable
+    confidence_estimate: Optional[float] = None  # 0-1, or None if unavailable
 
 
 class FirstTurnHint(str, Enum):
@@ -665,7 +658,7 @@ class Decision:
     phase: Phase
     main_action: MainAction
     add_affirm: AffirmationMode
-    # 次状態（このDecisionを採用した後の想定状態）
+    # Expected next state after applying this decision.
     next_state: DialogueState
     reflection_style: Optional[ReflectionStyle] = None
     risk_mode: RiskLevel = RiskLevel.NONE
@@ -675,14 +668,14 @@ class Decision:
 
 
 # ============================
-# 差し替え可能な分類・提案器
+# Swappable classifier / planner interfaces
 # ============================
 class ActionRanker(Protocol):
     """
-    主動作（OARS + 例外）の優先順位提案器。
-    - 戻り値の1つ目: MainAction の順位リスト
-    - 戻り値の2つ目(debug): proposed_main_action など
-    - allowed_actions が与えられた場合は、その集合内で提案する
+    Priority proposer for main actions (OARS + exceptions).
+    - First return value: ranked list of MainAction values
+    - Second return value: debug payload such as proposed_main_action
+    - If allowed_actions is provided, propose only within that set
     """
 
     def rank(
@@ -698,8 +691,8 @@ class ActionRanker(Protocol):
 
 class FeatureExtractor(Protocol):
     """
-    特徴量抽出器（ルール/LLMで差し替え可）。
-    - 戻り値: (PlannerFeatures, debug)
+    Feature extractor (rule-based or LLM-based).
+    - Returns: (PlannerFeatures, debug)
     """
 
     def extract(
@@ -715,8 +708,8 @@ class FeatureExtractor(Protocol):
 
 class PhaseSlotFiller(Protocol):
     """
-    フェーズ別スロット埋め器（LLM/ルールで差し替え可）。
-    - 戻り値: (更新候補リスト, debug)
+    Phase-slot filler (LLM or rule-based).
+    - Returns: (candidate updates, debug)
     """
 
     def fill_slots(
@@ -731,8 +724,8 @@ class PhaseSlotFiller(Protocol):
 
 class RiskDetector(Protocol):
     """
-    安全性リスク検知（自傷他害など）。
-    - 戻り値: RiskAssessment
+    Safety-risk detector (self-harm, violence, etc.).
+    - Returns: RiskAssessment
     """
 
     def detect(
@@ -747,7 +740,7 @@ class RiskDetector(Protocol):
 
 class OutputEvaluator(Protocol):
     """
-    生成応答のMI準拠評価器（LLM採点など）。
+    MI-alignment evaluator for generated responses.
     """
 
     def evaluate(
@@ -763,8 +756,8 @@ class OutputEvaluator(Protocol):
 
 class ChangeTalkInferer(Protocol):
     """
-    ユーザ発話からチェンジトーク（明示/言外）候補を推論する差し込み口。
-    - 返り値の1つ目は、構造化オブジェクト推奨（互換のため str も許容）。
+    Inference hook for explicit or implied change-talk candidates in the user utterance.
+    - The first return value should preferably be structured, though `str` is still accepted for compatibility.
     """
 
     def infer(
@@ -780,7 +773,7 @@ class ChangeTalkInferer(Protocol):
 
 class AffirmationDecider(Protocol):
     """
-    是認モード（NONE/SIMPLE/COMPLEX）を推定する差し込み口。
+    Inference hook for the affirmation mode (NONE / SIMPLE / COMPLEX).
     """
 
     def decide(
@@ -822,9 +815,9 @@ class Layer1Bundle:
 
 class SlotReviewer(Protocol):
     """
-    Layer2: Layer1候補の監査器。
-    - Layer1Bundle を監査し、品質・修復ヒントを返す。
-    - 採用可否（admissibility）は Layer1 側の責務。
+    Layer 2 reviewer for Layer 1 candidates.
+    - Reviews Layer1Bundle and returns quality / repair hints.
+    - Admissibility remains a Layer 1 responsibility.
     """
 
     def review(
@@ -880,9 +873,9 @@ class ResponseBrief:
 
 class ResponseIntegrator(Protocol):
     """
-    Layer3: 情報統合ブリーフ生成器。
-    - 入力: 履歴、state、Layer2確定判断、内部シグナル
-    - 出力: ResponseBrief（契約情報 + 完成ドラフト本文）
+    Layer 3 response-brief generator.
+    - Input: history, state, Layer 2 decisions, internal signals
+    - Output: ResponseBrief (contract-like constraints + completed draft)
     """
 
     def integrate(
@@ -909,165 +902,160 @@ class ResponseIntegrator(Protocol):
 
 
 # ----------------------------
-# Feature extraction (軽量版)
+# Feature extraction (lightweight)
 # ----------------------------
-_RE_QUESTION = re.compile(r"[？?]|(でしょうか)|(ですか)|(ますか)")
-_RE_INFO_REQ = re.compile(r"(教えて|知りたい|情報|アドバイス|提案|方法|コツ|おすすめ|どうすれば|どうしたら)")
-_RE_YES = re.compile(r"^(はい|ええ|うん|お願いします|お願い|いいです|大丈夫|ok|OK|了解|ぜひ|是非)", re.IGNORECASE)
-_RE_NO = re.compile(r"^(いいえ|いや|やめて|いりません|不要|結構です|ノー|no|NO)", re.IGNORECASE)
-_ASK_PERMISSION_REQUIRED_KEYWORDS = ("情報", "共有", "提案", "方法", "選択肢")
+_RE_QUESTION = re.compile(r"[?？]|(?:could you|would you|can you|what|how|why|when|where)\b", re.IGNORECASE)
+_RE_INFO_REQ = re.compile(
+    r"(?:tell me|want to know|information|advice|suggestion|options|approach|tips|how should I|what should I do)",
+    re.IGNORECASE,
+)
+_RE_YES = re.compile(
+    r"^(?:yes|yeah|yep|sure|please|sounds good|that's fine|that's okay|okay|ok|got it|absolutely)",
+    re.IGNORECASE,
+)
+_RE_NO = re.compile(
+    r"^(?:no|nope|stop|don't|do not|not now|not needed|no thanks|rather not)",
+    re.IGNORECASE,
+)
+_ASK_PERMISSION_REQUIRED_KEYWORDS = ("information", "share", "suggest", "option", "approach")
 _ASK_PERMISSION_FORBIDDEN_PATTERNS = (
-    re.compile(r"進めて"),
-    re.compile(r"許可をいただ"),
-    re.compile(r"にしますね"),
-    re.compile(r"決めますね"),
+    re.compile(r"let me go ahead", re.IGNORECASE),
+    re.compile(r"with your permission", re.IGNORECASE),
+    re.compile(r"i'?ll decide", re.IGNORECASE),
+    re.compile(r"we'?ll do that", re.IGNORECASE),
 )
 _PROVIDE_INFO_OPTION_PATTERNS = (
-    re.compile(r"選択肢"),
+    re.compile(r"options?", re.IGNORECASE),
     re.compile(r"(?:A\s*/\s*B(?:\s*/\s*C)?)", re.IGNORECASE),
     re.compile(r"(?:\([ABCabc123]\)|[ABCabc123][\)）]|[①-③])"),
 )
-_PROVIDE_INFO_NEUTRAL_PHRASES = ("一つの方法として", "ひとつの方法として")
+_PROVIDE_INFO_NEUTRAL_PHRASES = ("as one option", "as one possible approach")
 _PROVIDE_INFO_REACTION_MARKERS = (
-    "どう感じ",
-    "どう思い",
-    "いかがですか",
-    "どれなら",
-    "どれが",
-    "どれを",
-    "できそう",
-    "やれそう",
-    "試せそう",
-    "使えそう",
-    "合いそう",
+    "how does that feel",
+    "what do you think",
+    "how does that sound",
+    "which one",
+    "what feels doable",
+    "what might work",
+    "what seems realistic",
+    "what could you try",
+    "what seems to fit",
 )
 _AUTONOMY_FORBIDDEN_PATTERNS = (
-    re.compile(r"にしますね"),
-    re.compile(r"しておきますね"),
-    re.compile(r"今週は.*しますね"),
+    re.compile(r"we'?ll do that", re.IGNORECASE),
+    re.compile(r"i'?ll take care of that", re.IGNORECASE),
+    re.compile(r"this week we'?ll", re.IGNORECASE),
 )
 _ACTION_MISMATCH_SUGGESTION_PATTERNS = (
-    re.compile(r"しましょう"),
-    re.compile(r"してみましょう"),
-    re.compile(r"したほうがいい"),
-    re.compile(r"するといい"),
-    re.compile(r"がおすすめ"),
-    re.compile(r"をおすすめ"),
-    re.compile(r"してみてください"),
-    re.compile(r"してはどう"),
+    re.compile(r"let'?s", re.IGNORECASE),
+    re.compile(r"you should", re.IGNORECASE),
+    re.compile(r"it would be good to", re.IGNORECASE),
+    re.compile(r"i recommend", re.IGNORECASE),
+    re.compile(r"i'?d recommend", re.IGNORECASE),
+    re.compile(r"try\b", re.IGNORECASE),
+    re.compile(r"how about\b", re.IGNORECASE),
 )
 _ACTION_MISMATCH_CHOICE_PATTERNS = (
-    re.compile(r"どちら"),
-    re.compile(r"どっち"),
-    re.compile(r"どのほう"),
-    re.compile(r"選択肢"),
+    re.compile(r"which one", re.IGNORECASE),
+    re.compile(r"which would you choose", re.IGNORECASE),
+    re.compile(r"which side", re.IGNORECASE),
+    re.compile(r"options?", re.IGNORECASE),
 )
 _SUMMARY_FORWARD_PROMPT_PATTERNS = (
-    re.compile(r"(?:最後に|次に|次回|今後|ここから).{0,20}(?:一歩|ステップ|行動|計画).{0,20}(?:教えて|決め|考え|どう|何)"),
-    re.compile(r"(?:具体的な|次の).{0,12}(?:一歩|ステップ|行動|計画).{0,20}(?:教えて|決め|考え|どう|何)"),
-    re.compile(r"(?:何から|どこから).{0,12}(?:始め|進め)"),
+    re.compile(r"(?:next|after this|moving forward|from here).{0,20}(?:step|action|plan).{0,20}(?:what|how|decide|think|tell)", re.IGNORECASE),
+    re.compile(r"(?:specific|next).{0,12}(?:step|action|plan).{0,20}(?:what|how|decide|think|tell)", re.IGNORECASE),
+    re.compile(r"(?:where|what) would you start", re.IGNORECASE),
 )
 _SUMMARY_EMOTION_MARKERS: Tuple[str, ...] = (
-    "気持ち",
-    "感情",
-    "不安",
-    "心配",
-    "迷い",
-    "揺れ",
-    "しんど",
-    "つら",
-    "辛",
-    "怖",
-    "戸惑",
-    "焦",
+    "feeling",
+    "emotion",
+    "anxious",
+    "worry",
+    "uncertain",
+    "torn",
+    "hard",
+    "painful",
+    "scared",
+    "confused",
+    "overwhelmed",
 )
 _SUMMARY_VALUE_MARKERS: Tuple[str, ...] = (
-    "価値",
-    "大切",
-    "意味",
-    "守りたい",
-    "ありたい",
-    "優先",
-    "理由",
-    "望",
+    "value",
+    "important",
+    "meaning",
+    "protect",
+    "want to be",
+    "priority",
+    "reason",
+    "want",
 )
 _SUMMARY_AMBIVALENCE_MARKERS: Tuple[str, ...] = (
-    "一方",
-    "同時に",
-    "反面",
-    "ただ",
-    "でも",
-    "けれど",
-    "両方",
-    "迷い",
-    "揺れ",
+    "on the other hand",
+    "at the same time",
+    "but",
+    "however",
+    "both",
+    "torn",
+    "uncertain",
 )
 _REVIEW_FIRST_TURN_SUMMARY_MARKERS: Tuple[str, ...] = (
-    "ここまで",
-    "これまで",
-    "今日のセッション",
-    "今回のセッション",
-    "このセッション",
+    "so far",
+    "up to now",
+    "today's session",
+    "this session",
 )
 _REVIEW_FIRST_TURN_QUESTION_MARKERS: Tuple[str, ...] = (
-    "気づき",
-    "学び",
-    "振り返り",
-    "印象",
-    "持ち帰り",
+    "notice",
+    "learning",
+    "reflection",
+    "what stands out",
+    "takeaway",
 )
 _CLOSING_FIRST_TURN_ENDING_MARKERS: Tuple[str, ...] = (
-    "終えて",
-    "終え",
-    "終わり",
-    "終了",
-    "ここまで",
-    "締め",
-    "区切",
+    "end",
+    "wrap up",
+    "finish",
+    "close",
 )
 _CLOSING_FIRST_TURN_SESSION_MARKERS: Tuple[str, ...] = (
-    "今日",
-    "今回",
-    "このセッション",
-    "今日のセッション",
-    "セッション",
+    "today",
+    "this time",
+    "this session",
+    "session",
 )
-_FINAL_CLOSING_MESSAGE = "ありがとうございました。今日のセッションはこれで終わりにします。"
+_FINAL_CLOSING_MESSAGE = "Thank you. We will end today's session here."
 _CT_STRENGTH_VALUE_REASON_MARKERS: Tuple[str, ...] = (
-    "理由",
-    "ため",
-    "から",
-    "価値",
-    "大切",
-    "意味",
-    "望",
+    "reason",
+    "because",
+    "value",
+    "important",
+    "meaning",
+    "want",
 )
 _CT_STRENGTH_NEXT_STEP_PATTERNS: Tuple[re.Pattern[str], ...] = (
-    re.compile(r"(次の一歩|最初の一歩|まず|最初に)"),
-    re.compile(r"(やってみる|試してみる|始める|続ける|取り組む|決める|実行してみる)"),
+    re.compile(r"(next step|first step|to start|first)", re.IGNORECASE),
+    re.compile(r"(try|start|continue|work on|decide|put into practice)", re.IGNORECASE),
 )
 _CT_STRENGTH_SCENE_TRIGGER_PATTERNS: Tuple[re.Pattern[str], ...] = (
-    re.compile(r"(とき|したら|になると|直前|直後|場面|タイミング)"),
+    re.compile(r"(when|if|right before|right after|situation|timing)", re.IGNORECASE),
 )
 _OBSERVABLE_BEHAVIOR_CONTEXT_PATTERNS: Tuple[re.Pattern[str], ...] = (
-    re.compile(r"(今日|明日|今週|来週|朝|夜|平日|休日|毎日|毎週|週\d|週[一二三四五六七]|回|分|時|どこ|いつ|場面)"),
+    re.compile(r"(today|tomorrow|this week|next week|morning|night|weekday|weekend|every day|every week|\d+\s*(?:times?|minutes?|hours?)|where|when|situation)", re.IGNORECASE),
 )
 _NEXT_STEP_AUTONOMY_MARKERS: Tuple[str, ...] = (
-    "あなたにとって",
-    "ご自身で",
-    "自分で",
-    "合いそう",
-    "できそう",
-    "やれそう",
-    "選べそう",
-    "選ぶ",
-    "無理なく",
+    "for you",
+    "on your own",
+    "feels like a fit",
+    "seems doable",
+    "seems realistic",
+    "choose",
+    "without forcing it",
 )
-_RE_HAS_JAPANESE_CHAR = re.compile(r"[ぁ-んァ-ヶ一-龥々]")
+_RE_HAS_JAPANESE_CHAR = re.compile(r"[\u3041-\u3093\u30a1-\u30f6\u4e00-\u9fa5\u3005]")
 _RE_JSON_LIKE_TEXT = re.compile(r"^\s*[\[{].*[\]}]\s*$", re.DOTALL)
 _RE_DIALOGUE_ROLE_PREFIX = re.compile(r"^\s*(assistant|system|user)\s*[:：]", re.IGNORECASE)
-_RE_CASUAL_ENDING = re.compile(r"(だよ|だね|じゃん|だな|だろ|っす)(?:[。．!?？！\s]*)$")
-_RE_CHAT_SLANG = re.compile(r"(?:\bwww+\b|\bw{2,}\b|笑)")
+_RE_CASUAL_ENDING = re.compile(r"(?:yeah|yep|kinda|sorta|gonna|wanna|ain't)(?:[.?!\s]*)$", re.IGNORECASE)
+_RE_CHAT_SLANG = re.compile(r"(?:\blol+\b|\blmao\b|\brofl\b)")
 _RE_SUSPICIOUS_ASCII_TOKEN = re.compile(r"(?<![A-Za-z0-9_])([A-Za-z]{2,20})(?![A-Za-z0-9_])")
 _ALLOWED_INLINE_ASCII_TOKENS: Set[str] = {
     "ok",
@@ -1075,63 +1063,61 @@ _ALLOWED_INLINE_ASCII_TOKENS: Set[str] = {
     "line",
 }
 _REFLECTION_ELLIPSIS_ENDING_PATTERNS = (
-    re.compile(r".+ということ$"),
-    re.compile(r".+という感じ$"),
-    re.compile(r".+たい$"),
-    re.compile(r".+たくない$"),
-    re.compile(r".+したい$"),
-    re.compile(r".+したくない$"),
-    re.compile(r".+したかった$"),
-    re.compile(r".+したくなかった$"),
-    re.compile(r".{2,}が.{2,}$"),
+    re.compile(r".+that'?s what it is$", re.IGNORECASE),
+    re.compile(r".+that'?s how it feels$", re.IGNORECASE),
+    re.compile(r".+want to$", re.IGNORECASE),
+    re.compile(r".+don'?t want to$", re.IGNORECASE),
+    re.compile(r".+wanted to$", re.IGNORECASE),
+    re.compile(r".+didn'?t want to$", re.IGNORECASE),
+    re.compile(r".{2,}but.{2,}$", re.IGNORECASE),
 )
 _REFLECT_ENDING_FAMILY_PATTERNS: Tuple[Tuple[str, Tuple[re.Pattern[str], ...]], ...] = (
-    ("聞こえます系", (re.compile(r"ように(?:も)?聞こえます$"),)),
+    ("sounds_like_family", (re.compile(r"sounds like$", re.IGNORECASE),)),
     (
-        "かもしれません系",
+        "might_be_family",
         (
-            re.compile(r"(?:なの|の)?かもしれません$"),
-            re.compile(r"かもしれない(?:ですね)?$"),
+            re.compile(r"might be$", re.IGNORECASE),
+            re.compile(r"could be$", re.IGNORECASE),
         ),
     ),
     (
-        "ということ系",
+        "that_means_family",
         (
-            re.compile(r"ということ(?:ですね)?$"),
-            re.compile(r"という感じ$"),
+            re.compile(r"that means$", re.IGNORECASE),
+            re.compile(r"that'?s how it feels$", re.IGNORECASE),
         ),
     ),
-    ("のですね系", (re.compile(r"(?:の|ん|な)?ですね$"),)),
+    ("is_that_right_family", (re.compile(r"isn'?t it$", re.IGNORECASE),)),
     (
-        "省略終止系",
+        "elliptical_family",
         (
-            re.compile(r".+という$"),
-            re.compile(r".+と$"),
+            re.compile(r".+that$", re.IGNORECASE),
+            re.compile(r".+to$", re.IGNORECASE),
         ),
     ),
 )
 _REFLECT_ADVICE_LIKE_PATTERNS = (
-    re.compile(r"してみるのはどうでしょう"),
-    re.compile(r"が有効です"),
-    re.compile(r"が適切です"),
-    re.compile(r"していきましょう"),
-    re.compile(r"(?:おすすめ|お勧め|オススメ)は.{0,40}です"),
+    re.compile(r"how about trying", re.IGNORECASE),
+    re.compile(r"is effective", re.IGNORECASE),
+    re.compile(r"is appropriate", re.IGNORECASE),
+    re.compile(r"let'?s keep", re.IGNORECASE),
+    re.compile(r"recommend.{0,40}", re.IGNORECASE),
 )
 _OVERINTERPRETATION_INFERENCE_PATTERNS: Tuple[re.Pattern[str], ...] = (
-    re.compile(r"ように(?:も)?聞こえ"),
-    re.compile(r"どこかで感じ"),
-    re.compile(r"(?:つながる|成る).{0,8}(?:感じ|考え)"),
+    re.compile(r"sounds like", re.IGNORECASE),
+    re.compile(r"somewhere you feel", re.IGNORECASE),
+    re.compile(r"(?:connects|becomes).{0,8}(?:feeling|thought)", re.IGNORECASE),
 )
 _OVERINTERPRETATION_STORY_PATTERNS: Tuple[re.Pattern[str], ...] = (
-    re.compile(r"安心の土台"),
-    re.compile(r"土台にして"),
-    re.compile(r"強みとして"),
-    re.compile(r"形になってき"),
-    re.compile(r"育ててい"),
-    re.compile(r"積み重ね"),
-    re.compile(r"これから"),
-    re.compile(r"大事にすることにつなが"),
-    re.compile(r"(?:つながる|なる).{0,6}入口"),
+    re.compile(r"foundation of safety", re.IGNORECASE),
+    re.compile(r"use as a foundation", re.IGNORECASE),
+    re.compile(r"as a strength", re.IGNORECASE),
+    re.compile(r"starting to take shape", re.IGNORECASE),
+    re.compile(r"grow", re.IGNORECASE),
+    re.compile(r"build up", re.IGNORECASE),
+    re.compile(r"from here", re.IGNORECASE),
+    re.compile(r"connects to what matters", re.IGNORECASE),
+    re.compile(r"(?:connects|becomes).{0,6}entry point", re.IGNORECASE),
 )
 
 _SOFT_WARNING_LAYER4_REWRITE_ISSUE_MAP: Dict[str, str] = {
@@ -1157,71 +1143,60 @@ _LAYER4_GLOBAL_REWRITE_WARNING_CODES: Set[str] = {
     "layer4_not_shorter_than_draft",
 }
 _LAYER4_FALLBACK_ISSUE_REPAIR_GUIDANCE: Dict[str, str] = {
-    "draft_response_text_missing": "draft_response_text が欠けている。utterance_target と must_include を使って、1機能だけの短い自然文を最小限で組み直す。",
-    "layer4_not_shorter_than_draft": "最終文が draft_response_text より短くなっていない。意味を増やさず、具体語を残したまま削って短くする。",
-    "reflect_ending_family_bias": "直近の assistant 反射と同系統の語尾が続いている。writer_plan.avoid_recent_ending_families を優先し、同じfamilyの連投を避ける。",
-    "question_preface_missing": "QUESTION / ASK_PERMISSION(add_affirm=NONE) は1文目に simple reflection、最後の文に質問を置く。1文目を省略しない。",
-    "question_preface_not_grounded_in_change_talk": "QUESTION / ASK_PERMISSION(add_affirm=NONE) の1文目を question_reflect_seed / change_talk に戻し、別焦点へずらさない。",
+    "draft_response_text_missing": "draft_response_text is missing. Rebuild only one minimal natural sentence using utterance_target and must_include.",
+    "layer4_not_shorter_than_draft": "The final sentence is not shorter than draft_response_text. Shorten it without adding meaning, while keeping the concrete wording.",
+    "reflect_ending_family_bias": "Recent assistant reflections keep repeating the same ending family. Prioritize writer_plan.avoid_recent_ending_families and avoid repeating the same family.",
+    "question_preface_missing": "QUESTION / ASK_PERMISSION(add_affirm=NONE) must use a simple reflection in sentence 1 and place the question in the final sentence. Do not omit sentence 1.",
+    "question_preface_not_grounded_in_change_talk": "Return sentence 1 of QUESTION / ASK_PERMISSION(add_affirm=NONE) to question_reflect_seed / change_talk and do not drift to another focus.",
 }
 _LAYER4_EDIT_AUDIT_ABSTRACT_TERMS: Tuple[str, ...] = (
-    "意味づけ",
-    "土台",
-    "連結点",
-    "支え",
-    "方向性",
-    "感触",
-    "やり方",
-    "つながり",
-    "入口",
+    "meaning-making",
+    "foundation",
+    "link point",
+    "support",
+    "direction",
+    "sense",
+    "approach",
+    "connection",
+    "entry point",
 )
 _LAYER4_EDIT_AUDIT_META_BRIDGE_PATTERNS: Tuple[re.Pattern[str], ...] = (
-    re.compile(r"「[^」]{2,80}」は「[^」]{2,120}」につながる入口"),
+    re.compile(r"\"[^\"]{2,80}\" is an entry point to \"[^\"]{2,120}\"", re.IGNORECASE),
 )
 _LAYER4_EDIT_AUDIT_QUOTED_PHRASE_PATTERN = re.compile(r"「([^」]{2,80})」")
 _LAYER4_EDIT_AUDIT_CONCRETE_SPAN_PATTERNS: Tuple[re.Pattern[str], ...] = (
     re.compile(
-        r"((?:今夜|今日|明日|朝|夜|帰宅後|会議前|準備時間|休憩時間|静かな席|会議室)[^。]{0,24}?"
-        r"(?:見直|落とし込|書き出|声に出|練習|伝え|試|続け|始め))"
+        r"((?:tonight|today|tomorrow|morning|night|after getting home|before a meeting|prep time|break time|quiet seat|meeting room)[^.]{0,24}?"
+        r"(?:review|write down|say out loud|practice|tell someone|try|continue|start))",
+        re.IGNORECASE,
     ),
     re.compile(
-        r"((?:メモ|ノート|一文)[^。]{0,18}?"
-        r"(?:見直|落とし込|書き出|声に出|練習|伝え))"
+        r"((?:note|notebook|one sentence)[^.]{0,18}?"
+        r"(?:review|write down|say out loud|practice|tell someone))",
+        re.IGNORECASE,
     ),
-    re.compile(r"(([0-9一二三四五六七八九十]+分[^。]{0,18}?(?:声に出|練習|見直|続け)))"),
+    re.compile(r"((?:[0-9]+(?:\s*minutes?)?[^.]{0,18}?(?:say out loud|practice|review|continue)))", re.IGNORECASE),
 )
 _LAYER4_EDIT_AUDIT_SUBJECT_REVERSAL_PAIRS: Tuple[Tuple[str, str], ...] = (
-    ("あなたの", "私の"),
-    ("ご自身の", "私の"),
-    ("自分の", "私の"),
-    ("あなたが", "私が"),
-    ("ご自身が", "私が"),
-    ("自分が", "私が"),
-    ("あなたの", "こちらの"),
-    ("ご自身の", "こちらの"),
+    ("your", "my"),
+    ("you", "I"),
+    ("your", "our"),
 )
 _LAYER4_EDIT_AUDIT_VIEWPOINT_REVERSAL_PAIRS: Tuple[Tuple[str, str], ...] = (
-    ("あなた", "私"),
-    ("ご自身", "私"),
-    ("自分", "私"),
-    ("あなた", "こちら"),
-    ("ご自身", "こちら"),
-    ("自分", "こちら"),
+    ("you", "I"),
+    ("you", "we"),
 )
 _LAYER4_EDIT_AUDIT_AUTONOMY_ANCHORS: Tuple[str, ...] = (
-    "あなたが決め",
-    "あなたの感覚",
-    "あなたにとって",
-    "ご自身で決め",
-    "ご自身の感覚",
-    "ご自身にとって",
-    "自分で決め",
-    "自分の感覚",
-    "自分にとって",
+    "you decide",
+    "your sense",
+    "for you",
+    "decide for yourself",
+    "your own sense",
 )
 _LAYER4_EDIT_AUDIT_FIRST_PERSON_MARKERS: Tuple[str, ...] = (
-    "私",
-    "わたし",
-    "こちら",
+    "I",
+    "we",
+    "our side",
 )
 _LAYER4_DRAFT_HARD_CONTRACT_ISSUE_CODES: Set[str] = {
     "scale_followup_question_missing_plus_one_probe",
@@ -1269,27 +1244,17 @@ _INTERNAL_LABEL_LITERAL_TOKENS: Tuple[str, ...] = (
 _RE_INTERNAL_CT_ID = re.compile(r"(?<![A-Za-z0-9_])ct_\d+(?![A-Za-z0-9_])", re.IGNORECASE)
 _RE_INTERNAL_SNAKE_CASE_LONG = re.compile(r"\b[a-z]{2,}(?:_[a-z0-9]{2,}){2,}\b", re.IGNORECASE)
 
-# 助言リクエストを強く示すフレーズ（空白を除去したテキストで判定する）
+# Strong advice-request markers, checked on whitespace-stripped text.
 _INFO_REQUEST_STRONG_MARKERS = [
-    "教えてください",
-    "教えてほしい",
-    "教えて欲しい",
-    "教えてもらえますか",
-    "アドバイスがほしい",
-    "アドバイスください",
-    "アドバイスをください",
-    "おすすめを教えて",
-    "オススメを教えて",
-    "提案がほしい",
-    "提案してください",
-    "助言をください",
-    "コツを知りたい",
-    "コツを教えて",
-    "方法を教えて",
-    "やり方を教えて",
-    "どうすればいい",
-    "どうしたらいい",
-    "何をすればいい",
+    "please tell me",
+    "i want advice",
+    "can you advise me",
+    "what do you recommend",
+    "please suggest something",
+    "i want suggestions",
+    "what are the options",
+    "how should i do this",
+    "what should i do",
 ]
 
 
@@ -1345,7 +1310,7 @@ def _sanitize_human_draft_text(value: Any, *, max_len: int = 420) -> str:
         return ""
     if text.lower() in {"none", "null", "unknown", "n/a", "na"}:
         return ""
-    if text in {"不明", "未設定", "なし"}:
+    if text in {"unknown", "unset", "none"}:
         return ""
     return text[: max(80, int(max_len))]
 
@@ -1377,7 +1342,7 @@ def _extract_slot_quality_target_example_detail_raw(item: Any) -> str:
         lower = text.lower()
         if lower in {"none", "null", "unknown", "n/a", "na"}:
             continue
-        if text in {"不明", "未設定"}:
+        if text in {"unknown", "unset"}:
             continue
         return text
     return ""
@@ -1414,43 +1379,40 @@ def _contains_internal_label_in_any(value: Any) -> bool:
         return any(_contains_internal_label_in_any(item) for item in value)
     return _find_internal_label_leak(value) is not None
 
-# 抵抗（抵抗・反発）のシグナル（雑でOK：最初はルールが主）
+# Resistance signals (coarse heuristic is acceptable here).
 _RESIST_MARKERS = [
-    # 典型的な拒否・反発
-    "でも", "けど", "しかし", "無理", "できない", "難しい", "やりたくない", "嫌", "意味ない",
-    "必要ない", "無駄", "どうせ", "無理だ", "しんどい", "めんどくさい", "やる気が出ない",
-    # 両価性の後ろ向き側
-    "前にも失敗", "うまくいかない", "続かない", "気が進まない",
+    "but", "however", "can't", "cannot", "hard", "difficult", "don't want to", "hate it", "pointless",
+    "don't need", "waste", "what's the point", "too much", "exhausting", "annoying", "no motivation",
+    "failed before", "won't work", "can't keep it up", "not feeling up for it",
 ]
 
-# チェンジトーク（変化への志向）のシグナル
+# Change talk signals.
 _CHANGE_TALK_MARKERS = [
-    # 前向き・志向性
-    "したい", "やってみる", "やってみたい", "変えたい", "変わりたい", "頑張る", "できそう",
-    "必要", "大事", "大切", "目標", "挑戦", "改善", "やったほうがいい", "続けたい",
-    "もう少し", "試したい", "取り組みたい", "できるように",
+    "want to", "try", "would like to try", "change", "be different", "work on it", "seems doable",
+    "need", "important", "goal", "challenge", "improve", "should do", "keep going",
+    "a little more", "want to test", "want to work on", "be able to",
 ]
 
-# 不協和（関係のずれ、対話同盟の亀裂）シグナル
+# Discord / alliance-rupture signals.
 _DISCORD_MARKERS = [
-    "わかってない",
-    "違う",
-    "そういうことじゃない",
-    "押し付け",
-    "責めないで",
-    "なんで",
-    "もういい",
-    "話したくない",
-    "うるさい",
-    "イライラ",
-    "腹が立つ",
-    "納得できない",
-    "信用できない",
+    "you don't get it",
+    "that's not it",
+    "that's not what I mean",
+    "you're pushing me",
+    "don't blame me",
+    "why",
+    "enough",
+    "don't want to talk",
+    "annoying",
+    "irritated",
+    "angry",
+    "can't accept that",
+    "can't trust that",
 ]
 
 _AMBIVALENCE_SUSTAIN_HINTS = [
-    "怖い", "不安", "難しい", "無理", "できない", "続かない", "しんどい", "気が進まない",
-    "自信がない", "迷う",
+    "scared", "anxious", "hard", "impossible", "can't", "won't keep it up", "exhausting", "not feeling up for it",
+    "not confident", "unsure",
 ]
 
 
@@ -1474,25 +1436,25 @@ def _jaccard(a: set, b: set) -> float:
 def _estimate_novelty(user_text: str, last_user_text: str) -> float:
     clean_len = len(re.sub(r"\s+", "", user_text))
 
-    # 1) 文字bi-gramの差
+    # 1) Character bigram distance.
     sim = _jaccard(_char_bigrams(user_text), _char_bigrams(last_user_text))
     novelty = 1.0 - sim
 
-    # 2) 数字・日時っぽいものが増えたらブースト
+    # 2) Boost when new numbers or time-like details appear.
     nums_now = set(re.findall(r"\d+", user_text))
     nums_prev = set(re.findall(r"\d+", last_user_text))
     if nums_now - nums_prev:
         novelty = min(1.0, novelty + 0.15)
 
-    # 3) 固有っぽい語（簡易：カタカナ連続）が増えたら少しブースト
-    kata_now = set(re.findall(r"[ァ-ヴー]{3,}", user_text))
-    kata_prev = set(re.findall(r"[ァ-ヴー]{3,}", last_user_text))
+    # 3) Small boost when new proper-noun-like katakana spans appear.
+    kata_now = set(re.findall(r"[\u30a1-\u30f4\u30fc]{3,}", user_text))
+    kata_prev = set(re.findall(r"[\u30a1-\u30f4\u30fc]{3,}", last_user_text))
     if kata_now - kata_prev:
         novelty = min(1.0, novelty + 0.10)
 
-    # 4) 極端に短い入力でも、完全に0にはしない（過去を踏まえ反射できるため）
+    # 4) Even very short inputs should not drop fully to 0 because reflection can still build on context.
     if clean_len <= 8:
-        # 短い相槌などで新情報がない場合に1.0扱いにならないよう上限を設ける
+        # Cap novelty so short backchannels without new information do not look maximally novel.
         novelty = min(novelty, 0.45)
         novelty = max(novelty, 0.15)
     elif clean_len <= 14:
@@ -1512,45 +1474,42 @@ def _detect_permission(text: str) -> Optional[bool]:
         return True
     if _RE_NO.search(t):
         return False
-    if "いいですよ" in t or "大丈夫です" in t:
+    if "that's fine" in t or "that's okay" in t:
         return True
-    if "やめて" in t or "やめてください" in t:
+    if "stop" in t or "please stop" in t:
         return False
     normalized = re.sub(r"\s+", "", t)
     soft_yes_markers = [
-        "少しなら",
-        "短くなら",
-        "簡単になら",
-        "ひとまずお願いします",
-        "まずは聞きたい",
-        "聞いてみたい",
-        "一部なら",
-        "今なら大丈夫",
-        # 明確な「はい」がなくても、受け取り意思が読み取れる表現は許諾として扱う。
-        "教えてもらえると助かる",
-        "教えてもらえると助かります",
-        "教えてもらえるとありがたい",
-        "教えてほしい",
-        "詳しく知りたい",
-        "知りたい",
-        "参考にしたい",
-        "可能なら聞きたい",
-        "方法があると助かる",
-        "具体例があると助かる",
-        "ポイントが知りたい",
-        "今夜にも試せる",
+        "a little is okay",
+        "keep it brief",
+        "if it's simple",
+        "for now, sure",
+        "i want to hear a bit",
+        "i'd like to hear it",
+        "part of it is okay",
+        "i'm okay with it now",
+        "it would help if you told me",
+        "i'd appreciate hearing it",
+        "i want to know",
+        "i want details",
+        "i'd use that",
+        "if possible i'd like to hear it",
+        "it would help to have an approach",
+        "it would help to have an example",
+        "i want the key points",
+        "i could try it tonight",
     ]
     soft_no_markers = [
-        "今はまだ",
-        "まだいい",
-        "今はいい",
-        "今日はやめたい",
-        "やめておきたい",
-        "また今度",
-        "今は整理したい",
-        "気が進まない",
-        "怖いので",
-        "不安なので",
+        "not yet",
+        "not now",
+        "i'm okay without it for now",
+        "i want to stop for today",
+        "i'd rather leave it",
+        "maybe another time",
+        "i want to sort things out first",
+        "i'm not feeling ready",
+        "because i'm scared",
+        "because i'm anxious",
     ]
     yes_hits = sum(1 for marker in soft_yes_markers if marker in normalized)
     no_hits = sum(1 for marker in soft_no_markers if marker in normalized)
@@ -1563,9 +1522,9 @@ def _detect_permission(text: str) -> Optional[bool]:
 
 def _detect_info_request(text: str) -> bool:
     """
-    助言を明確に求めている場合のみ True にする。
-    - 明確なフレーズのヒットを最優先
-    - それ以外は「質問調」かつ情報キーワードを含むケースに限定
+    Return True only when advice is being explicitly requested.
+    - Exact strong-request phrases have top priority.
+    - Otherwise limit it to question-like utterances that also contain information-request keywords.
     """
     normalized = re.sub(r"\s+", "", text)
     if any(marker in normalized for marker in _INFO_REQUEST_STRONG_MARKERS):
@@ -1601,12 +1560,12 @@ def _coerce_bool_with_ja(value: Any, default: bool) -> bool:
             "y",
             "on",
             "t",
-            "はい",
-            "真",
-            "必要",
-            "要",
-            "あり",
-            "ある",
+            "yes",
+            "true",
+            "needed",
+            "need",
+            "present",
+            "have",
         }:
             return True
         if s in {
@@ -1616,11 +1575,11 @@ def _coerce_bool_with_ja(value: Any, default: bool) -> bool:
             "n",
             "off",
             "f",
-            "いいえ",
-            "偽",
-            "不要",
-            "なし",
-            "ない",
+            "no",
+            "false",
+            "not needed",
+            "none",
+            "absent",
         }:
             return False
     return default
@@ -1639,7 +1598,7 @@ def _coerce_permission(value: Any, default: Optional[bool]) -> Optional[bool]:
             return True
         if s in {"false", "0", "no", "n", "off"}:
             return False
-        if s in {"null", "none", "unknown", "不明"}:
+        if s in {"null", "none", "unknown"}:
             return default
     return default
 
@@ -1660,15 +1619,15 @@ def _coerce_optional_scale_0_1(value: Any, default: Optional[float]) -> Optional
         return default
     if score <= 1.0:
         return float(max(0.0, min(1.0, score)))
-    # 後方互換: 旧 0〜10 入力は 0〜1 へ正規化して受理する。
+    # Backward compatibility: accept legacy 0-10 inputs after normalizing them to 0-1.
     return float(max(0.0, min(1.0, score / 10.0)))
 
 
 def _compute_need_summary(*, state: DialogueState, topic_shift: bool, cfg: PlannerConfig) -> bool:
     """
-    SUMMARY は前回から約 interval ターン経過後に出やすくする。
-    - interval 未満の間は原則クールダウン
-    - ただし interval 直前（-1）では、反射連続や話題転換があれば候補化を許可
+    Make SUMMARY more likely once roughly `interval` turns have passed since the previous one.
+    - Stay in cooldown before reaching `interval`
+    - Just before `interval` (-1), allow it when there is a reflection streak or a topic shift
     """
     turns = max(0, int(state.turns_since_summary))
     interval = max(1, int(cfg.summary_interval_turns))
@@ -1689,9 +1648,9 @@ def _summary_cadence_multiplier(
     need_summary: bool = False,
 ) -> Tuple[float, str]:
     """
-    SUMMARY の周期性を soft に制御する。
-    - クールダウン中は抑制
-    - interval 到達で押し上げ
+    Softly control SUMMARY cadence.
+    - Suppress it during cooldown
+    - Boost it once `interval` is reached
     """
     turns = max(0, int(turns_since_summary))
     interval = max(1, int(cfg.summary_interval_turns))
@@ -1720,8 +1679,8 @@ def _merge_feature_overlay(
     cfg: PlannerConfig,
 ) -> Tuple[PlannerFeatures, Dict[str, Any]]:
     """
-    ルール抽出のベース値に、LLM由来の overlay を重ねて PlannerFeatures を作る。
-    - LLM値を優先し、欠落/不正時のみルール値へフォールバック
+    Build PlannerFeatures by layering an LLM-derived overlay on top of rule-based baseline features.
+    - Prefer LLM values, and fall back to rule values only when they are missing or invalid
     """
     resistance = _clamp01(overlay.get("resistance", base_features.resistance), base_features.resistance)
     discord = _clamp01(overlay.get("discord", base_features.discord), base_features.discord)
@@ -1891,7 +1850,7 @@ def _normalize_slot_text(value: Any) -> str:
     text = re.sub(r"\s+", " ", text).strip()
     if text.lower() in {"none", "null", "unknown", "n/a", "na"}:
         return ""
-    if text in {"不明", "未設定", "なし"}:
+    if text in {"unknown", "unset", "none"}:
         return ""
     return text[:120]
 
@@ -1933,7 +1892,7 @@ _SLOT_CONFIRM_QUALITY_THRESHOLD = 0.50
 _SLOT_LAYER2_REVIEW_TARGET_QUALITY_THRESHOLD = 0.80
 _SLOT_REPAIR_HINT_TARGET_QUALITY = 1.00
 _EXPLICIT_NUMERIC_SCALE_QUALITY_FLOOR = 0.80
-# LLM reviewer の quality_score が利用できない場合の最小フォールバック値
+# Minimum fallback value when the LLM reviewer does not return `quality_score`
 _SLOT_FALLBACK_QUALITY_SCORE = 0.62
 
 
@@ -2252,9 +2211,9 @@ def _build_all_phase_slot_status_for_prompt(
                 missing_items.append(f"{slot_key}({label})")
 
         lines.append(f"- {phase.value} [{phase.name}]")
-        lines.append(f"  必須スロット: {' / '.join(expected_items) if expected_items else 'なし'}")
-        lines.append(f"  現在値: {' / '.join(current_items) if current_items else 'なし'}")
-        lines.append(f"  未充足: {' / '.join(missing_items) if missing_items else 'なし'}")
+        lines.append(f"  Required slots: {' / '.join(expected_items) if expected_items else 'none'}")
+        lines.append(f"  Current values: {' / '.join(current_items) if current_items else 'none'}")
+        lines.append(f"  Missing: {' / '.join(missing_items) if missing_items else 'none'}")
     return "\n".join(lines)
 
 
@@ -2302,13 +2261,13 @@ def _extract_phase_slot_update_list(payload: Mapping[str, Any]) -> List[Dict[str
     for list_key in ("phase_slot_updates", "slot_updates", "updates"):
         raw_block = payload.get(list_key)
         if isinstance(raw_block, Mapping):
-            # 形式A: {"phase":"...","slots":{...}} を1件として扱う
+            # Format A: treat {"phase":"...","slots":{...}} as one item
             if any(key in raw_block for key in ("phase", "phase_code", "phase_label", "slots")):
                 parsed_single = _extract_phase_slot_updates({"phase_slots": dict(raw_block)})
                 if parsed_single:
                     parsed_updates.append(parsed_single)
             else:
-                # 形式B: {"PHASE_CODE":{"slot_key":{value,evidence_quote,confidence}}}
+                # Format B: {"PHASE_CODE":{"slot_key":{value,evidence_quote,confidence}}}
                 for phase_hint, slots_hint in raw_block.items():
                     if not isinstance(slots_hint, Mapping):
                         continue
@@ -2895,7 +2854,7 @@ def _precheck_slot_quality_for_layer2_target(
         if isinstance(slot_meta, Mapping)
         else 0.0
     )
-    # 初回ターンなどで quality が未設定(0.0)でも、値があれば最小フォールバック品質を使う。
+    # Even on the first turn, if quality is unset (0.0), use the minimum fallback quality when a value exists.
     if meta_quality <= 0.0 and slot_value:
         return _estimate_slot_text_quality(slot_key, slot_value)
     return meta_quality
@@ -3607,7 +3566,7 @@ def _apply_phase_slot_updates_to_state(
             continue
         if not evidence_quote:
             blocked_missing_evidence_slots.append(slot_key)
-            confirmation_items.append(f"{slot_key}: 根拠引用なし（候補={sv}）")
+            confirmation_items.append(f"{slot_key}: no evidence quote (candidate={sv})")
             continue
         if confidence < _SLOT_APPLY_CONFIDENCE_THRESHOLD:
             low_confidence_slots.append(
@@ -3619,7 +3578,7 @@ def _apply_phase_slot_updates_to_state(
                 }
             )
             confirmation_items.append(
-                f"{slot_key}: 確信度{confidence:.2f}（候補={sv}）"
+                f"{slot_key}: confidence {confidence:.2f} (candidate={sv})"
             )
             continue
         slot_format_issue = _validate_slot_value_format(slot_key=slot_key, value=sv)
@@ -3632,7 +3591,7 @@ def _apply_phase_slot_updates_to_state(
                 }
             )
             confirmation_items.append(
-                f"{slot_key}: 形式不一致({slot_format_issue})（候補={sv}）"
+                f"{slot_key}: format mismatch ({slot_format_issue}) (candidate={sv})"
             )
             continue
         phase_bucket[slot_key] = sv
@@ -3649,7 +3608,7 @@ def _apply_phase_slot_updates_to_state(
 
     confirmation_note = ""
     if confirmation_items:
-        confirmation_note = "確認が必要なスロット: " + " / ".join(confirmation_items[:3])
+        confirmation_note = "Slots requiring confirmation: " + " / ".join(confirmation_items[:3])
 
     if not applied_slots:
         result = {"applied": False, "reason": "no_effective_slots", "phase": phase.value}
@@ -3919,9 +3878,9 @@ def _focus_choice_context_from_layer1_bundle(
 
 def _normalize_review_evidence_role(value: Any) -> str:
     role = _normalize_slot_text(value).lower()
-    if role in {"user", "client", "u", "ユーザー", "利用者", "本人"}:
+    if role in {"user", "client", "u"}:
         return "user"
-    if role in {"assistant", "counselor", "therapist", "a", "支援者", "面接者"}:
+    if role in {"assistant", "counselor", "therapist", "a"}:
         return "assistant"
     if "user" in role or "client" in role:
         return "user"
@@ -4156,9 +4115,9 @@ def _harmonize_review_outcome(
     issue_codes: Sequence[str],
 ) -> Tuple[str, bool, str]:
     """
-    review outcome の最小整合を担保する。
-    - missing_evidence がある場合、accept/revise を needs_confirmation に降格する。
-    - non-admissible と accept/revise の矛盾を解消する。
+    Enforce minimal consistency for the review outcome.
+    - If `missing_evidence` is present, downgrade `accept/revise` to `needs_confirmation`.
+    - Resolve contradictions between non-admissible results and `accept/revise`.
     """
     decision = _normalize_slot_text(requested_decision).lower()
     if decision not in {"accept", "revise", "reject", "needs_confirmation", "clear_request"}:
@@ -4166,7 +4125,7 @@ def _harmonize_review_outcome(
     reason = _normalize_slot_text(admissibility_reason)
     merged_issue_codes = _merge_issue_codes(issue_codes)
 
-    # clear_request は値の消去意図なので優先して維持する。
+    # `clear_request` expresses an intent to clear the value, so preserve it with highest priority.
     if decision == "clear_request":
         return decision, True, reason
 
@@ -4204,8 +4163,8 @@ def _resolve_review_outcome(
     honor_requested_quality_action: bool = True,
 ) -> Tuple[str, str, bool, str, List[str]]:
     """
-    reviewed slot の最終判定を1箇所で整合させる。
-    返り値: (decision, quality_action, admissible, admissibility_reason, issue_codes)
+    Resolve the final decision for a reviewed slot in one place.
+    Returns: (decision, quality_action, admissible, admissibility_reason, issue_codes)
     """
     normalized_slot_key = _normalize_slot_text(slot_key)
     normalized_value = _normalize_slot_text(candidate_value)
@@ -4462,7 +4421,7 @@ def _build_rule_slot_review(layer1_bundle: Layer1Bundle) -> Dict[str, Any]:
             }
         )
 
-        # Rule fallback でも、current phase の low-quality slot は Layer3 向け hint を残す。
+        # Even in rule fallback, keep Layer3-facing hints for low-quality slots in the current phase.
         should_add_current_phase_hint = (
             slot_key in current_phase_slot_keys
             and quality_score < low_quality_hint_threshold
@@ -4474,10 +4433,10 @@ def _build_rule_slot_review(layer1_bundle: Layer1Bundle) -> Dict[str, Any]:
             slot_label = _PHASE_SLOT_LABELS.get(slot_key, slot_key)
             probe_style = _SLOT_REPAIR_PROBE_STYLE.get(primary_issue, _SLOT_REPAIR_PROBE_STYLE["too_vague"])
             target_information = _sanitize_human_text(candidate_value) or _sanitize_human_text(
-                f"{slot_label}の具体"
+                f"{slot_label} details"
             )
             detail_seed = _sanitize_human_text(candidate_value) or _sanitize_human_text(
-                f"{slot_label}について、もう少し具体的に話したいです"
+                f"I want to talk about {slot_label} a bit more concretely"
             )
             detail = (
                 detail_seed
@@ -4633,7 +4592,7 @@ def _normalize_slot_review_payload(
                 validation_issue=_normalize_slot_text(candidate.get("validation_issue")),
             )
 
-            # Layer2 LLM には統合結果と品質/根拠のみを返させ、判定系はルール導出に統一する。
+            # Ask the Layer2 LLM to return only merged results plus quality/evidence, and keep decision logic rule-derived.
             llm_review_decision = _normalize_slot_text(item.get("decision")).lower()
             if llm_review_decision != "clear_request":
                 llm_review_decision = ""
@@ -4904,7 +4863,7 @@ def _apply_reviewed_phase_slot_updates_to_state(
             review_decision_raw = ""
         original_value = _normalize_slot_text(reviewed.get("original_value"))
         revised_value = _normalize_slot_text(reviewed.get("revised_value"))
-        # Layer1候補を毎ターン反映しやすくするため、更新意図がある revised_value を優先する。
+        # Prefer `revised_value` with explicit update intent so Layer1 candidates can be applied each turn more easily.
         final_value = revised_value or original_value
         extraction_confidence = _clamp01(reviewed.get("extraction_confidence"), 0.0)
         quality_score = _clamp01(reviewed.get("quality_score"), _estimate_slot_text_quality(slot_key, final_value))
@@ -5083,7 +5042,7 @@ def _apply_reviewed_phase_slot_updates_to_state(
             candidate_status = "inactive"
             applied_to_committed = True
         elif commit_allowed:
-            # 品質スコアは減点しない（上げる場合のみ更新）。
+            # Never lower the quality score; update it only when it increases.
             committed_quality_after = (
                 max(committed_quality_before, quality_score)
                 if committed_status_before == "confirmed" and committed_value_before
@@ -5108,7 +5067,7 @@ def _apply_reviewed_phase_slot_updates_to_state(
                 "review_origin_phase": source_phase_name,
                 "review_decision_raw": review_decision_raw,
             }
-            # confirmed 採用時は pending をクリアする。
+            # Clear pending values when a confirmed value is adopted.
             pending_memory[phase.name][slot_key] = ""
             pending_meta[phase.name][slot_key] = dict(default_meta[phase.name][slot_key])
             applied_count += 1
@@ -5116,7 +5075,7 @@ def _apply_reviewed_phase_slot_updates_to_state(
             candidate_status = "confirmed"
             applied_to_committed = True
         else:
-            # reject / needs_confirmation / 根拠不足候補は state に昇格させず、pending も残さない。
+            # Do not promote reject / needs_confirmation / evidence-poor candidates into state, and do not keep them in pending either.
             pending_memory[phase.name][slot_key] = ""
             pending_meta[phase.name][slot_key] = dict(default_meta[phase.name][slot_key])
             overwrite_blocked_by_confirmed = bool(
@@ -5268,8 +5227,8 @@ def _normalize_json_mode(value: Any) -> str:
 
 def _parse_json_from_text(text: str, *, strict: bool = False) -> Optional[Any]:
     """
-    LLM出力から最初のJSONオブジェクト/配列を抜き出してパースするゆるいヘルパ。
-    - ```json ... ``` のコードブロックや前後の説明を取り除く。
+    A permissive helper that extracts and parses the first JSON object/array from LLM output.
+    - Strip ```json ... ``` code fences and surrounding explanatory text.
     """
     cleaned = text.strip()
     cleaned = re.sub(r"^```(?:json)?", "", cleaned, flags=re.IGNORECASE | re.MULTILINE)
@@ -5312,7 +5271,7 @@ def _extract_text_from_payload(
     ),
 ) -> Tuple[Optional[str], Optional[str]]:
     """
-    JSON っぽい構造から会話本文として使える文字列を抽出する。
+    Extract a string that can be used as dialogue text from a JSON-like structure.
     """
     if isinstance(payload, str):
         text = payload.strip()
@@ -5333,7 +5292,7 @@ def _extract_text_from_payload(
         return None, None
 
     if isinstance(payload, dict):
-        # まずはよくあるキー名を優先して探す
+        # Prefer common key names first.
         for key in preferred_keys:
             if key not in payload:
                 continue
@@ -5346,7 +5305,7 @@ def _extract_text_from_payload(
             if extracted:
                 return extracted, extracted_path
 
-        # 次に残りのキーを総当たり
+        # Then scan the remaining keys.
         for key, value in payload.items():
             if key in preferred_keys:
                 continue
@@ -5380,7 +5339,7 @@ def _extract_text_from_payload_preferred_only(
     ),
 ) -> Tuple[Optional[str], Optional[str]]:
     """
-    preferred_keys で指定したキー配下のみを探索して本文候補を抽出する。
+    Extract body candidates only from subtrees under the keys listed in `preferred_keys`.
     """
     if isinstance(payload, str):
         text = payload.strip()
@@ -5432,7 +5391,7 @@ def _recover_draft_response_text_from_raw_output(
     raw_output_text: Any,
 ) -> Tuple[str, Optional[Dict[str, Any]]]:
     """
-    Layer3生出力から draft_response_text 相当の本文を回収する。
+    Recover the body corresponding to `draft_response_text` from raw Layer3 output.
     """
     cleaned = str(raw_output_text or "").strip()
     if not cleaned:
@@ -5448,7 +5407,7 @@ def _recover_draft_response_text_from_raw_output(
                 "source_path": extracted_path or "",
             }
 
-    # JSONが壊れていても key 文字列が残っていれば回収する
+    # Recover the text even if the JSON is broken, as long as the key string still remains.
     quoted_key_match = re.search(
         r'"draft_response_text"\s*:\s*"((?:\\.|[^"\\])*)"',
         cleaned,
@@ -5494,19 +5453,19 @@ def _recover_draft_response_text_from_raw_output(
 
 def _normalize_assistant_output_text(raw_text: str) -> Tuple[str, Optional[Dict[str, Any]]]:
     """
-    生成結果が JSON の場合、本文候補（response/text 等）を取り出して返す。
+    When the generation result is JSON, extract and return the body candidate (`response`, `text`, etc.).
     """
 
     def _flatten_output_whitespace(text: Any) -> str:
         t = str(text or "")
         if not t:
             return ""
-        # モデルが返すエスケープ改行（"\\n"）と実改行の両方を1スペースへ畳む。
+        # Collapse both escaped newlines ("\\n") and literal newlines into a single space.
         t = t.replace("\\r\\n", "\n").replace("\\n", "\n").replace("\\r", "\n").replace("\\t", " ")
         t = t.replace("\r\n", "\n").replace("\r", "\n")
         t = re.sub(r"[ \t]*\n+[ \t]*", " ", t)
         t = re.sub(r"\s+", " ", t).strip()
-        # 日本語文では句読点の直後スペースを詰める。
+        # Remove spaces immediately after punctuation for cleaner sentence formatting.
         t = re.sub(r"([。．！？])\s+", r"\1", t)
         return t
 
@@ -5538,7 +5497,7 @@ def _normalize_assistant_output_text(raw_text: str) -> Tuple[str, Optional[Dict[
             "normalized": True,
         }
 
-    # JSON は取れたが本文候補が見つからない場合は空として扱い、再生成の対象にする
+    # If JSON is parsed but no body candidate is found, treat it as empty and trigger regeneration.
     return "", {
         "raw_format": "json",
         "extracted_text_path": "",
@@ -5561,10 +5520,10 @@ def _summarize_assistant_generation_exception(exc: Exception) -> Dict[str, Any]:
 
 def extract_features_rule(user_text: str, state: DialogueState, cfg: PlannerConfig) -> PlannerFeatures:
     """
-    入力発話からルールベースの特徴量を抽出。
-    - resistance / change_talk はマーカーリストに基づくスコア（実ログで拡張予定）
-    - novelty は bi-gram 類似度＋数字/固有語の出現で新情報らしさを拾う
-    - allow_reflect_override が True なら、連続反射キャップを緩める
+    Extract rule-based features from the input utterance.
+    - Score `resistance` / `change_talk` from marker lists (to be extended with real logs later)
+    - Estimate `novelty` using bi-gram similarity plus numbers/proper-term appearances
+    - If `allow_reflect_override` is True, relax the cap on consecutive reflections
     """
     user_is_question = bool(_RE_QUESTION.search(user_text))
     user_requests_info = _detect_info_request(user_text)
@@ -5604,7 +5563,7 @@ def extract_features_rule(user_text: str, state: DialogueState, cfg: PlannerConf
 
 def extract_features(user_text: str, state: DialogueState, cfg: PlannerConfig) -> PlannerFeatures:
     """
-    後方互換のためのエイリアス。ルール版の特徴量抽出を呼び出します。
+    Backward-compatible alias that calls the rule-based feature extractor.
     """
     return extract_features_rule(user_text, state, cfg)
 
@@ -5612,7 +5571,7 @@ def extract_features(user_text: str, state: DialogueState, cfg: PlannerConfig) -
 @dataclass
 class RuleBasedFeatureExtractor:
     """
-    既存のルールベース特徴量抽出のラッパー。
+    Wrapper around the existing rule-based feature extractor.
     """
 
     def extract(
@@ -5630,8 +5589,8 @@ class RuleBasedFeatureExtractor:
 @dataclass
 class LLMFeatureExtractor:
     """
-    LLMを用いて抵抗/チェンジトーク/新情報度などをスコア化する抽出器。
-    ルール版をフォールバック兼ベースラインとして併用する。
+    Extractor that scores resistance / change talk / novelty and related features with an LLM.
+    Use the rule-based version as both fallback and baseline.
     """
 
     llm: LLMClient
@@ -5660,41 +5619,39 @@ class LLMFeatureExtractor:
                 break
         permission_priority = state.info_mode == InfoMode.WAITING_PERMISSION
         system = (
-            "あなたは動機づけ面接（MI）の対話から特徴量を数値で推定するアナリストです。\n"
-            "抵抗（0〜1）、不協和（discord:0〜1）、変化への前向きさ（チェンジトーク:0〜1）、新情報度（0〜1）などを推定してください。\n"
-            "加えて、重要度/自信度の推定値（0〜1）を推定可能なら返してください（不明なら null）。\n"
-            "出力は JSON オブジェクトのみ。例：\n"
-            '{"resistance":0.2,"discord":0.1,"change_talk":0.6,"novelty":0.4,"importance_estimate":0.7,"confidence_estimate":0.4,"user_is_question":false,"user_requests_info":false,"has_permission":null,"note":"短い返答"}\n'
-            "- 抵抗: 反発・拒否・諦めを示すほど1に近い。\n"
-            "- resistance は通常基準より +0.2 高めに採点し、最終値は 1.0 でクリップする。\n"
-            "- 抵抗は過小評価しない。迷い・ためらい・自己効力感の低さがあれば 0.3〜0.5 を検討する。\n"
-            "- 明確な拒否/反発（無理、できない、意味がない等）は 0.6 以上を優先する。\n"
-            "- 不協和(discord): 関係のずれ（責められ感、押しつけ感、反発）ほど1に近い。\n"
-            "- 変化への前向きさ: 変えたい・やってみたい・価値に沿いたいほど1に近い。\n"
-            "- 新情報度: 直前までと比べて内容が新しいほど1に近い。\n"
-            "- importance_estimate: 変化の重要度の見立て（0〜1）。\n"
-            "- confidence_estimate: 変化の自信度の見立て（0〜1）。\n"
-            "- user_is_question: クライアント発話が質問なら true。\n"
-            "- user_requests_info: 情報提供の要望なら true。\n"
-            "- has_permission: 許可の意図が伺えれば true/false、不明なら null。\n"
-            "- 例: 「少しだけなら大丈夫」「負担のない範囲で聞きたい」は true。\n"
-            "- 例: 「今はまだ聞きたくない」「やめておきたい」は false。\n"
-            "- 肯定と留保が共存しても、受け取る意向が主であれば true を優先する。\n"
-            "- 特に info_mode が WAITING_PERMISSION のときは has_permission 判定を最優先する。\n"
-            "- WAITING_PERMISSION で、今回発話が明確な受諾（はい/お願いします/大丈夫/OK 等）なら has_permission は必ず true。\n"
-            "- 明確な受諾でなくても、条件付き・控えめでも受け取る意思が読み取れる場合は has_permission を true とする。\n"
-            "- WAITING_PERMISSION で、今回発話が明確な拒否（いいえ/今はまだ/やめて 等）なら has_permission は必ず false。\n"
-            "- 上記の明確な受諾・拒否シグナルがある場合は has_permission に null を返してはいけない。\n"
+            "You are an analyst that estimates numeric MI dialogue features from counselor-client conversations.\n"
+            "Estimate resistance (0-1), discord (0-1), change talk orientation (0-1), and novelty (0-1).\n"
+            "Also return importance_estimate and confidence_estimate (0-1) when inferable; otherwise use null.\n"
+            "Return a JSON object only. Example:\n"
+            '{"resistance":0.2,"discord":0.1,"change_talk":0.6,"novelty":0.4,"importance_estimate":0.7,"confidence_estimate":0.4,"user_is_question":false,"user_requests_info":false,"has_permission":null,"note":"brief rationale"}\n'
+            "- Resistance: closer to 1.0 when the client shows pushback, refusal, or giving up.\n"
+            "- Score resistance slightly high (+0.2 from your default instinct) and clip at 1.0.\n"
+            "- Do not underestimate resistance. Hesitation, low self-efficacy, or reluctance can justify 0.3-0.5.\n"
+            "- Clear refusal or rejection (for example: impossible, cannot, pointless) should usually be 0.6 or above.\n"
+            "- Discord: closer to 1.0 when the relationship feels misaligned, pressured, blamed, or oppositional.\n"
+            "- Change talk: closer to 1.0 when the client expresses wanting change, trying something, or acting in line with values.\n"
+            "- Novelty: closer to 1.0 when the current utterance adds meaningfully new information versus the recent context.\n"
+            "- user_is_question: true when the client utterance is a question.\n"
+            "- user_requests_info: true when the client is clearly asking for information, advice, or options.\n"
+            "- has_permission: true/false when permission intent is inferable, otherwise null.\n"
+            "- Examples of true: \"A little would be okay\", \"I'd like to hear something manageable\".\n"
+            "- Examples of false: \"I don't want to hear that yet\", \"I'd rather not do that now\".\n"
+            "- If both acceptance and reservation are present, prioritize true when receiving the information still seems primary.\n"
+            "- When info_mode is WAITING_PERMISSION, prioritize the has_permission judgment over everything else.\n"
+            "- In WAITING_PERMISSION, clear acceptance such as yes / please / that's okay / OK must produce has_permission=true.\n"
+            "- Even if the acceptance is conditional or tentative, set has_permission=true when a willingness to receive is readable.\n"
+            "- In WAITING_PERMISSION, clear refusal such as no / not yet / stop must produce has_permission=false.\n"
+            "- When clear acceptance or refusal is present, do not return has_permission=null.\n"
         )
-        prev_assistant_text = last_assistant_text if last_assistant_text else "(なし)"
+        prev_assistant_text = last_assistant_text if last_assistant_text else "(none)"
         user = (
-            f"【現在フェーズ】{state.phase.value}\n"
-            f"【現在の情報共有モード】{state.info_mode.value}\n"
-            f"【許可応答の判定優先】{'yes' if permission_priority else 'no'}\n"
-            f"【直前のカウンセラー発話】{prev_assistant_text}\n"
-            f"【直近の対話（新しい順ではなく発話順）】\n{dialogue}\n"
-            f"【今回のクライアント発話】{user_text}\n"
-            "上記を踏まえて JSON だけを返してください。"
+            f"[Current phase]\n{state.phase.value}\n"
+            f"[Current info-sharing mode]\n{state.info_mode.value}\n"
+            f"[Permission judgment prioritized]\n{'yes' if permission_priority else 'no'}\n"
+            f"[Previous counselor utterance]\n{prev_assistant_text}\n"
+            f"[Recent dialogue in chronological order]\n{dialogue}\n"
+            f"[Current client utterance]\n{user_text}\n"
+            "Return JSON only."
         )
         messages = [
             {"role": "system", "content": system},
@@ -5711,7 +5668,7 @@ class LLMFeatureExtractor:
         novelty_source = "llm"
         novelty_raw = overlay.get("novelty")
         if novelty_raw in (None, ""):
-            # LLM成功時に novelty が欠落しても、古典的推定へは戻さない。
+            # Even if `novelty` is missing on an LLM success path, do not fall back to the old heuristic estimate.
             overlay["novelty"] = _clamp01(self.novelty_neutral_default, 0.5)
             novelty_source = "neutral_default_missing"
         else:
@@ -5743,7 +5700,7 @@ class LLMFeatureExtractor:
 
 
 # ----------------------------
-# Planning (方策：ranker強制採用 + action mask)
+# Planning (policy: forced ranker adoption + action mask)
 # ----------------------------
 _RANKER_ACTION_SPACE: Tuple[MainAction, ...] = (
     MainAction.REFLECT_SIMPLE,
@@ -5781,9 +5738,9 @@ _CLARIFY_PREFERENCE_PRIORITY_INTERVAL_TURNS = 10
 
 def _estimate_ambivalence_score(features: PlannerFeatures) -> float:
     """
-    両価性（変わりたい気持ちと維持側シグナルの同居）を 0〜1 で近似する。
-    - change_talk: 変化側シグナル
-    - sustain側: resistance / discord の強い方
+    Approximate ambivalence (coexistence of change-side and sustain-side signals) on a 0-1 scale.
+    - change_talk: change-side signal
+    - sustain side: the stronger of resistance / discord
     """
     change_side = _clamp01(features.change_talk, 0.0)
     sustain_side = max(_clamp01(features.resistance, 0.0), _clamp01(features.discord, 0.0))
@@ -6195,7 +6152,7 @@ def _effective_scale_followup_pending_step(
     normalized_score = _normalize_scale_score_0_10(score)
     if step != _SCALE_FOLLOWUP_STEP_PLUS_ONE or normalized_score is None:
         return step
-    # 重要度8点以上と自信度の正の値では plus_one を継続させない。
+    # Do not continue `plus_one` when importance is 8+ and confidence is already positive.
     if phase == Phase.IMPORTANCE_PROMOTION and normalized_score >= 8.0:
         return _SCALE_FOLLOWUP_STEP_REASON
     if phase == Phase.CONFIDENCE_PROMOTION and normalized_score > 0.0:
@@ -6273,10 +6230,10 @@ def _should_schedule_plus_one_after_reason(*, phase: Phase, score: Optional[floa
     normalized_score = _normalize_scale_score_0_10(score)
     if normalized_score is None or normalized_score <= 0.0:
         return False
-    # 自信度では通常「理由確認」で止める（0点時は最初からplus_one分岐）。
+    # For confidence, usually stop at the reason check (if the score is 0, branch to plus-one from the start).
     if phase == Phase.CONFIDENCE_PROMOTION:
         return False
-    # 重要度8点以上はplus_oneを省略する。
+    # Skip `plus_one` when importance is 8 or higher.
     if phase == Phase.IMPORTANCE_PROMOTION and normalized_score >= 8.0:
         return False
     return True
@@ -6311,8 +6268,8 @@ def _update_scale_followup_state_from_user_turn(state: DialogueState, user_text:
 
     last_action = state.last_actions[-1] if state.last_actions else None
     if last_action == MainAction.SCALING_QUESTION:
-        # フェーズ遷移直後（phase_turns==0）の場合、直前のSCALING_QUESTIONは
-        # 旧フェーズで行われた質問とみなし、現フェーズのfollow-upは立てない。
+        # Right after a phase transition (`phase_turns == 0`), treat the preceding SCALING_QUESTION
+        # as a question that belonged to the previous phase, so do not create a follow-up in the current phase.
         if state.phase_turns <= 0:
             _clear_scale_followup_runtime_state(state)
             state.scale_followup_done_in_phase[phase_key] = True
@@ -6648,29 +6605,29 @@ def _action_ranker_supports_allowed_actions(action_ranker: ActionRanker) -> bool
 
 
 _AFFIRM_COMPLEX_SIGNAL_PATTERNS: Sequence[str] = (
-    "価値",
-    "大切",
-    "意味",
-    "自分らし",
-    "信念",
-    "責任",
-    "家族",
-    "将来",
-    "仕事",
-    "役割",
-    "続けたい",
-    "守りたい",
-    "誇り",
-    "工夫",
-    "乗り越",
-    "向き合",
+    "value",
+    "important",
+    "meaning",
+    "authentic",
+    "belief",
+    "responsibility",
+    "family",
+    "future",
+    "work",
+    "role",
+    "want to continue",
+    "want to protect",
+    "pride",
+    "resourcefulness",
+    "overcome",
+    "face",
 )
 
 
 def _simple_affirm_interval(state: DialogueState) -> int:
     """
-    単純是認の間隔は 1 または 2（2を優先）で揺らぎを持たせる。
-    ランダムではなく状態由来で決め、再現性を保つ。
+    Vary the spacing of simple affirmations between 1 and 2 turns, preferring 2.
+    Derive it from state rather than randomness so behavior stays reproducible.
     """
     mix = state.turn_index + state.phase_turns + state.r_since_q + len(state.last_actions)
     return 1 if (mix % 7) in (1, 4) else 2
@@ -6700,10 +6657,10 @@ def _decide_affirm_mode(
     state: DialogueState,
 ) -> Tuple[AffirmationMode, Dict[str, Any]]:
     """
-    是認の3値判定:
+    Three-way affirmation decision:
     - NONE
-    - SIMPLE: 2〜3ターン周期で軽く入れる
-    - COMPLEX: 文脈が十分育ち、価値・強みが発話に如実な場合のみ低頻度で入れる
+    - SIMPLE: add lightly every 2-3 turns
+    - COMPLEX: use sparingly only when the context is rich and values/strengths are clearly present
     """
     complex_signal = _estimate_complex_affirm_signal(user_text=user_text, features=features, state=state)
     simple_interval = _simple_affirm_interval(state)
@@ -6911,8 +6868,8 @@ def decide_affirm(
     user_text: str = "",
 ) -> AffirmationMode:
     """
-    互換のため公開関数はモードのみ返す。
-    bool(decide_affirm(...)) は __bool__ で従来互換（NONEのみFalse）。
+    For compatibility, the public function returns only the mode.
+    `bool(decide_affirm(...))` stays backward-compatible via `__bool__` (`NONE` only is False).
     """
     mode, _ = _decide_affirm_mode(user_text=user_text, features=features, state=state)
     return mode
@@ -6930,14 +6887,14 @@ def apply_action_to_state(
     ns.scale_followup_done_in_phase = dict(state.scale_followup_done_in_phase or {})
     affirm_mode = _normalize_affirmation_mode(add_affirm)
     ns.turn_index += 1
-    # 現フェーズの滞在ターン数（カウンセラー出力で+1）
+    # Number of turns spent in the current phase (+1 on counselor output).
     ns.phase_turns += 1
 
-    # info_mode遷移
+    # info_mode transitions
     if action == MainAction.ASK_PERMISSION_TO_SHARE_INFO:
         ns.info_mode = InfoMode.WAITING_PERMISSION
     elif action == MainAction.CLARIFY_PREFERENCE:
-        # 許可の再質問ループを避けるため、ここで待機状態を解除する。
+        # Exit the waiting state here to avoid permission re-ask loops.
         ns.info_mode = InfoMode.NONE
     elif action == MainAction.PROVIDE_INFO:
         ns.info_mode = InfoMode.NONE
@@ -6959,7 +6916,7 @@ def apply_action_to_state(
     elif state.scale_followup_pending_phase is not None and state.scale_followup_pending_phase != state.phase:
         _clear_scale_followup_runtime_state(ns)
 
-    # リズムカウンタ
+    # Rhythm counters
     emitted_double_sided = False
     if action in (
         MainAction.QUESTION,
@@ -6988,13 +6945,13 @@ def apply_action_to_state(
     else:
         ns.turns_since_double_sided_reflection += 1
 
-    # 要約カウンタ
+    # Summary counters
     if action == MainAction.SUMMARY:
         ns.turns_since_summary = 0
     else:
         ns.turns_since_summary += 1
 
-    # 是認カウンタ
+    # Affirmation counters
     if affirm_mode != AffirmationMode.NONE:
         ns.turns_since_affirm = 0
     else:
@@ -7008,31 +6965,31 @@ def apply_action_to_state(
     return ns
 
 
-# 初回入力（1ターン目）の簡易判定
+# Simple first-turn hint detection
 _FIRST_TURN_GREETING_PATTERNS: Sequence[str] = [
-    "こんにちは",
-    "こんばんは",
-    "おはよう",
-    "おはようございます",
-    "はじめまして",
-    "初めまして",
-    "よろしく",
-    "お世話",
-    "お疲れ",
+    "hello",
+    "good evening",
+    "good morning",
+    "good morning",
+    "nice to meet you",
+    "nice to meet you",
+    "looking forward to working with you",
+    "thank you for your help",
+    "thanks for your hard work",
 ]
 _FIRST_TURN_CONSULT_PATTERNS: Sequence[str] = [
-    "相談",
-    "悩",
-    "困っ",
-    "話したい",
-    "聞いてほしい",
-    "聞いて欲しい",
-    "聞いてください",
-    "教えて",
-    "助けて",
-    "手伝って",
-    "について",
-    "質問",
+    "consult",
+    "worry",
+    "trouble",
+    "want to talk",
+    "want you to listen",
+    "want you to listen",
+    "please listen",
+    "tell me",
+    "help me",
+    "help me",
+    "about",
+    "question",
 ]
 
 
@@ -7051,7 +7008,7 @@ def detect_first_turn_hint(user_text: str) -> Tuple[FirstTurnHint, Dict[str, boo
     return hint, {"has_greeting": has_greeting, "has_consultation": has_consult}
 
 
-# フェーズ進行順（基本は飛ばさない）
+# Phase progression order (do not skip by default)
 _PHASE_ORDER: List[Phase] = [
     Phase.GREETING,
     Phase.PURPOSE_CONFIRMATION,
@@ -7072,46 +7029,46 @@ _TARGET_BEHAVIOR_ALIGNMENT_PHASES: Tuple[Phase, ...] = (
 
 _PHASE_PLANNING_BOUNDARY: Dict[Phase, str] = {
     Phase.GREETING: (
-        "フェーズ目的: 安心できる雰囲気で挨拶し、話しやすい土台を作る。 "
-        "planning注意: まだ計画は作らない。関係形成と安心感の確立を優先する。"
+        "Phase goal: greet the client, create safety, and establish a base for easy conversation. "
+        "Planning note: do not make plans yet. Prioritize rapport and felt safety."
     ),
     Phase.PURPOSE_CONFIRMATION: (
-        "フェーズ目的: 今日は何を扱うか（目的・ゴール）を確認する。 "
-        "planning注意: 目的合意までに留め、具体的な実行内容・日時・回数は扱わない。"
+        "Phase goal: clarify what the client wants to work on today. "
+        "Planning note: stop at goal alignment; do not move into concrete execution details, timing, or frequency."
     ),
     Phase.CURRENT_STATUS_CHECK: (
-        "フェーズ目的: 現状・具体的な問題場面・困りごと・気持ち・状況を丁寧に理解する。 "
-        "planning注意: 理解と整理に徹し、超小さな一歩の提案や実施タイミングの合意はしない。"
+        "Phase goal: understand the current situation, concrete problem scenes, difficulties, feelings, and context with care. "
+        "Planning note: stay with understanding and organizing; do not propose even tiny next steps or agree on timing."
     ),
     Phase.FOCUSING_TARGET_BEHAVIOR: (
-        "フェーズ目的: 標的とすべき行動の方向を絞り、焦点を合わせる。 "
-        "planning注意: 行動領域の焦点化まで。実行日・頻度・期限の確定はまだ行わない。"
+        "Phase goal: narrow the direction of the target behavior and focus the conversation. "
+        "Planning note: focus the behavioral domain only. Do not decide dates, frequency, or deadlines yet."
     ),
     Phase.IMPORTANCE_PROMOTION: (
-        "フェーズ目的: ユーザの目的達成の重要性（理由・価値）の探索と言語化をサポートする。"
-        "planning注意: 具体化は理由・価値を明確にする範囲に留め、実行計画には進まない。"
-        "QUESTIONでは、重要度スケール（Importance）を用いて、重要性を引き出す。"
-        "REFLECTでは、D（Desire）「〜したい」、A（Ability）「できそう／できたことがある」、R（Reasons）「〜だから良い」、N（Need）「〜しないとまずい」に着目して聞き返しを行うことで、これらを深く掘り下げる。"
+        "Phase goal: help the client explore and put into words why this goal matters, including reasons and values. "
+        "Planning note: keep the work at the level of clarifying reasons and values; do not move into execution planning. "
+        "In QUESTION, use an importance scale to evoke importance. "
+        "In REFLECT, deepen DARN material: Desire, Ability, Reasons, and Need."
     ),
     Phase.CONFIDENCE_PROMOTION: (
-        "フェーズ目的: 障壁への対処方法・資源・過去の成功体験を整理し、ちょっとでも変化を起こせそうな部分を探索して、できそう感（自信）を高める。 "
-        "planning注意: 具体化は対処方法/資源/成功体験の整理まで。日時や手順の確定は次フェーズに委ねる。"
-        "QUESTIONでは、自信スケール（Confidence）を用いて自信を引き出す。"
-        "REFLECTでは、C（Commitment）「〜します／できそう」、A（Activation）「やる気が出てきた／動き始めた」、T（Taking steps）「もう始めた／手続きをした／これならやっている」に着目して聞き返しを行うことで、これらを深く掘り下げる。"
+        "Phase goal: organize coping strategies, resources, and past successes, and find places where change feels possible so confidence can grow. "
+        "Planning note: stay with coping strategies, resources, and successful experiences. Leave exact dates and procedures to the next phase. "
+        "In QUESTION, use a confidence scale to evoke confidence. "
+        "In REFLECT, deepen CAT material: Commitment, Activation, and Taking steps."
     ),
     Phase.NEXT_STEP_DECISION: (
-        "フェーズ目的: 次の一歩を具体的行動として合意する。 "
-        "planning注意: ここでのみ、いつ・何を・どれくらい行うかを具体化して合意してよい。"
-        "QUESTIONでは、実行条件・障壁・再開ルールを具体化して実行意思/確度を言語化する（数値化は必須ではない）。"
-        "REFLECTでは、次の一歩を実行できそうかという見通しと条件の言語化を深める。"
+        "Phase goal: agree on the next step as a concrete action. "
+        "Planning note: only here is it acceptable to specify when, what, and how much. "
+        "In QUESTION, make execution conditions, barriers, and restart rules concrete so willingness and likelihood can be expressed. "
+        "In REFLECT, deepen the client's wording about whether the next step feels doable and under what conditions."
     ),
     Phase.REVIEW_REFLECTION: (
-        "フェーズ目的: 今日の話で一番残っていることや、次に意識したいことを振り返って言葉にする。 "
-        "planning注意: 新しい計画は増やさず、場面・理由・次に意識したいことを確かめる。"
+        "Phase goal: reflect on what stands out most from today and what the client wants to keep in mind next. "
+        "Planning note: do not add new plans; revisit scenes, reasons, and what the client wants to carry forward."
     ),
     Phase.CLOSING: (
-        "フェーズ目的: 要点をまとめ、次回への接続や労いを添えて終える。 "
-        "planning注意: 新規の計画化は行わず、合意内容の確認と締めくくりを行う。"
+        "Phase goal: summarize key points and close with connection and appreciation. "
+        "Planning note: do not add new planning; confirm what has been agreed and bring the session to a close."
     ),
 }
 
@@ -7125,96 +7082,96 @@ def _min_turns_required_for_exit(p: Phase) -> int:
     if p == Phase.REVIEW_REFLECTION:
         return 2
     if p == Phase.CLOSING:
-        # CLOSING は「初回に終了確認質問 → 次ターンで最終クローズ」の2ターン運用にする。
+        # Handle CLOSING in two turns: first ask whether to end, then close on the next turn.
         return 1
     return 3 if _is_mid_phase(p) else 0
 
 
 _SLOT_QUALITY_LOW_INFO_PATTERNS: Tuple[re.Pattern[str], ...] = (
-    re.compile(r"(わからない|分からない|未設定|未記入|特になし|なし$|不明|まだ決められない|決めきれない)"),
+    re.compile(r"(do not know|not set|blank|nothing in particular|none$|unknown|cannot decide yet|cannot quite decide yet)"),
 )
 _SLOT_QUALITY_ACTIONABLE_VERB_PATTERNS: Tuple[re.Pattern[str], ...] = (
-    re.compile(r"(する|したい|試す|続ける|始める|減らす|増やす|話す|休む|進める)"),
+    re.compile(r"(do|want to do|try|continue|start|reduce|increase|talk|rest|move forward)"),
 )
 _SLOT_SCALE_KEYS: Tuple[str, ...] = ("importance_scale", "confidence_scale")
-# 数値必須は重要度/自信度のみ。commitment_level は数値・定性の両方を許容し、別ロジックで扱う。
+# Only importance/confidence strictly require numeric values. `commitment_level` accepts both numeric and qualitative forms and is handled separately.
 _SLOT_NUMERIC_REQUIRED_KEYS: Tuple[str, ...] = ("importance_scale", "confidence_scale")
 _SLOT_SCALE_REASON_MARKERS: Tuple[str, ...] = (
-    "から",
-    "ため",
-    "ので",
-    "理由",
-    "根拠",
-    "だと",
-    "なら",
-    "見込み",
-    "なぜ",
-    "どうして",
+    "because",
+    "because",
+    "because",
+    "reason",
+    "basis",
+    "if so",
+    "if",
+    "prospect",
+    "why",
+    "why",
 )
 _SLOT_SCALE_REASON_PROBE_STRICT_MARKERS: Tuple[str, ...] = (
-    "理由",
-    "根拠",
-    "なぜ",
-    "どうして",
+    "reason",
+    "basis",
+    "why",
+    "why",
 )
 _SCALE_FOLLOWUP_ZERO_ANCHOR_MARKERS: Tuple[str, ...] = (
-    "0点",
-    "ゼロ点",
-    "0ではなく",
-    "ゼロではなく",
+    "0 points",
+    "zero points",
+    "rather than 0",
+    "rather than zero",
 )
 _SCALE_FOLLOWUP_PLUS_ONE_MARKERS: Tuple[str, ...] = (
-    "1点上が",
-    "1点あが",
-    "1点上げ",
-    "1点あげ",
-    "1つ上が",
-    "1つあが",
-    "一つ上が",
-    "一つあが",
-    "ひとつ上が",
-    "ひとつあが",
-    "1段階上が",
-    "1段階あが",
+    "go up by 1 point",
+    "go up by 1 point",
+    "raise by 1 point",
+    "raise by 1 point",
+    "go up by one",
+    "go up by one",
+    "go up by one",
+    "go up by one",
+    "go up by one",
+    "go up by one",
+    "go up by one level",
+    "go up by one level",
 )
 _SCALE_VALUE_BLOCKED_SUFFIXES: Tuple[str, ...] = (
-    "分",
-    "時間",
-    "日",
-    "週間",
-    "週",
-    "か月",
-    "ヶ月",
-    "月",
-    "年",
-    "回",
-    "時",
-    "秒",
-    "円",
-    "人",
-    "個",
-    "つ",
-    "本",
-    "枚",
-    "歳",
-    "才",
+    "minutes",
+    "hours",
+    "days",
+    "weeks",
+    "week",
+    "months",
+    "months",
+    "month",
+    "year",
+    "times",
+    "o'clock",
+    "seconds",
+    "yen",
+    "people",
+    "items",
+    "items",
+    "items",
+    "sheets",
+    "years old",
+    "years old",
     "%",
     "％",
 )
 _SLOT_CONTEXT_TIME_PATTERNS: Tuple[re.Pattern[str], ...] = (
-    re.compile(r"(\d{1,2}\s*時|\d{1,2}\s*分|朝|昼|夜|深夜|今週|来週|平日|休日|日曜|月曜|火曜|水曜|木曜|金曜|土曜|毎日|毎週|週\d)"),
+    re.compile(r"(\d{1,2}\s*(?:o'clock|am|pm|min(?:ute)?s?)|morning|afternoon|evening|late night|this week|next week|weekday|weekend|sunday|monday|tuesday|wednesday|thursday|friday|saturday|every day|daily|every week|weekly|week\s*\d+)"),
 )
 _SLOT_CONTEXT_PLACE_PATTERNS: Tuple[re.Pattern[str], ...] = (
-    re.compile(r"(家|自宅|職場|会社|学校|机|デスク|寝室|ベッド|リビング|キッチン|通勤|電車|外出先|カフェ)"),
+    re.compile(r"(home|house|workplace|office|company|school|desk|bedroom|bed|living room|kitchen|commute|train|on the go|cafe)"),
 )
 _SLOT_CONTEXT_TRIGGER_PATTERNS: Tuple[re.Pattern[str], ...] = (
-    re.compile(r"(とき|時|たら|したら|になると|直前|直後|感じたら|気づいたら|落ちたら|不安になったら)"),
+    re.compile(r"(when|if|once|right before|right after|whenever I feel|when I notice|when I slump|when I get anxious)"),
 )
 _SLOT_SCENE_DISRUPTION_PATTERNS: Tuple[re.Pattern[str], ...] = (
-    re.compile(r"(手が止ま|動けなく|固ま|考え込|先延ば|回避|中断|進まなく|止まってしまう)"),
+    re.compile(r"(freeze|cannot move|get stuck|overthink|procrastinat|avoid|interrupt|stop making progress|come to a halt)"),
 )
 _SLOT_ACTION_OBSERVABLE_PATTERNS: Tuple[re.Pattern[str], ...] = (
-    re.compile(r"(書く|記録|メモ|歩く|寝る|起きる|閉じる|開く|呼吸|連絡|実施|試す|始める|続ける|止める|減らす|増やす)"),
+    re.compile(r"(write|record|note|walk|sleep|wake up|close|open|breathe|contact|do|try|start|continue|stop|reduce|increase)"),
 )
 _SLOT_VALIDATION_FORMAT_ISSUES: Tuple[str, ...] = (
     "scale_missing_number",
@@ -7239,10 +7196,10 @@ _CURRENT_PHASE_SLOT_REPAIR_HINT_DETAIL_MISSING_ISSUE_PREFIX = (
 )
 _SLOT_REPAIR_HINT_OUTSIDE_CURRENT_PHASE_ISSUE_PREFIX = "slot_repair_hint_outside_current_phase:"
 _SLOT_REPAIR_PROBE_STYLE: Dict[str, str] = {
-    "missing_evidence": "具体例や最近の1回をたずねて根拠を補う",
-    "low_confidence": "断定せず確認的に、合っているかを短く確かめる",
-    "wrong_format": "数値・時期・頻度など、形式を指定してたずねる",
-    "too_vague": "時間・場所・相手・行動のどれかで具体化する",
+    "missing_evidence": "ask for a concrete example or a recent instance to add evidence",
+    "low_confidence": "check briefly and tentatively whether it fits, without stating it as certain",
+    "wrong_format": "ask with an explicit format such as number, timing, or frequency",
+    "too_vague": "make it more concrete through time, place, person, or action",
 }
 
 
@@ -7254,9 +7211,9 @@ def _slot_key_from_focus_text(value: Any) -> str:
         "barriers": "barrier_coping_strategy",
         "barrier_coping": "barrier_coping_strategy",
         "barrier_coping_strategy": "barrier_coping_strategy",
-        "障壁": "barrier_coping_strategy",
-        "障害要因": "barrier_coping_strategy",
-        "障壁への対処方法": "barrier_coping_strategy",
+        "barrier": "barrier_coping_strategy",
+        "barrier factor": "barrier_coping_strategy",
+        "barrier coping strategy": "barrier_coping_strategy",
     }
     normalized = alias_map.get(text.lower(), alias_map.get(text, text))
     if normalized in _PHASE_SLOT_LABELS:
@@ -7422,8 +7379,8 @@ def _count_slot_context_categories(text: str) -> int:
 
 
 def _validate_slot_value_format(*, slot_key: str, value: str) -> str:
-    # 古典的NLP（正規表現・語彙ヒューリスティクス）による形式判定は廃止。
-    # 形式妥当性は Layer2 reviewer の判断に委譲し、ここではブロックしない。
+    # Classical NLP-style format checks (regex / lexical heuristics) are no longer used.
+    # Let the Layer2 reviewer judge format validity; do not block here.
     _ = slot_key
     _ = value
     return ""
@@ -7585,7 +7542,7 @@ def _did_phase_transition_for_current_turn(
     if transition_code == "phase_advanced":
         return True
     transition_note = _normalize_slot_text(phase_prediction_debug.get("phase_transition_note"))
-    return bool(transition_note and transition_note.startswith("新フェーズ開始"))
+    return bool(transition_note and transition_note.startswith("New phase started"))
 
 
 def _next_phase_or_self(current: Phase) -> Phase:
@@ -7638,11 +7595,11 @@ def _derive_slot_focus_priority_from_slot_gate(
 
 def _estimate_slot_text_quality(slot_key: str, value: str) -> float:
     """
-    旧来の文字数・語パターンベース推定は廃止。
-    品質は原則として Layer2 LLM reviewer の quality_score を使い、
-    ここは reviewer 情報が無い場合のフォールバックのみを担う。
+    Legacy length- and token-pattern-based estimation is no longer used.
+    Quality should normally come from the Layer2 LLM reviewer's `quality_score`;
+    this function only serves as a fallback when reviewer information is unavailable.
     """
-    _ = slot_key  # 互換のため引数は維持
+    _ = slot_key  # Retained for backward compatibility.
     text = _normalize_slot_text(value)
     if not text:
         return 0.0
@@ -7705,8 +7662,8 @@ def evaluate_phase_slot_readiness(
                 else reviewed_quality
             )
         else:
-            # LLM reviewer から品質が返らないターンは補完推定しない。
-            # 過去に確定済みの品質がある場合のみ、その値を維持する。
+            # Do not fabricate a quality estimate when the LLM reviewer does not return one.
+            # Only preserve a previously confirmed quality value if it exists.
             slot_quality[slot_key] = committed_quality_floor if should_apply_quality_floor else 0.0
 
         if slot_text:
@@ -7719,7 +7676,7 @@ def evaluate_phase_slot_readiness(
         _PHASE_SLOT_LABELS.get(slot_key, slot_key)
         for slot_key in missing_slot_keys
     ]
-    missing_slot_texts = [f"{label}の情報が必要" for label in missing_slot_labels]
+    missing_slot_texts = [f"Need information about {label}" for label in missing_slot_labels]
     fill_rate = 1.0 if required_count == 0 else round(float(filled_count / required_count), 3)
     quality_values = [slot_quality.get(slot_key, 0.0) for slot_key in required_slots if slot_key in slot_quality]
     quality_mean: Optional[float] = (
@@ -7799,8 +7756,8 @@ def evaluate_phase_slot_readiness(
                 if len(blocking_issue_codes) >= 6:
                     break
 
-        # 旧形式（blocking_issue_codes のみ）との後方互換:
-        # 未確定スロットがあり、かつ reviewed_updates が無い場合だけ採用する。
+        # Backward compatibility with the older format (`blocking_issue_codes` only):
+        # only use it when unresolved required slots remain and `reviewed_updates` is absent.
         if unresolved_required_slot_keys and not reviewed_update_seen and not blocking_issue_codes:
             raw_blocking = slot_review_debug.get("blocking_issue_codes")
             if isinstance(raw_blocking, Sequence) and not isinstance(raw_blocking, (str, bytes)):
@@ -7815,16 +7772,16 @@ def evaluate_phase_slot_readiness(
 
     has_user_content = len(re.sub(r"\s+", "", user_text or "")) >= 3
     if current == Phase.CLOSING:
-        # CLOSING は次フェーズ遷移を伴わないが、セッション終了可否の最終判定には
-        # スロット充足・最低滞在ターンを使う（関係シグナルはここでは終了条件に使わない）。
+        # CLOSING does not advance to another phase, but the final completion check still
+        # uses slot readiness and minimum stay turns (relationship signals do not block closing here).
         passed = pass_fill and turn_gate_pass
         decision = "advance_by_closing_readiness" if passed else "stay_by_closing_readiness"
     elif current == Phase.GREETING:
-        # あいさつは長く留まらず、開始直後を抜ける。
+        # GREETING should not linger; move past it shortly after the start.
         passed = state.turn_index >= 1 and has_user_content
         decision = "advance_by_greeting_completion" if passed else "stay_greeting_phase"
     elif current == Phase.REVIEW_REFLECTION:
-        # 振り返りフェーズは2ターン固定。2ターン目終了後は必ず CLOSING へ進む。
+        # REVIEW_REFLECTION is fixed to two turns and always moves to CLOSING afterward.
         passed = turn_gate_pass
         decision = "advance_by_review_fixed_two_turns" if passed else "stay_review_until_two_turns"
     else:
@@ -7907,10 +7864,10 @@ def _build_phase_transition_feedback(
         text = _normalize_slot_text(item)
         if not text:
             continue
-        if text.endswith("の情報が必要"):
+        if text.endswith("information is needed"):
             missing_from_llm.append(text)
         else:
-            missing_from_llm.append(f"{text}の情報が必要")
+            missing_from_llm.append(f"{text} information is needed")
 
     missing_from_slots = [
         _normalize_slot_text(item)
@@ -7921,7 +7878,7 @@ def _build_phase_transition_feedback(
     if selected_phase != current_phase:
         return {
             "phase_transition_code": "phase_advanced",
-            "phase_transition_note": f"新フェーズ開始: {selected_phase.value}",
+            "phase_transition_note": f"New phase started: {selected_phase.value}",
         }
 
     pass_fill = bool(slot_gate_debug.get("pass_fill"))
@@ -7930,9 +7887,9 @@ def _build_phase_transition_feedback(
     hold_reasons = hold_reasons_raw if isinstance(hold_reasons_raw, list) else []
 
     if not pass_fill:
-        # fill不足時は実スロットの未充足情報を優先して提示する。
+        # When fill is insufficient, prioritize concrete missing-slot information.
         missing_texts = missing_from_slots or missing_from_llm
-        note = " / ".join(missing_texts[:3]) if missing_texts else "必要なスロット情報が不足"
+        note = " / ".join(missing_texts[:3]) if missing_texts else "Required slot information is missing"
         return {
             "phase_transition_code": "need_slot_information",
             "phase_transition_note": note,
@@ -7942,25 +7899,25 @@ def _build_phase_transition_feedback(
         if llm_phase_intent == "stay":
             stay_reasons = missing_from_llm or missing_from_slots
             if stay_reasons:
-                note = " / ".join(stay_reasons[:3]) + "（最低滞在ターン未満のため継続）"
+                note = " / ".join(stay_reasons[:3]) + " (stay: below the minimum required turns)"
                 return {
                     "phase_transition_code": "llm_stay_intent",
                     "phase_transition_note": note,
                 }
         return {
             "phase_transition_code": "insufficient_min_turns",
-            "phase_transition_note": "フェーズ継続（最低滞在ターン未満）",
+            "phase_transition_note": "Stay in phase (below the minimum required turns)",
         }
 
     if any(reason in {"high_resistance", "high_discord"} for reason in hold_reasons):
         return {
             "phase_transition_code": "need_resistance_or_discord_response",
-            "phase_transition_note": "抵抗やdiscordへの対応が必要",
+            "phase_transition_note": "Need to respond to resistance or discord",
         }
 
     if llm_phase_intent == "stay":
         stay_reasons = missing_from_llm or missing_from_slots
-        note = " / ".join(stay_reasons[:3]) if stay_reasons else "フェーズ継続"
+        note = " / ".join(stay_reasons[:3]) if stay_reasons else "Stay in phase"
         return {
             "phase_transition_code": "llm_stay_intent",
             "phase_transition_note": note,
@@ -7968,7 +7925,7 @@ def _build_phase_transition_feedback(
 
     return {
         "phase_transition_code": "phase_stay",
-        "phase_transition_note": "フェーズ継続",
+        "phase_transition_note": "Stay in phase",
     }
 
 
@@ -7994,7 +7951,7 @@ def _build_phase_transition_feedback_from_review(
     if selected_phase != current_phase:
         return {
             "phase_transition_code": "phase_advanced",
-            "phase_transition_note": f"新フェーズ開始: {selected_phase.value}",
+            "phase_transition_note": f"New phase started: {selected_phase.value}",
             "slot_focus_priority": [],
             "slot_quality_target_examples": [],
             "slot_repair_hints": [],
@@ -8049,7 +8006,7 @@ def _build_phase_transition_feedback_from_review(
     review_summary_note = _normalize_slot_text(review_debug.get("review_summary_note"))
 
     if "insufficient_slot_fill" in gate_fail_reasons:
-        note = " / ".join(missing_slot_texts[:3]) if missing_slot_texts else "必要なスロット情報が不足"
+        note = " / ".join(missing_slot_texts[:3]) if missing_slot_texts else "Required slot information is missing"
         return {
             "phase_transition_code": "need_slot_information",
             "phase_transition_note": note,
@@ -8058,9 +8015,9 @@ def _build_phase_transition_feedback_from_review(
             "slot_repair_hints": normalized_hints,
         }
     if "insufficient_slot_quality" in gate_fail_reasons or "blocking_review_issue" in gate_fail_reasons:
-        quality_note = review_summary_note or "スロット情報の質改善が必要"
+        quality_note = review_summary_note or "Slot information quality needs improvement"
         if blocking_issue_codes:
-            quality_note = f"{quality_note}（{', '.join(blocking_issue_codes[:3])}）"
+            quality_note = f"{quality_note} ({', '.join(blocking_issue_codes[:3])})"
         return {
             "phase_transition_code": "need_slot_quality_improvement",
             "phase_transition_note": quality_note,
@@ -8071,7 +8028,7 @@ def _build_phase_transition_feedback_from_review(
     if "insufficient_min_turns" in gate_fail_reasons:
         return {
             "phase_transition_code": "insufficient_min_turns",
-            "phase_transition_note": "フェーズ継続（最低滞在ターン未満）",
+            "phase_transition_note": "Stay in phase (below the minimum required turns)",
             "slot_focus_priority": (quality_slots or missing_slot_keys)[:3],
             "slot_quality_target_examples": normalized_hints,
             "slot_repair_hints": normalized_hints,
@@ -8079,14 +8036,14 @@ def _build_phase_transition_feedback_from_review(
     if "relational_hold" in gate_fail_reasons:
         return {
             "phase_transition_code": "need_resistance_or_discord_response",
-            "phase_transition_note": "抵抗やdiscordへの対応が必要",
+            "phase_transition_note": "Need to respond to resistance or discord",
             "slot_focus_priority": (quality_slots or missing_slot_keys)[:3],
             "slot_quality_target_examples": normalized_hints,
             "slot_repair_hints": normalized_hints,
         }
     return {
         "phase_transition_code": "phase_stay",
-        "phase_transition_note": review_summary_note or "フェーズ継続",
+        "phase_transition_note": review_summary_note or "Stay in phase",
         "slot_focus_priority": (quality_slots or missing_slot_keys)[:3],
         "slot_quality_target_examples": normalized_hints,
         "slot_repair_hints": normalized_hints,
@@ -8102,14 +8059,15 @@ def enforce_phase_progression(
     cfg: Optional[PlannerConfig] = None,
 ) -> Tuple[Phase, Dict[str, Any]]:
     """
-    フェーズは原則として順序通りに1段階ずつ前進。後退はしない。
-    ただし抵抗/不協和が強いときは「前進せずに現フェーズへステイ」する。
-    挨拶/クロージング以外は原則最低3ターン滞在してから遷移（振り返りのみ最短2ターン）。
-    戻り: (採用フェーズ, debug)
+    Advance phases one step at a time in order and never move backward.
+    When resistance/discord is strong, stay in the current phase instead of advancing.
+    Except for greeting/closing, stay at least three turns before transitioning
+    (review reflection may end after two turns).
+    Returns: (selected_phase, debug)
     """
     dbg: Dict[str, Any] = {"enforce": True, "current": current.value, "predicted": predicted.value, "phase_turns": state.phase_turns}
 
-    # 後退はしない（例外: リスクでクロージングは別レイヤで処理）
+    # Do not move backward (exception: risk-driven closing is handled in another layer).
     if _phase_index(predicted) <= _phase_index(current):
         dbg["decision"] = "no_backward"
         return current, dbg
@@ -8142,28 +8100,28 @@ def enforce_phase_progression(
             "turn_index": state.turn_index,
         }
 
-    # 1段階以上のスキップは許可しない
+    # Do not allow skipping more than one phase.
     next_idx = _phase_index(current) + 1
     desired = _PHASE_ORDER[next_idx]
     if _phase_index(predicted) > next_idx:
         dbg["clamped_from"] = predicted.value
         predicted = desired
 
-    # 最低滞在ターンの満たし確認（挨拶/クロージングは対象外）
+    # Check the minimum-stay requirement (excluding greeting/closing).
     min_turns = _min_turns_required_for_exit(current)
     dbg["min_turns_required"] = min_turns
     if state.phase_turns < min_turns:
         dbg["decision"] = "stay_until_min_turns"
         return current, dbg
 
-    # 進行可：次フェーズへ（1段階）
+    # Progress allowed: move to the next phase (one step).
     dbg["decision"] = "advance_one"
     return predicted, dbg
 
 def _history_to_dialogue(history: List[Tuple[str, str]], *, max_turns: int = 8) -> str:
     lines: List[str] = []
     for role, text in history[-max_turns:]:
-        prefix = "クライアント" if role == "user" else "カウンセラー"
+        prefix = "Client" if role == "user" else "Counselor"
         lines.append(f"{prefix}: {text}")
     return "\n".join(lines)
 
@@ -8173,34 +8131,34 @@ def _parse_phase_from_text(text: str) -> Tuple[Optional[Phase], float]:
     if not t:
         return None, 0.0
 
-    # 完全一致（最も高信頼）
+    # Exact match (highest confidence).
     for p in Phase:
         if t == p.value:
             return p, 1.0
 
-    # 文章のどこかにラベルが含まれる（中信頼）
+    # Label appears somewhere in the text (medium confidence).
     for p in Phase:
         if p.value in t:
             return p, 0.7
 
-    # 省略・表記揺れの救済（低信頼）
-    if "挨拶" in t:
+    # Rescue omitted or variant forms (low confidence).
+    if "greeting" in t:
         return Phase.GREETING, 0.4
-    if "目的" in t:
+    if "purpose" in t:
         return Phase.PURPOSE_CONFIRMATION, 0.4
-    if "現状" in t:
+    if "current status" in t:
         return Phase.CURRENT_STATUS_CHECK, 0.4
-    if "標的" in t or "行動" in t or "焦点" in t:
+    if "target" in t or "behavior" in t or "focus" in t:
         return Phase.FOCUSING_TARGET_BEHAVIOR, 0.35
-    if "重要" in t:
+    if "importance" in t:
         return Phase.IMPORTANCE_PROMOTION, 0.35
-    if "自信" in t:
+    if "confidence" in t:
         return Phase.CONFIDENCE_PROMOTION, 0.35
-    if "次" in t or "一歩" in t:
+    if "next" in t or "next step" in t:
         return Phase.NEXT_STEP_DECISION, 0.35
-    if "振り返" in t or "気づき" in t or "学び" in t:
+    if "review" in t or "insight" in t or "learning" in t:
         return Phase.REVIEW_REFLECTION, 0.35
-    if "クロージ" in t or "終" in t:
+    if "closing" in t or "end" in t:
         return Phase.CLOSING, 0.35
 
     return None, 0.0
@@ -8267,8 +8225,8 @@ def _slot_fill_future_phases_for_scope(*, current_phase: Phase, scope_mode: str)
 @dataclass
 class LLMPhaseSlotFiller:
     """
-    LLMでフェーズ別スロット更新候補を抽出する。
-    - 返り値は「更新対象のみ」の phase_slot_updates リスト。
+    Use the LLM to extract phase-specific slot-update candidates.
+    - Return a `phase_slot_updates` list containing only slots targeted for update.
     """
 
     llm: LLMClient
@@ -8347,31 +8305,31 @@ class LLMPhaseSlotFiller:
         target_phase_text = (
             f"{current_phase.value}[{current_phase.name}]"
             if target_phase_codes
-            else "なし（現在フェーズ更新禁止）"
+            else "none (current-phase updates disabled)"
         )
-        regular_target_slot_keys = ", ".join(layer1_prompt_target_slot_keys) or "なし（全スロットquality>=0.8）"
-        all_current_phase_slot_keys = ", ".join(current_phase_required_slot_keys) or "なし"
+        regular_target_slot_keys = ", ".join(layer1_prompt_target_slot_keys) or "none (all slot quality >= 0.8)"
+        all_current_phase_slot_keys = ", ".join(current_phase_required_slot_keys) or "none"
         target_slot_schema_text = (
             f"- {current_phase.value} [{current_phase.name}]: {all_current_phase_slot_keys}"
             if target_phase_codes
-            else "- なし"
+            else "- none"
         )
         previous_phase_text = (
-            " / ".join(f"{phase.value}[{phase.name}]" for phase in previous_phases) if previous_phases else "なし"
+            " / ".join(f"{phase.value}[{phase.name}]" for phase in previous_phases) if previous_phases else "none"
         )
         future_phase_text = (
-            " / ".join(f"{phase.value}[{phase.name}]" for phase in future_phases) if future_phases else "なし"
+            " / ".join(f"{phase.value}[{phase.name}]" for phase in future_phases) if future_phases else "none"
         )
         previous_slot_schema_lines: List[str] = []
         for phase in previous_phases:
-            slot_keys = ", ".join(_PHASE_SLOT_SCHEMA.get(phase, ())) or "なし"
+            slot_keys = ", ".join(_PHASE_SLOT_SCHEMA.get(phase, ())) or "none"
             previous_slot_schema_lines.append(f"- {phase.value} [{phase.name}]: {slot_keys}")
-        previous_slot_schema_text = "\n".join(previous_slot_schema_lines) if previous_slot_schema_lines else "- なし"
+        previous_slot_schema_text = "\n".join(previous_slot_schema_lines) if previous_slot_schema_lines else "- none"
         future_slot_schema_lines: List[str] = []
         for phase in future_phases:
-            slot_keys = ", ".join(_PHASE_SLOT_SCHEMA.get(phase, ())) or "なし"
+            slot_keys = ", ".join(_PHASE_SLOT_SCHEMA.get(phase, ())) or "none"
             future_slot_schema_lines.append(f"- {phase.value} [{phase.name}]: {slot_keys}")
-        future_slot_schema_text = "\n".join(future_slot_schema_lines) if future_slot_schema_lines else "- なし"
+        future_slot_schema_text = "\n".join(future_slot_schema_lines) if future_slot_schema_lines else "- none"
         current_phase_lightweight_definition_text = _build_lightweight_slot_definition_text(
             phases=[current_phase],
             allowed_slot_keys_by_phase={current_phase.name: current_phase_required_slot_keys},
@@ -8382,32 +8340,32 @@ class LLMPhaseSlotFiller:
         if scope_mode == _SLOT_FILL_SCOPE_CURRENT_ONLY:
             lightweight_definition_scope = "current_only"
             lightweight_definition_prompt_text = (
-                "現在フェーズ軽量スロット定義:\n"
+                "Current-phase lightweight slot definitions:\n"
                 f"{current_phase_lightweight_definition_text}\n"
             )
             user_lightweight_definition_text = (
-                f"【現在フェーズ軽量スロット定義】\n{current_phase_lightweight_definition_text}\n"
+                f"[Current-phase lightweight slot definitions]\n{current_phase_lightweight_definition_text}\n"
             )
         elif scope_mode == _SLOT_FILL_SCOPE_NON_CURRENT_ONLY:
             lightweight_definition_scope = "non_current_only"
             lightweight_definition_prompt_text = (
-                "現在以外フェーズ軽量スロット定義:\n"
+                "Non-current-phase lightweight slot definitions:\n"
                 f"{non_current_phase_lightweight_definition_text}\n"
             )
             user_lightweight_definition_text = (
-                f"【現在以外フェーズ軽量スロット定義】\n{non_current_phase_lightweight_definition_text}\n"
+                f"[Non-current-phase lightweight slot definitions]\n{non_current_phase_lightweight_definition_text}\n"
             )
         else:
             lightweight_definition_scope = "mixed"
             lightweight_definition_prompt_text = (
-                "現在フェーズ軽量スロット定義:\n"
+                "Current-phase lightweight slot definitions:\n"
                 f"{current_phase_lightweight_definition_text}\n"
-                "現在以外フェーズ軽量スロット定義:\n"
+                "Non-current-phase lightweight slot definitions:\n"
                 f"{non_current_phase_lightweight_definition_text}\n"
             )
             user_lightweight_definition_text = (
-                f"【現在フェーズ軽量スロット定義】\n{current_phase_lightweight_definition_text}\n"
-                f"【現在以外フェーズ軽量スロット定義】\n{non_current_phase_lightweight_definition_text}\n"
+                f"[Current-phase lightweight slot definitions]\n{current_phase_lightweight_definition_text}\n"
+                f"[Non-current-phase lightweight slot definitions]\n{non_current_phase_lightweight_definition_text}\n"
             )
         target_behavior_focus = _get_confirmed_target_behavior_for_change_talk(state=state)
         target_behavior_alignment_active = bool(
@@ -8417,153 +8375,113 @@ class LLMPhaseSlotFiller:
             f"{phase.value}[{phase.name}]"
             for phase in _TARGET_BEHAVIOR_ALIGNMENT_PHASES
         )
-        target_behavior_alignment_anchor_text = target_behavior_focus or "なし"
+        target_behavior_alignment_anchor_text = target_behavior_focus or "none"
         target_behavior_alignment_active_text = (
-            "有効" if target_behavior_alignment_active else "無効"
+            "enabled" if target_behavior_alignment_active else "disabled"
         )
         scope_rules_text = ""
         if scope_mode == _SLOT_FILL_SCOPE_CURRENT_ONLY:
             scope_rules_text = (
-                "- 現在フェーズ専用モード: phase_slot_updates に現在フェーズ更新のみを入れる。\n"
-                "- previous_phase_slot_updates / future_phase_slot_updates は常に空配列にする。\n"
-                "- need_previous_phase_slot_updates / need_future_phase_slot_updates は false にする。\n"
+                "- Current-phase-only mode: put only current-phase updates into `phase_slot_updates`.\n"
+                "- Always keep `previous_phase_slot_updates` / `future_phase_slot_updates` as empty arrays.\n"
+                "- Set `need_previous_phase_slot_updates` / `need_future_phase_slot_updates` to false.\n"
             )
         elif scope_mode == _SLOT_FILL_SCOPE_NON_CURRENT_ONLY:
             scope_rules_text = (
-                "- 非現在フェーズ専用モード: 現在フェーズ更新は禁止（phase_slot_updates は空配列）。\n"
-                "- 現在より前フェーズの更新は previous_phase_slot_updates に入れる。\n"
-                "- 現在より後フェーズの更新は future_phase_slot_updates に入れる。\n"
-                "- 該当がなければ各配列は空配列にする。\n"
+                "- Non-current-phase-only mode: current-phase updates are prohibited (`phase_slot_updates` must be empty).\n"
+                "- Put updates for earlier phases into `previous_phase_slot_updates`.\n"
+                "- Put updates for later phases into `future_phase_slot_updates`.\n"
+                "- If none apply, keep each array empty.\n"
             )
         else:
             scope_rules_text = (
-                "- 通常は phase_slot_updates に現在フェーズの更新のみを入れる。\n"
-                "- 例外: 対話履歴から『ユーザがそれを望んでいること』が明確で、過去フェーズの補完が必要な場合のみ、need_previous_phase_slot_updates=true とし、previous_phase_slot_updates に過去フェーズ更新を入れる。\n"
-                "- 例外に当てはまらない場合、need_previous_phase_slot_updates=false、previous_phase_slot_updates=[] とする。\n"
-                "- 例外: 将来フェーズに直接関係する情報（次の行動/重要度/自信/締めの意図など）が明確な場合のみ、need_future_phase_slot_updates=true とし、future_phase_slot_updates に将来フェーズ更新を入れる。\n"
-                "- 将来フェーズ更新を出す場合は最大1フェーズ・最大2スロットまで。該当がなければ need_future_phase_slot_updates=false, future_phase_slot_updates=[]。\n"
+                "- Normally, place only current-phase updates into `phase_slot_updates`.\n"
+                "- Exception: only when the dialogue history clearly shows that the user wants it and a previous phase needs completion, set `need_previous_phase_slot_updates=true` and place the update in `previous_phase_slot_updates`.\n"
+                "- If that exception does not apply, set `need_previous_phase_slot_updates=false` and `previous_phase_slot_updates=[]`.\n"
+                "- Exception: only when information directly relevant to a future phase is explicit (for example next action, importance, confidence, or closing intent), set `need_future_phase_slot_updates=true` and place the update in `future_phase_slot_updates`.\n"
+                "- When emitting future-phase updates, allow at most one phase and two slots. Otherwise use `need_future_phase_slot_updates=false` and `future_phase_slot_updates=[]`.\n"
             )
 
         system = (
-            "あなたは動機づけ面接（MI）のフェーズ別スロット埋めエージェントです。\n"
-            "目的: 最新のクライアント発話と対話履歴から、現在フェーズ中心でスロット更新候補を抽出する。\n"
-            "出力制約: JSONオブジェクトのみを1つ返す。説明文・コードブロックは禁止。\n"
-            f"抽出スコープ: {scope_mode}\n"
-            f"今回の更新対象フェーズ: {target_phase_text}\n"
-            f"現在より前のフェーズ: {previous_phase_text}\n"
-            f"現在より後のフェーズ: {future_phase_text}\n"
-            "更新ルール:\n"
+            "You are a phase-aware MI slot filling agent.\n"
+            "Goal: extract candidate slot updates from the latest client utterance and the dialogue history, centered on the current phase.\n"
+            "Return exactly one JSON object and nothing else.\n"
+            f"Extraction scope: {scope_mode}\n"
+            f"Target phase this turn: {target_phase_text}\n"
+            f"Previous phases: {previous_phase_text}\n"
+            f"Future phases: {future_phase_text}\n"
+            "Update rules:\n"
             f"{scope_rules_text}"
             f"{lightweight_definition_prompt_text}"
-            f"- target_behavior整合フェーズ: {target_behavior_alignment_phase_text}。\n"
-            f"- target_behavior整合アンカー（confirmed, quality>=0.8）: {target_behavior_alignment_anchor_text}。\n"
-            f"- target_behavior整合ルール適用: {target_behavior_alignment_active_text}。\n"
-            "- target_behavior整合ルール: 適用が有効な場合、対象フェーズの更新候補は FOCUSING_TARGET_BEHAVIOR.target_behavior に直接関連する内容を優先する。\n"
-            "- 適用が有効な場合、target_behavior と無関係な一般論でスロットを埋めない（ユーザの明示訂正 explicit_correction=true は例外）。\n"
-            "- 各スロットは {\"value\":\"...\",\"user_quote\":\"...\",\"user_evidence_turn_ids\":[1],\"assistant_quote\":\"...\",\"assistant_evidence_turn_ids\":[2],\"assent_bridge\":false,\"assent_bridge_source_turn_id\":0,\"confidence\":0.0-1.0,\"explicit_correction\":false} の形式で返す。\n"
-            "- Layer1では原則として既存スロット値を参照せず、最新ユーザ発話（assent_bridge時のみ直前assistant発話）から候補を抽出する。\n"
-            "- importance_scale / confidence_scale は、user_quote に0-10数値が明示される場合のみ value を更新する。\n"
-            "- assent_bridge=true の場合でも、直前assistant発話に数値があり、最新ユーザ発話がその数値への承諾を示すときだけ scale 数値を更新できる。\n"
-            "- ただし target_behavior整合ルール適用が有効な場合に限り、上記target_behaviorアンカーのみ整合確認の目的で参照してよい。\n"
-            "- 既存値との統合・最終確定は Layer2 Reviewer が行うため、Layer1は候補抽出と根拠紐づけに専念する。\n"
-            "- ユーザが既存理解を明示的に訂正した場合（例: 違う/ではなく/やっぱり〜）は、そのスロットに explicit_correction=true を付ける。\n"
-            "- user_quote / user_evidence_turn_ids は必ずユーザ発話（role=user）を対応付けて入れる。\n"
-            "- assistant_quote / assistant_evidence_turn_ids は assent_bridge=true の場合のみ使用する。\n"
-            "- user_evidence_turn_ids には【証拠に使える user ターンID】のみを入れる。\n"
-            "- assistant_evidence_turn_ids には【assent_bridge時に使える assistant ターンID】のみを入れる。\n"
-            "- user_quote と user_evidence_turn_ids、assistant_quote と assistant_evidence_turn_ids の対応関係を崩さない。\n"
-            "- カウンセラー発話は根拠に使わない（assent bridge の例外を除く）。\n"
-            "処理手順（厳守）:\n"
-            "1) まず最新ユーザ発話からスロット候補を作り、user根拠（user_quote/user_evidence_turn_ids）を出す。\n"
-            "2) 最新ユーザ発話が同意応答（例: はい/その通り/合っています）かを確認し、該当なら assent_bridge=true にする。\n"
-            "3) assent_bridge=true の場合、直前assistant発話を確認して必要な内容をslot valueへ統合し、assistant_quote/assistant_evidence_turn_ids を追加する。\n"
-            "4) assent_bridge=false の場合、assistant_quote=\"\" と assistant_evidence_turn_ids=[] にする。\n"
-            "- 例外（assent bridge）: 最新ユーザ発話が直前カウンセラー要約への明示同意で、スロット値の根拠が直前要約に依存する場合のみ、"
-            "assent_bridge=true と assent_bridge_source_turn_id=<直前assistantのT番号> を付与してよい。\n"
-            "- assent bridge 時は、assistant_quote に短い同意語（例: はい）だけを書かず、直前assistant発話で確認できる句、または確定したslot value句を書く。\n"
-            "- assent bridge を使わない場合、カウンセラー発話を根拠に使ってはいけない。\n"
-            f"- confidence が {_SLOT_APPLY_CONFIDENCE_THRESHOLD:.2f} 未満の候補は state へ反映されない。確認が必要な候補は note に短く指示を書く。\n"
-            "- 既存値があるスロットを None/null/不明/なし へ変更する出力は禁止。\n"
-            "- 根拠が弱い推測で無理に埋めない。\n"
-            "- 1スロットは短い句で書く（120文字以内）。\n"
-            "- スロットキーは指定リスト以外を使わない。\n"
-            "- value / note など人が読む文字列は自然な日本語で書く。JSONキー・phaseコード・true/false 以外に英単語・ローマ字・プレースホルダを混ぜない。\n"
-            "- ただし user_quote / assistant_quote は原文引用なので改変しなくてよい。\n"
-            "- 最新ユーザ発話に英単語混入や崩れた語（例: night）があっても、value にはその表記をそのまま写さない。意味が明確なら自然な日本語へ正規化し、不明ならその語を使わず周辺意味だけで短く書く。\n"
-            "- PURPOSE_CONFIRMATION では today_focus_topic と process_need を混同しない。\n"
-            "- today_focus_topic には『今日扱う中身』だけを書く。話すペース・進め方・安心条件・提案の要否は入れない。\n"
-            "- process_need には『どう進めると話しやすいか』だけを書く。扱うテーマそのものは入れない。\n"
-            "- process_need には、ペースや安心条件だけでなく、『同じ確認は短めにして具体から入りたい』のような進め方の選好も含めてよい。\n"
-            "- 最新ユーザ発話に両方が含まれる場合は、today_focus_topic と process_need に分けて同時に返してよい。\n"
-            "- 例: 「眠れないことを整理したいし、同じ確認は短めで、まず具体的な話から入りたい」なら、today_focus_topic=「眠れないことの整理」、process_need=「同じ確認は短めで、まず具体的な話から入りたい」と分ける。\n"
-            "- PURPOSE_CONFIRMATION / CURRENT_STATUS_CHECK で、複数の妥当な入口があり、まだ本人がどこから扱うかを明示していない場合は focus_choice_hint.needed=true にする。\n"
-            "- focus_choice_hint.candidate_topics には、今扱えそうな入口を2〜3件、短い名詞句で入れる。\n"
-            "- すでに『まずは〜』『今は〜』など本人の入口選択が明示されている場合は focus_choice_hint.explicit_preference_present=true、focus_choice_hint.needed=false にする。\n"
-            "- 候補が1件しかない場合や、内容ではなく進め方の迷いだけが出ている場合は focus_choice_hint.needed=false にする。\n"
-            "- FOCUSING_TARGET_BEHAVIOR では、本人が自発的に具体行動を述べているなら focus_agreement が未確定でも target_behavior を返してよい。\n"
-            "- 直前assistant要約への明示承諾で、その要約が具体的な target_behavior を含む場合は assent_bridge=true を使い、target_behavior と focus_agreement を同時に返してよい。\n"
-            "- focus_agreement は、この場で扱う対象が target_behavior または change_direction と分かる文にする。対象が曖昧な同意だけなら無理に埋めない。\n"
-            "- 新しい対処行動・休憩法・coping plan を面接者側で発明して target_behavior にしない。具体行動は user 根拠か assent_bridge で裏づける。\n"
-            f"- 通常は quality<{layer1_target_quality_threshold:.2f} のスロットキーのみ更新候補として返す。\n"
-            "- 例外として explicit_correction=true の場合のみ、quality>=0.8 の既存スロットも更新候補に含めてよい。\n"
-            "- 更新がない場合は対応する配列を空配列で返す。\n"
-            "出力形式:\n"
-            '{"phase_slot_updates":[{"phase":"現状確認","slots":{"current_situation":{"value":"残業が続いて疲労が強い","user_quote":"残業が続いて疲れが抜けません","user_evidence_turn_ids":[3],"assistant_quote":"","assistant_evidence_turn_ids":[],"assent_bridge":false,"assent_bridge_source_turn_id":0,"confidence":0.91,"explicit_correction":false}}}],'
-            '"need_previous_phase_slot_updates":false,'
-            '"previous_phase_slot_updates":[],'
-            '"need_future_phase_slot_updates":false,'
-            '"future_phase_slot_updates":[],'
-            '"focus_choice_hint":{"needed":false,"explicit_preference_present":false,"candidate_topics":[],"reason":""},'
-            '"note":""}\n'
-            '{"phase_slot_updates":[{"phase":"目的確認","slots":{"process_need":{"value":"同じ確認は短めにして、まず具体的な話から入りたい","user_quote":"はい、その通りです","user_evidence_turn_ids":[9],"assistant_quote":"同じ確認を続けるより、まず具体的な話から入りたい感じですね。","assistant_evidence_turn_ids":[8],"confidence":0.76,"assent_bridge":true,"assent_bridge_source_turn_id":8,"explicit_correction":false}}}],'
-            '"need_previous_phase_slot_updates":false,'
-            '"previous_phase_slot_updates":[],'
-            '"need_future_phase_slot_updates":false,'
-            '"future_phase_slot_updates":[],'
-            '"focus_choice_hint":{"needed":false,"explicit_preference_present":false,"candidate_topics":[],"reason":"内容ではなく進め方の希望が中心"},'
-            '"note":"最新ユーザ発話が直前要約への同意で、新規情報は短いため assent bridge を使用"}\n'
-            '{"phase_slot_updates":[{"phase":"目的確認","slots":{"today_focus_topic":{"value":"休養と不安の整理","user_quote":"休みたい気持ちと不安を整理したい","user_evidence_turn_ids":[2],"assistant_quote":"","assistant_evidence_turn_ids":[],"assent_bridge":false,"assent_bridge_source_turn_id":0,"confidence":0.74,"explicit_correction":false}}}],'
-            '"need_previous_phase_slot_updates":true,'
-            '"previous_phase_slot_updates":[{"phase":"あいさつ","slots":{"rapport_cue":{"value":"安全に話せる場を確認","user_quote":"ここなら話せる気がする","user_evidence_turn_ids":[1],"assistant_quote":"","assistant_evidence_turn_ids":[],"assent_bridge":false,"assent_bridge_source_turn_id":0,"confidence":0.83,"explicit_correction":false}}}],'
-            '"need_future_phase_slot_updates":false,'
-            '"future_phase_slot_updates":[],'
-            '"focus_choice_hint":{"needed":true,"explicit_preference_present":false,"candidate_topics":["休養の整理","不安の整理"],"reason":"複数の入口があり優先確認が必要"},'
-            '"note":"相談の優先度（休養か不安整理か）を次ターンで確認する"}\n'
-            '{"phase_slot_updates":[{"phase":"目的確認","slots":{"presenting_problem_raw":{"value":"何のために生きるのか分からず楽しさが薄れている","user_quote":"最近、何のために生きてるのか分からない","user_evidence_turn_ids":[12],"assistant_quote":"","assistant_evidence_turn_ids":[],"assent_bridge":false,"assent_bridge_source_turn_id":0,"confidence":0.82,"explicit_correction":false}}}],'
-            '"need_previous_phase_slot_updates":false,'
-            '"previous_phase_slot_updates":[],'
-            '"need_future_phase_slot_updates":true,'
-            '"future_phase_slot_updates":[{"phase":"次の一歩決定","slots":{"next_step_action":{"value":"今夜は寝る前に1文で意味づけを書く","user_quote":"寝る前に一文で書いてみます","user_evidence_turn_ids":[12],"assistant_quote":"","assistant_evidence_turn_ids":[],"assent_bridge":false,"assent_bridge_source_turn_id":0,"confidence":0.78,"explicit_correction":false}}}],'
-            '"focus_choice_hint":{"needed":false,"explicit_preference_present":false,"candidate_topics":[],"reason":""},'
-            '"note":"相談の優先度（休養か不安整理か）を次ターンで確認する"}\n'
-            "今回使用可能な現在フェーズのスロットキー:\n"
+            f"- Target-behavior alignment phase: {target_behavior_alignment_phase_text}.\n"
+            f"- Target-behavior alignment anchor (confirmed, quality>=0.8): {target_behavior_alignment_anchor_text}.\n"
+            f"- Target-behavior alignment enabled: {target_behavior_alignment_active_text}.\n"
+            "- When target-behavior alignment is enabled, prefer updates directly related to FOCUSING_TARGET_BEHAVIOR.target_behavior.\n"
+            "- Do not fill slots with unrelated generalities unless explicit_correction=true clearly justifies it.\n"
+            "- Each slot value must use the shape {\"value\":\"...\",\"user_quote\":\"...\",\"user_evidence_turn_ids\":[1],\"assistant_quote\":\"...\",\"assistant_evidence_turn_ids\":[2],\"assent_bridge\":false,\"assent_bridge_source_turn_id\":0,\"confidence\":0.0-1.0,\"explicit_correction\":false}.\n"
+            "- In Layer1, do not rely on existing slot values except to check the target-behavior anchor. Extract from the latest user turn, or from the immediately previous assistant turn only when assent_bridge=true.\n"
+            "- Update importance_scale / confidence_scale only when the user_quote explicitly contains a 0-10 number.\n"
+            "- Even with assent_bridge=true, scale values may be updated only when the previous assistant utterance named the number and the latest user utterance clearly assents to that number.\n"
+            "- Final integration is handled by Layer2 Reviewer; Layer1 should focus on candidate extraction plus evidence linkage.\n"
+            "- When the client explicitly corrects an earlier understanding, set explicit_correction=true.\n"
+            "- user_quote / user_evidence_turn_ids must always point to user turns.\n"
+            "- assistant_quote / assistant_evidence_turn_ids may be used only when assent_bridge=true.\n"
+            "- Maintain alignment between quotes and turn ids.\n"
+            "- Do not use counselor utterances as evidence except in the assent-bridge case.\n"
+            "Required procedure:\n"
+            "1) Build slot candidates from the latest user utterance and attach user evidence.\n"
+            "2) If the latest user utterance is an assent response, set assent_bridge=true.\n"
+            "3) When assent_bridge=true, inspect the immediately previous assistant utterance and merge only the information required for the slot value.\n"
+            "4) When assent_bridge=false, set assistant_quote=\"\" and assistant_evidence_turn_ids=[].\n"
+            "- For assent_bridge, do not write a bare assent token like \"yes\" as assistant_quote. Quote the relevant phrase from the previous assistant utterance or the finalized slot value phrase.\n"
+            f"- Candidates with confidence < {_SLOT_APPLY_CONFIDENCE_THRESHOLD:.2f} will not be applied to state. Put any needed confirmation guidance in note.\n"
+            "- Never overwrite an existing slot value with None/null/unknown/none.\n"
+            "- Do not force weak guesses into slots.\n"
+            "- Keep each slot value short (within 120 characters).\n"
+            "- Use only allowed slot keys.\n"
+            "- Human-readable fields such as value and note must be natural English. Avoid placeholders or stray code tokens.\n"
+            "- Preserve user_quote / assistant_quote as quotations from the source when used.\n"
+            "- In PURPOSE_CONFIRMATION, do not confuse today_focus_topic with process_need.\n"
+            "- today_focus_topic should name only what the client wants to work on today.\n"
+            "- process_need should describe only how the client wants the conversation to proceed.\n"
+            "- If the latest user utterance contains both, return both in separate slots.\n"
+            "- In PURPOSE_CONFIRMATION / CURRENT_STATUS_CHECK, if there are multiple plausible entry points and the client has not stated a preference, set focus_choice_hint.needed=true.\n"
+            "- Put 2-3 short noun phrases in focus_choice_hint.candidate_topics when a choice prompt is needed.\n"
+            "- If the client has already made the entry preference explicit, set focus_choice_hint.explicit_preference_present=true and focus_choice_hint.needed=false.\n"
+            "- In FOCUSING_TARGET_BEHAVIOR, if the client spontaneously states a concrete behavior, target_behavior may be returned even if focus_agreement is still uncertain.\n"
+            "- Do not invent new coping actions or plans. Concrete behavior must be grounded in user evidence or assent_bridge.\n"
+            f"- Normally return only slot keys with quality < {layer1_target_quality_threshold:.2f}. If explicit_correction=true, already-high-quality slots may also be returned.\n"
+            "- If there are no updates, return empty arrays.\n"
+            "Output format example:\n"
+            '{"phase_slot_updates":[{"phase":"CURRENT_STATUS_CHECK","slots":{"current_situation":{"value":"Overtime has been continuing and fatigue feels intense","user_quote":"The overtime just keeps going and I cannot shake the fatigue","user_evidence_turn_ids":[3],"assistant_quote":"","assistant_evidence_turn_ids":[],"assent_bridge":false,"assent_bridge_source_turn_id":0,"confidence":0.91,"explicit_correction":false}}}],"need_previous_phase_slot_updates":false,"previous_phase_slot_updates":[],"need_future_phase_slot_updates":false,"future_phase_slot_updates":[],"focus_choice_hint":{"needed":false,"explicit_preference_present":false,"candidate_topics":[],"reason":""},"note":""}\n'
+            "Available slot keys in the current phase:\n"
             f"{target_slot_schema_text}\n"
-            "今回使用可能な現在より前フェーズのスロットキー:\n"
+            "Available slot keys in previous phases:\n"
             f"{previous_slot_schema_text}\n"
-            "今回使用可能な現在より後フェーズのスロットキー:\n"
+            "Available slot keys in future phases:\n"
             f"{future_slot_schema_text}\n"
         )
         system = inject_mi_knowledge(system, agent_name="phase_slot_filler")
 
         user = (
-            f"【現在フェーズ】{state.phase.value}\n"
-            f"【抽出スコープ】{scope_mode}\n"
-            f"【今回の更新対象フェーズ】{target_phase_text}\n"
-            f"【軽量定義スコープ】{lightweight_definition_scope}\n"
+            f"[Current phase]\n{state.phase.value}\n"
+            f"[Extraction scope]\n{scope_mode}\n"
+            f"[Target phase this turn]\n{target_phase_text}\n"
+            f"[Lightweight definition scope]\n{lightweight_definition_scope}\n"
             f"{user_lightweight_definition_text}"
-            f"【FOCUSING_TARGET_BEHAVIOR.target_behavior（confirmed, quality>=0.8）】{target_behavior_alignment_anchor_text}\n"
-            f"【target_behavior整合ルール適用】{target_behavior_alignment_active_text}\n"
-            f"【Layer1更新対象スロットキー（quality<{layer1_target_quality_threshold:.2f}）】{json.dumps(layer1_prompt_target_slot_keys, ensure_ascii=False)}\n"
-            "【例外ルール】explicit_correction=true の場合は上記対象外スロットでも更新可\n"
-            f"【現在より前のフェーズ】{previous_phase_text}\n"
-            f"【現在より後のフェーズ】{future_phase_text}\n"
-            "【例外ルール】将来フェーズが明確に関連する場合のみ need_future_phase_slot_updates=true を使う\n"
-            f"【ターン番号】{state.turn_index}\n"
-            f"【証拠に使える user ターンID】{prompt_user_turn_ids_json}\n"
-            f"【assent_bridge時に使える assistant ターンID】{prompt_assistant_turn_ids_for_assent_bridge_json}\n"
-            f"【直近の対話（T{turn_start}〜T{turn_end}）】\n{dialogue}\n"
-            f"【今回のクライアント発話】{user_text}\n"
-            "更新済みスロットのみを JSON で返してください。"
+            f"[FOCUSING_TARGET_BEHAVIOR.target_behavior anchor]\n{target_behavior_alignment_anchor_text}\n"
+            f"[Target-behavior alignment enabled]\n{target_behavior_alignment_active_text}\n"
+            f"[Layer1 target slot keys (quality<{layer1_target_quality_threshold:.2f})]\n{json.dumps(layer1_prompt_target_slot_keys, ensure_ascii=False)}\n"
+            "[Exception rule]\nSlots outside the list above may also be updated when explicit_correction=true.\n"
+            f"[Previous phases]\n{previous_phase_text}\n"
+            f"[Future phases]\n{future_phase_text}\n"
+            "[Future-phase exception]\nUse need_future_phase_slot_updates=true only when future-phase relevance is explicit.\n"
+            f"[Turn index]\n{state.turn_index}\n"
+            f"[User turn ids allowed as evidence]\n{prompt_user_turn_ids_json}\n"
+            f"[Assistant turn ids allowed for assent bridge]\n{prompt_assistant_turn_ids_for_assent_bridge_json}\n"
+            f"[Recent dialogue T{turn_start}-T{turn_end}]\n{dialogue}\n"
+            f"[Current client utterance]\n{user_text}\n"
+            "Return JSON containing updated slots only."
         )
 
         messages: List[Dict[str, str]] = [
@@ -8861,7 +8779,7 @@ class LLMPhaseSlotFiller:
 @dataclass
 class RuleBasedSlotReviewer:
     """
-    Layer1Bundle の候補を deterministic に監査する reviewer。
+    Deterministic reviewer for candidates contained in Layer1Bundle.
     """
 
     def review(
@@ -8885,8 +8803,8 @@ class RuleBasedSlotReviewer:
 @dataclass
 class RuleBasedNonCurrentSlotReviewer:
     """
-    Layer2: 非現在フェーズ候補の deterministic reviewer。
-    - reviewed_updates と slot_quality のみを返し、修復 hint は返さない。
+    Layer2 deterministic reviewer for non-current-phase candidates.
+    - Return only reviewed_updates and slot quality, without repair hints.
     """
 
     def review(
@@ -8915,9 +8833,9 @@ class RuleBasedNonCurrentSlotReviewer:
 @dataclass
 class LLMSlotReviewer:
     """
-    Layer2: Layer1 抽出候補を監査し、品質・修復ヒントを返す。
-    - 新規スロットの創作は禁止（Layer1 候補のみ監査）。
-    - LLMの判定を優先し、正規化時にスキーマ不整合のみフォールバックする。
+    Layer2 reviewer that audits Layer1 extraction candidates and returns quality plus repair hints.
+    - Do not invent new slots; review only Layer1 candidates.
+    - Prefer the LLM judgment and fall back only for schema normalization issues.
     """
 
     llm: LLMClient
@@ -8953,99 +8871,58 @@ class LLMSlotReviewer:
         rubric_text = _build_phase_slot_quality_rubric_prompt_text(state.phase)
 
         system = (
-            "あなたは MI カウンセリングの Layer2 Slot Reviewer です。\n"
-            "役割: Layer1 が抽出したスロット候補だけを監査し、品質評価と修復ヒントを返す。\n"
-            "制約:\n"
-            f"- review対象は quality < {review_target_threshold:.2f}（未設定を含む）として Layer1Bundle.review_target_slot_keys に限定される。\n"
-            "- phase_code+slot_key の組み合わせは Layer1Bundle.review_target_slot_refs / candidate_updates の範囲に限定する。\n"
-            "- reviewed_updates[].slot_key と slot_quality_target_examples[].slot_key は review_target_slot_keys から選ぶ。\n"
-            "- Layer1 候補にない slot_key を新規追加しない。\n"
-            "- LLM出力は最小化する。reviewed_updates には統合結果(revised_value)、quality_score、issue_codes、evidence_items、review_note を返す。\n"
-            "- decision / admissible / quality_action / slot_quality / quality_mean / quality_min / blocking_issue_codes は返さない（ルール側で導出・集計する）。\n"
-            "- features を再推定しない。\n"
-            "- phase の進行判定をしない。\n"
-            "- Layer1Bundle.candidate_updates[].validation_issue / evidence_valid / semantic_review_pending は重要な参考情報として扱う。\n"
-            "- 各 slot の candidate_updates[].candidate_variants に既存値(existing_slot_memory)と新規候補(latest_user_update)がある場合、両方を比較して最終値を1つに統合する。\n"
-            "- reviewed_updates[].original_value / revised_value は、比較した結果の最終判断値を反映する。\n"
-            "- 具体性維持ルール: revised_value は original_value や candidate_variants の具体情報より抽象化しない。\n"
-            "- 既存値/新規候補に時間・場所・頻度・所要時間・実施条件などの具体語がある場合は、矛盾しない限り保持して統合する。\n"
-            "- 具体情報が増えた候補がある場合はその増分を優先し、一般化した言い換え（例: 小さな実験/習慣化する）だけに置換しない。\n"
-            "- 特に NEXT_STEP_DECISION の next_step_action / execution_context は、\"いつ・どこで・何分・どの日に\"の情報を落とさない。\n"
-            "- importance_scale / confidence_scale の正規化: 0-10数値（例: 7, 7/10, 7.0）を許容。low/medium/high など定性のみは wrong_format を付与する。\n"
-            "- 数値スロット監査ルール: importance_scale / confidence_scale は、evidence_items の user 根拠（role=user）に0-10数値が明示される場合のみ確定値として採用する。\n"
-            f"- importance_scale / confidence_scale で user 根拠に明示数値がある場合、quality_score は {_EXPLICIT_NUMERIC_SCALE_QUALITY_FLOOR:.2f} 未満にしない。\n"
-            "- evidence_items の user 根拠に数値がない場合は未確定扱いとし、revised_value は非数値の確認表現（例: 要確認（数値未明示））にし、issue_codes に low_confidence と wrong_format を付与し、quality_score は0.59以下にする。\n"
-            "- commitment_level の正規化: 0-10数値（例: 7, 7/10, 7.0）と定性表現（例: low/medium/high, 低/中/高）を許容し、medium を wrong_format 扱いにしない。\n"
-            "- commitment_level の quality は数値の高低ではなく、意思の明確さ（実行条件・障壁・上げ下げ要因の説明）で評価する。\n"
-            "- today_focus_topic は、本人の自発発話か直前assistant要約への明示承諾で扱う中身が確認できる場合にのみ quality_score を0.80以上にしてよい。\n"
-            "- 面接者が出した方向に本人が乗って話しているだけ、または『どちらから扱うか』の選択だけなら today_focus_topic は 0.79 以下に留める。\n"
-            "- target_behavior の採用条件: 目に見える行動 / 再現可能な場面での対処 / 状態改善のための近位行動 のいずれかを満たすこと。\n"
-            "- target_behavior が価値・意味の探索テーマ（例: 長期目標の見え方を明確化する、役割の輪郭をつかむ、意味づけを整理する）に留まる場合は target_behavior_not_actionable と wrong_format を付与する。\n"
-            "- focus_agreement は、本人の yes / 自発的再表明 / 直前assistant要約への明示承諾がある場合にのみ quality_score を0.80以上にしてよい。\n"
-            "- 『どちらから扱うか』は subtopic preference であり、focus_agreement の根拠にしない。内容の薄い同意表現（例: その方向でいく）だけなら low_confidence / too_vague 寄りに評価する。\n"
-            "- target_behavior が未確定の段階の focus_agreement は today_focus_topic または change_direction を対象にしてよいが、target_behavior 候補がある場合はその行動または近い言い換えを明示的に含める。\n"
-            "- 本人が自発的に具体行動を述べている場合、focus_agreement が未確定でも target_behavior は quality_score を0.80以上にしてよい。\n"
-            "- 直前assistant要約への明示承諾で、その要約が target_behavior を含む場合は target_behavior と focus_agreement をともに quality_score 0.80以上にしてよい。\n"
-            "- focus_agreement がその内容を指していなければ、focus_agreement の quality_score は0.79以下に留め、low_confidence を付与する。\n"
-            "- target_behavior に新しい対処行動や coping plan を発明しない。user 根拠か assent bridge で裏づけられた内容だけを採用する。\n"
-            "- semantic_review_pending=true の候補は、user_quote が指定 user ターンの同根拠（言い換え/要約を含む）かをあなたが判断する。\n"
-            "- 減点禁止: quality_score は既存値を下回らない。更新は上げる場合だけ行う。\n"
-            f"- 合格基準: 既存 quality_score が {self.quality_pass_threshold:.2f} 以上のスロットは、根拠矛盾がない限り pass（維持）する。\n"
-            "- 各 review対象スロットについて quality_score を必ず返す。\n"
-            "- reviewed_updates[].evidence_items に根拠を列挙する（例: 根拠1, 根拠2...）。各要素は role(user|assistant), quote, turn_ids を持つ。\n"
-            "- missing_evidence は、reviewed_updates[].evidence_items に quote+turn_ids を満たす根拠が1件もない場合にのみ付与する。\n"
-            "- evidence_items に有効な根拠がある場合、missing_evidence を付与しない（low_confidence / too_vague などで表現する）。\n"
-            "- slot_quality_target_examples は監査メモではなく、次の応答で本当に扱う未言及情報の候補だけを返す。\n"
-            "- slot_quality_target_examples は reviewed_updates を踏まえた current_phase 専用ビューとして返す。\n"
-            f"- slot_quality_target_examples は reviewed_updates のうち、現在フェーズで quality_score < {review_target_threshold:.2f} の slot_key ごとに1件ずつ返す。該当がなければ [] を返す。\n"
-            f"- slot_quality_target_examples は 0〜{_MAX_SLOT_REPAIR_HINTS_PER_TURN} 件まで。現在フェーズの low-quality slot を漏らさず返し、他フェーズの hint は返さない。\n"
-            "- slot_quality_target_examples.slot_label は人が読む表示名だけを書く。GREETING.greeting_exchange / importance_reasons / phase.slot_key のような内部参照名は禁止。\n"
-            "- slot_label は『焦点合意』『方向性』『具体化』のような作業名ではなく、そのスロットで埋めたい内容名を書く。\n"
-            f"- slot_quality_target_examples.target_information には、そのスロットの quality を {_SLOT_REPAIR_HINT_TARGET_QUALITY:.2f} 相当に近づける未言及情報を短く書く。\n"
-            "- target_information は不足情報そのものを書く。『支援情報』『具体化』『合意の明確化』『qualityが上がる条件』のようなメモ見出しは禁止。\n"
-            "- target_information に『そのスロットでまだ未言及の前進情報』『焦点の具体化』『方向性』『合意』のような汎用プレースホルダを書かない。\n"
-            "- target_information は、場面 / 時間 / 場所 / 行動 / 手ごたえ / 数値根拠 のうち少なくとも1つが見える言い方にする。\n"
-            f"- slot_quality_target_examples.detail は「まだ本人が言っていないが、これが言えれば quality={_SLOT_REPAIR_HINT_TARGET_QUALITY:.2f} 相当へ近づく」ユーザ発話例を自然文1文で書く。\n"
-            "- detail は必ず本人の次の発話例として一人称で書き、原則として「...」で囲む。\n"
-            "- detail は質問文やカウンセラー指示ではなく、仮想的なユーザ発話の内容を書く。\n"
-            "- detail に疑問符、『ですか』『教えて』『言ってもよいですか』を入れない。問いではなく本人の叙述にする。\n"
-            "- detail は下流にそのまま渡るため、抽象語（例: 具体化する/明確にする）だけで終わらせない。\n"
-            "- detail には quality=..., phase_code, slot_key, REVIEW_REFLECTION.xxx, FOCUSING_TARGET_BEHAVIOR など内部語を出さない。\n"
-            "- detail は既存値の言い換えや、すでに evidence にある内容の反復ではなく、まだ未言及の前進情報を含める。\n"
-            "- detail にケース無関係の汎用例や仮の生活場面を創作しない。仮想例はケース文脈に接続していること。\n"
-            "- detail は『現在値を〜へ置換』『次に確認する』のような編集メモや作業指示にしない。\n"
-            "- detail に『次回の会話で』『qualityが上がる』『言語化できる』『〜という発話』『提案してみる』のようなメタ説明を書かない。\n"
-            f"- 現在フェーズで quality_score < {review_target_threshold:.2f} のスロットは漏らさず hint を返し、採用した example の detail 空欄は禁止。\n"
-            "- slot_quality_target_examples では quality_upgrade_model_text にも detail と同文を入れる。\n"
-            "悪い例:\n"
-            '- slot_label=\"GREETING.greeting_exchange\", target_information=\"支援情報\", detail=\"今日は話しやすい雰囲気で始められるように...教えてください。\"\n'
-            "良い例:\n"
-            '- slot_label=\"話しやすさの希望\", target_information=\"最初にどんな進め方だと話しやすいか\", detail=\"「最初に流れを短く聞いてから話し始められると安心です」\"\n'
-            "悪い例:\n"
-            '- slot_label=\"Importance scale\", target_information=\"qualityが上がる条件\", detail=\"重要度は8/10と感じる理由を具体的に教えてほしい。\"\n'
-            '- slot_label=\"焦点合意の確認\", target_information=\"そのスロットでまだ未言及の前進情報\", detail=\"『今日はこの焦点で進めてもよいですか』\"\n'
-            "良い例:\n"
-            '- slot_label=\"重要度の理由\", target_information=\"60秒区切りを大事だと感じる理由\", detail=\"「区切りがあると途中で頭が真っ白になっても戻りやすいので、大事だと思います」\"\n'
-            '- slot_label=\"手ごたえが出た場面\", target_information=\"資格学習で『これが大事だ』と感じた瞬間\", detail=\"「問題が解けた直後に、これなら自分の中で残したいと思いました」\"\n'
-            "- JSONオブジェクトのみ1件を返す。\n"
-            "出力形式:\n"
+            "You are the Layer2 Slot Reviewer for MI counseling.\n"
+            "Audit only the slot candidates extracted by Layer1 and return quality ratings plus repair hints.\n"
+            "Constraints:\n"
+            f"- Review only Layer1Bundle.review_target_slot_keys, defined as quality < {review_target_threshold:.2f} or unset.\n"
+            "- Stay within Layer1Bundle.review_target_slot_refs and candidate_updates.\n"
+            "- Do not invent new slot keys.\n"
+            "- Return reviewed_updates with revised_value, quality_score, issue_codes, evidence_items, and review_note.\n"
+            "- Do not return decision / admissible / quality_action / slot_quality / quality_mean / quality_min / blocking_issue_codes.\n"
+            "- Do not re-estimate features or decide phase progression.\n"
+            "- When candidate_variants include both existing memory and a latest user update, compare them and output one final integrated value.\n"
+            "- Keep concrete details. Do not abstract away time, place, frequency, duration, or conditions when they are grounded.\n"
+            "- For importance_scale / confidence_scale, accept only explicit 0-10 numeric evidence from user turns.\n"
+            f"- If explicit numeric evidence exists for importance_scale / confidence_scale, keep quality_score >= {_EXPLICIT_NUMERIC_SCALE_QUALITY_FLOOR:.2f}.\n"
+            "- If no numeric evidence exists, keep the value provisional, mark wrong_format and low_confidence, and keep quality_score <= 0.59.\n"
+            "- For commitment_level, accept either a 0-10 number or qualitative labels such as low / medium / high.\n"
+            "- Evaluate commitment_level by clarity of intent and conditions, not by the magnitude of the number itself.\n"
+            "- today_focus_topic deserves quality >= 0.80 only when the client explicitly confirms the topic, either spontaneously or by clear assent to the previous assistant summary.\n"
+            "- focus_agreement deserves quality >= 0.80 only when the client clearly assents or re-states the focus.\n"
+            "- target_behavior must be an observable action, reproducible coping response, or proximal action that improves the state.\n"
+            "- Do not invent new coping plans for target_behavior.\n"
+            "- quality_score may rise but must not go below the existing value.\n"
+            f"- If an existing quality_score is already >= {self.quality_pass_threshold:.2f} and evidence is not contradicted, keep it as pass.\n"
+            "- Always return quality_score for every reviewed slot.\n"
+            "- evidence_items must include role, quote, and turn_ids.\n"
+            "- Apply missing_evidence only when no valid quote+turn_ids evidence exists.\n"
+            "- slot_quality_target_examples must be actionable missing-information candidates for the next response, not audit notes.\n"
+            f"- Return one slot_quality_target_examples item per current-phase slot with quality < {review_target_threshold:.2f}; if none, return [].\n"
+            f"- Return at most {_MAX_SLOT_REPAIR_HINTS_PER_TURN} hint items and do not include other-phase hints.\n"
+            "- slot_label must be a human-readable content label, not an internal schema label.\n"
+            f"- target_information should briefly name the missing information needed to move the slot toward quality {_SLOT_REPAIR_HINT_TARGET_QUALITY:.2f}.\n"
+            "- detail must be one natural first-person user utterance example, not a question or counselor instruction.\n"
+            "- detail must not contain internal labels, meta commentary, or generic placeholders.\n"
+            "- If you output slot_quality_target_examples, mirror detail into quality_upgrade_model_text.\n"
+            "Return exactly one JSON object.\n"
+            "Output format:\n"
             "{\n"
             '  "reviewed_updates":[{"phase":"...","phase_code":"...","slot_key":"...","original_value":"...","revised_value":"...","evidence_items":[{"role":"user","quote":"...","turn_ids":[1]},{"role":"assistant","quote":"...","turn_ids":[2]}],"extraction_confidence":0.8,"quality_score":0.7,"issue_codes":["..."],"review_note":"..."}],\n'
-            '  "slot_quality_target_examples":[{"slot_key":"...","slot_label":"...","issue_type":"missing_evidence|low_confidence|wrong_format|too_vague","preferred_probe_style":"...","target_information":"そのスロットでまだ未言及の前進情報","detail":"もしユーザが次にこう言えればquality向上につながる発話例","quality_upgrade_model_text":"detailと同文"}],\n'
+            '  "slot_quality_target_examples":[{"slot_key":"...","slot_label":"...","issue_type":"missing_evidence|low_confidence|wrong_format|too_vague","preferred_probe_style":"...","target_information":"missing information needed for the slot","detail":"\"If the client said this next, the slot quality would improve\"","quality_upgrade_model_text":"same as detail"}],\n'
             '  "review_summary_note":"..."\n'
             "}"
         )
         system = inject_mi_knowledge(system, agent_name="slot_reviewer")
         user = (
-            f"【現在フェーズ】{state.phase.value}\n"
-            f"【特徴量】{feature_json}\n"
-            f"【現在フェーズ確定スロット（値/状態/現品質）】{current_quality_context_json}\n"
-            f"【フェーズ別スロット評価基準】\n{rubric_text}\n"
-            f"【Layer2レビュー対象スロット（quality<{review_target_threshold:.2f} / 未設定含む）】{review_target_slot_keys_json}\n"
-            f"【Layer2レビュー対象スロット参照（phase_code.slot_key）】{review_target_slot_refs_json}\n"
-            f"【履歴（T{turn_start}〜T{turn_end}）】\n{dialogue}\n"
-            f"【Layer1Bundle】{bundle_json}\n"
-            "Layer1Bundle.review_target_slot_keys のみ監査してJSONを返してください。"
+            f"[Current phase]\n{state.phase.value}\n"
+            f"[Features]\n{feature_json}\n"
+            f"[Confirmed current-phase slots: value / status / current quality]\n{current_quality_context_json}\n"
+            f"[Phase-specific slot rubric]\n{rubric_text}\n"
+            f"[Layer2 review target slot keys]\n{review_target_slot_keys_json}\n"
+            f"[Layer2 review target refs]\n{review_target_slot_refs_json}\n"
+            f"[Dialogue T{turn_start}-T{turn_end}]\n{dialogue}\n"
+            f"[Layer1Bundle]\n{bundle_json}\n"
+            "Audit only Layer1Bundle.review_target_slot_keys and return JSON."
         )
         messages = [
             {"role": "system", "content": system},
@@ -9118,8 +8995,8 @@ class LLMSlotReviewer:
 @dataclass
 class LLMNonCurrentSlotReviewer:
     """
-    Layer2: 非現在フェーズ候補の監査専用 reviewer。
-    - reviewed_updates / quality のみを返し、slot_quality_target_examples は返さない。
+    Layer2 reviewer dedicated to auditing non-current-phase candidates.
+    - Return only reviewed_updates / quality and omit slot_quality_target_examples.
     """
 
     llm: LLMClient
@@ -9160,37 +9037,37 @@ class LLMNonCurrentSlotReviewer:
         all_phase_status = _build_all_phase_slot_status_for_prompt(state)
 
         system = (
-            "あなたは MI カウンセリングの Layer2 Non-Current Slot Reviewer です。\n"
-            "役割: 現在フェーズ以外の Layer1 候補だけを監査し、統合済み reviewed_updates を返す。\n"
-            "制約:\n"
-            f"- review対象は quality < {review_target_threshold:.2f}（未設定を含む）として Layer1Bundle.review_target_slot_keys / review_target_slot_refs に限定する。\n"
-            "- phase_code+slot_key の組み合わせは Layer1Bundle.review_target_slot_refs / candidate_updates の範囲に限定する。\n"
-            "- Layer1 候補にない slot_key を新規追加しない。\n"
-            "- phase の進行判定をしない。\n"
-            "- features を再推定しない。\n"
-            "- reviewed_updates には統合結果(revised_value)、quality_score、issue_codes、evidence_items、review_note を返す。\n"
-            "- slot_quality_target_examples / slot_repair_hints は返さない。\n"
-            "- 各 slot の candidate_updates[].candidate_variants に existing_slot_memory と latest_user_update がある場合、両方を比較して最終値を1つに統合する。\n"
-            "- reviewed_updates[].original_value / revised_value は、比較した結果の最終判断値を反映する。\n"
-            "- 具体性維持ルール: revised_value は original_value や candidate_variants の具体情報より抽象化しない。\n"
-            "- today_focus_topic は、本人の自発発話か直前assistant要約への明示承諾で扱う中身が確認できる場合にのみ quality_score を0.80以上にしてよい。\n"
-            "- 面接者が出した方向に本人が乗って話しているだけ、または『どちらから扱うか』の選択だけなら today_focus_topic は 0.79 以下に留める。\n"
-            "- target_behavior の採用条件: 目に見える行動 / 再現可能な場面での対処 / 状態改善のための近位行動 のいずれかを満たすこと。\n"
-            "- target_behavior が価値・意味の探索テーマに留まる場合は target_behavior_not_actionable と wrong_format を付与する。\n"
-            "- focus_agreement は、本人の yes / 自発的再表明 / 直前assistant要約への明示承諾がある場合にのみ quality_score を0.80以上にしてよい。\n"
-            "- 『どちらから扱うか』は subtopic preference であり、focus_agreement の根拠にしない。内容の薄い同意表現だけなら low_confidence / too_vague 寄りに評価する。\n"
-            "- target_behavior が未確定の段階の focus_agreement は today_focus_topic または change_direction を対象にしてよいが、target_behavior 候補がある場合はその行動または近い言い換えを明示的に含める。\n"
-            "- 本人が自発的に具体行動を述べている場合、focus_agreement が未確定でも target_behavior は quality_score を0.80以上にしてよい。\n"
-            "- 直前assistant要約への明示承諾で、その要約が target_behavior を含む場合は target_behavior と focus_agreement をともに quality_score 0.80以上にしてよい。\n"
-            "- focus_agreement がその内容を指していなければ、focus_agreement の quality_score は0.79以下に留め、low_confidence を付与する。\n"
-            "- target_behavior に新しい対処行動や coping plan を確定値として発明しない。user 根拠か assent bridge で裏づけられた内容だけを採用する。\n"
-            "- semantic_review_pending=true の候補は、user_quote が指定 user ターンの同根拠（言い換え/要約を含む）かを判断する。\n"
-            "- 減点禁止: quality_score は既存値を下回らない。更新は上げる場合だけ行う。\n"
-            f"- 合格基準: 既存 quality_score が {self.quality_pass_threshold:.2f} 以上のスロットは、根拠矛盾がない限り pass（維持）する。\n"
-            "- reviewed_updates[].evidence_items に根拠を列挙する（各要素は role, quote, turn_ids）。\n"
-            "- missing_evidence は reviewed_updates[].evidence_items に quote+turn_ids を満たす根拠が1件もない場合にのみ付与する。\n"
-            "- JSONオブジェクトのみ1件を返す。\n"
-            "出力形式:\n"
+            "You are the Layer2 reviewer for non-current-phase MI slot candidates.\n"
+            "Role: review only Layer1 candidates outside the current phase and return merged `reviewed_updates`.\n"
+            "Constraints:\n"
+            f"- Limit review targets to `quality < {review_target_threshold:.2f}` (including unset quality) using `Layer1Bundle.review_target_slot_keys` / `review_target_slot_refs`.\n"
+            "- Restrict each `phase_code+slot_key` pair to the range covered by `Layer1Bundle.review_target_slot_refs` / `candidate_updates`.\n"
+            "- Do not add any new `slot_key` that is not already present in Layer1 candidates.\n"
+            "- Do not make phase-progression decisions.\n"
+            "- Do not re-estimate `features`.\n"
+            "- Return merged results (`revised_value`), `quality_score`, `issue_codes`, `evidence_items`, and `review_note` inside `reviewed_updates`.\n"
+            "- Do not return `slot_quality_target_examples` / `slot_repair_hints`.\n"
+            "- When a slot has both `existing_slot_memory` and `latest_user_update` in `candidate_updates[].candidate_variants`, compare them and merge to one final value.\n"
+            "- `reviewed_updates[].original_value / revised_value` must reflect the final judgment after comparison.\n"
+            "- Preserve specificity: `revised_value` must not become more abstract than the specific information already present in `original_value` or candidate variants.\n"
+            "- `today_focus_topic` may reach `quality_score >= 0.80` only when the topic is confirmed by the client's own spontaneous statement or explicit assent to the immediately preceding assistant summary.\n"
+            "- If the client is merely following the interviewer's direction, or only choosing which topic to start with, keep `today_focus_topic <= 0.79`.\n"
+            "- `target_behavior` is admissible only when it names an observable behavior, a reproducible coping action in a concrete situation, or a proximal action that improves the state.\n"
+            "- If `target_behavior` stays at the level of exploring values/meaning only, assign `target_behavior_not_actionable` and `wrong_format`.\n"
+            "- `focus_agreement` may reach `quality_score >= 0.80` only when there is a clear yes, spontaneous restatement, or explicit assent to the immediately preceding assistant summary.\n"
+            "- Choosing which subtopic to address first is only a subtopic preference and does not count as evidence for `focus_agreement`.\n"
+            "- When `target_behavior` is not yet settled, `focus_agreement` may refer to `today_focus_topic` or `change_direction`, but if there is a `target_behavior` candidate it must explicitly include that behavior or a close paraphrase.\n"
+            "- If the client spontaneously states a concrete behavior, `target_behavior` may still reach `quality_score >= 0.80` even if `focus_agreement` is unresolved.\n"
+            "- When explicit assent to the preceding assistant summary includes `target_behavior`, both `target_behavior` and `focus_agreement` may reach `quality_score >= 0.80`.\n"
+            "- If `focus_agreement` does not actually point to that content, keep it at `<= 0.79` and add `low_confidence`.\n"
+            "- Do not invent new coping actions or plans as fixed `target_behavior` values. Use only content supported by user evidence or an assent bridge.\n"
+            "- For `semantic_review_pending=true`, judge whether `user_quote` is semantically supported by the specified user turn, including paraphrase/summary cases.\n"
+            "- Never lower an existing `quality_score`; update only when it rises.\n"
+            f"- Pass criterion: if existing `quality_score` is already >= {self.quality_pass_threshold:.2f}, keep it as pass unless the evidence contradicts it.\n"
+            "- List evidence in `reviewed_updates[].evidence_items` with `role`, `quote`, and `turn_ids`.\n"
+            "- Add `missing_evidence` only when `reviewed_updates[].evidence_items` contains no valid quote+turn_ids evidence at all.\n"
+            "- Return exactly one JSON object.\n"
+            "Output format:\n"
             "{\n"
             '  "reviewed_updates":[{"phase":"...","phase_code":"...","slot_key":"...","original_value":"...","revised_value":"...","evidence_items":[{"role":"user","quote":"...","turn_ids":[1]}],"extraction_confidence":0.8,"quality_score":0.7,"issue_codes":["..."],"review_note":"..."}],\n'
             '  "review_summary_note":"..."\n'
@@ -9198,15 +9075,15 @@ class LLMNonCurrentSlotReviewer:
         )
         system = inject_mi_knowledge(system, agent_name="slot_reviewer")
         user = (
-            f"【現在フェーズ】{state.phase.value}\n"
-            f"【レビュー対象フェーズ】{' / '.join(target_phase_labels) if target_phase_labels else 'なし'}\n"
-            f"【特徴量】{feature_json}\n"
-            f"【全フェーズ確定スロット状態】\n{all_phase_status}\n"
-            f"【Layer2レビュー対象スロット（quality<{review_target_threshold:.2f} / 未設定含む）】{review_target_slot_keys_json}\n"
-            f"【Layer2レビュー対象スロット参照（phase_code.slot_key）】{review_target_slot_refs_json}\n"
-            f"【履歴（T{turn_start}〜T{turn_end}）】\n{dialogue}\n"
-            f"【Layer1Bundle】{bundle_json}\n"
-            "現在フェーズ以外の review_target_slot_refs のみ監査して JSON を返してください。"
+            f"[Current phase] {state.phase.value}\n"
+            f"[Review target phases] {' / '.join(target_phase_labels) if target_phase_labels else 'none'}\n"
+            f"[Features] {feature_json}\n"
+            f"[Confirmed slot state across all phases]\n{all_phase_status}\n"
+            f"[Layer2 review target slots (quality<{review_target_threshold:.2f}, including unset)] {review_target_slot_keys_json}\n"
+            f"[Layer2 review target refs (phase_code.slot_key)] {review_target_slot_refs_json}\n"
+            f"[History (T{turn_start}-T{turn_end})]\n{dialogue}\n"
+            f"[Layer1Bundle] {bundle_json}\n"
+            "Review only the non-current-phase `review_target_slot_refs` and return JSON."
         )
         messages = [
             {"role": "system", "content": system},
@@ -9267,10 +9144,10 @@ class LLMNonCurrentSlotReviewer:
 @dataclass
 class LLMActionRanker:
     """
-    LLMで主動作候補を同次元で評価し、最有力の main_action を提案する。
-    返り値:
-      - ordered_main_actions: ルール側バイアス用の順位（MainAction）
-      - debug: proposed_main_action など
+    Use the LLM to score candidate main actions on the same footing and propose the strongest one.
+    Returns:
+      - ordered_main_actions: ranking used as a rule-side bias (MainAction)
+      - debug: metadata such as proposed_main_action
     """
 
     llm: LLMClient
@@ -9488,24 +9365,24 @@ class LLMActionRanker:
         ranker_signal_json = json.dumps(ranker_signal, ensure_ascii=False)
 
         system = (
-            "あなたは動機づけ面接（MI）を行うカウンセラーの次の主動作を提案するアシスタントです。\n"
-            "allowed_actions の中からのみ main_action を1つ選んでください。\n"
-            "allowed_actions 以外は絶対に選ばないでください。\n"
-            "MI原則（共感・自律尊重・抵抗への順応）と対話の流れを重視し、\n"
-            "必要なら rank で上位3件まで候補順を返してください。\n"
-            "confidence は 0.00〜1.00 の数値で返してよい（任意）。\n"
-            "出力は JSON のみ。例:\n"
+            "You are an assistant that proposes the counselor's next main action in an MI dialogue.\n"
+            "Choose exactly one `main_action`, and it must come from `allowed_actions`.\n"
+            "Never choose anything outside `allowed_actions`.\n"
+            "Prioritize MI principles (empathy, autonomy support, rolling with resistance) and the flow of the dialogue.\n"
+            "If useful, return up to the top 3 ranked candidates in `rank`.\n"
+            "`confidence` may be returned as a number from 0.00 to 1.00 (optional).\n"
+            "Output JSON only. Example:\n"
             '{"main_action":"REFLECT_COMPLEX","rank":["REFLECT_COMPLEX","QUESTION","SUMMARY"],"confidence":0.82}\n'
-            "rank を返す場合も allowed_actions 内のラベルのみを使う。"
+            "If you return `rank`, use labels from `allowed_actions` only."
         )
         system = inject_mi_knowledge(system, agent_name="action_ranker")
         user = (
-            f"【現在フェーズ】{state.phase.value}\n"
-            f"【allowed_actions】{', '.join(allowed_labels)}\n"
-            f"【特徴量（参考）】{feature_json}\n"
-            f"【行動履歴シグナル（制約判定用）】{ranker_signal_json}\n"
-            f"【直近のやり取り】\n{dialogue}\n"
-            "MIの原則（共感・抵抗への順応・自律尊重）を踏まえて提案してください。"
+            f"[Current phase]{state.phase.value}\n"
+            f"[allowed_actions]{', '.join(allowed_labels)}\n"
+            f"[Features / reference]{feature_json}\n"
+            f"[Action-history signals / constraints]{ranker_signal_json}\n"
+            f"[Recent dialogue]\n{dialogue}\n"
+            "Make the proposal in line with MI principles (empathy, rolling with resistance, autonomy support)."
         )
         messages = [
             {"role": "system", "content": system},
@@ -9541,24 +9418,24 @@ class LLMActionRanker:
                 return None
             u = s.upper().replace("-", "_").replace(" ", "_")
 
-            # 日本語ラベルも許容
-            if ("単純" in s or "シンプル" in s) and ("反射" in s or "聞き返し" in s):
+            # Accept legacy localized labels as well.
+            if ("simple" in s.lower() or "\u5358\u7d14" in s or "\u30b7\u30f3\u30d7\u30eb" in s) and ("reflection" in s.lower() or "\u805e\u304d\u8fd4\u3057" in s):
                 return "REFLECT_SIMPLE"
-            if ("複雑" in s) and ("反射" in s or "聞き返し" in s):
+            if ("complex" in s.lower() or "\u8907\u96d1" in s) and ("reflection" in s.lower() or "\u805e\u304d\u8fd4\u3057" in s):
                 return "REFLECT_COMPLEX"
-            if ("両価" in s or "両面" in s) and ("反射" in s or "聞き返し" in s):
+            if ("double" in s.lower() or "double-sided" in s.lower() or "\u4e21\u4fa1" in s or "\u4e21\u9762" in s) and ("reflection" in s.lower() or "\u805e\u304d\u8fd4\u3057" in s):
                 return "REFLECT_DOUBLE"
-            if "スケーリング" in s or "尺度" in s:
+            if "scaling" in s.lower() or "\u30b9\u30b1\u30fc\u30ea\u30f3\u30b0" in s or "scale" in s:
                 return "SCALING_QUESTION"
-            if "質問" in s:
+            if "question" in s.lower():
                 return "QUESTION"
-            if "要約" in s:
+            if "summary" in s.lower():
                 return "SUMMARY"
-            if ("選好" in s or "意向" in s or "どちら" in s) and ("確認" in s or "質問" in s):
+            if ("preference" in s.lower() or "intent" in s.lower() or "which" in s.lower() or "\u9078\u597d" in s or "\u610f\u5411" in s or "\u3069\u3061\u3089" in s) and ("check" in s.lower() or "question" in s.lower() or "\u78ba\u8a8d" in s):
                 return "CLARIFY_PREFERENCE"
-            if "許可" in s:
+            if "permission" in s.lower() or "\u8a31\u53ef" in s:
                 return "ASK_PERMISSION_TO_SHARE_INFO"
-            if "情報提供" in s or "情報共有" in s:
+            if "provide_info" in s.lower() or "information sharing" in s.lower() or "\u60c5\u5831\u63d0\u4f9b" in s:
                 return "PROVIDE_INFO"
 
             if u in {"REFLECT_SIMPLE", "SIMPLE_REFLECT", "SIMPLE_REFLECTION", "REFLECTION_SIMPLE"}:
@@ -9686,53 +9563,53 @@ class LLMActionRanker:
 
 
 # ----------------------------
-# Change-talk inference（Layer2補助）
+# Change-talk inference (Layer2 helper)
 # ----------------------------
 _CHANGE_TALK_DIRECTION_RULES: Dict[Phase, Dict[str, Any]] = {
     Phase.GREETING: {
         "priority_slots": ("rapport_cue", "greeting_exchange"),
-        "focus_hint": "関係づくりにつながる前向きな糸口を優先。",
-        "phase_focus": "関係づくりの中で、話してみようとする前向きな糸口を拾う。",
+        "focus_hint": "Prioritize small forward-looking openings that help build rapport.",
+        "phase_focus": "Within rapport-building, look for openings that suggest willingness to start talking.",
     },
     Phase.PURPOSE_CONFIRMATION: {
         "priority_slots": ("today_focus_topic", "presenting_problem_raw", "process_need"),
-        "focus_hint": "目的に向かう理由・必要感・意向を優先。",
-        "phase_focus": "今日の目的に向かう理由や必要感を拾う。",
+        "focus_hint": "Prioritize reasons, felt need, and intention related to today's goal.",
+        "phase_focus": "Pick up reasons and felt need connected to today's purpose.",
     },
     Phase.CURRENT_STATUS_CHECK: {
         "priority_slots": ("problem_scene", "emotion_state", "current_situation", "background_context"),
-        "focus_hint": "現状の困りごとから、変化理由と必要感を優先。",
-        "phase_focus": "具体的な問題場面と現状の困りごとから、変化の必要感と理由を拾う。",
+        "focus_hint": "From the current difficulties, prioritize reasons for change and felt need.",
+        "phase_focus": "From concrete problem scenes and current strain, pick up need and reasons for change.",
     },
     Phase.FOCUSING_TARGET_BEHAVIOR: {
         "priority_slots": ("target_behavior", "change_direction", "focus_agreement"),
-        "focus_hint": "標的行動に向けた意志と実行可能感を優先。",
-        "phase_focus": "標的行動に対する意志と実行可能感を拾う。",
+        "focus_hint": "Prioritize intention and feasibility for the target behavior.",
+        "phase_focus": "Pick up intention and feasibility related to the target behavior.",
     },
     Phase.IMPORTANCE_PROMOTION: {
         "priority_slots": ("importance_reasons", "core_values", "importance_scale"),
-        "focus_hint": "価値・重要性・理由の語りを優先。",
-        "phase_focus": "価値と重要性の語りから、変化理由と必要感を拾う。",
+        "focus_hint": "Prioritize talk about values, importance, and reasons.",
+        "phase_focus": "From talk about values and importance, pick up reasons and felt need for change.",
     },
     Phase.CONFIDENCE_PROMOTION: {
         "priority_slots": ("supports_strengths", "past_success_experience", "barrier_coping_strategy", "confidence_scale"),
-        "focus_hint": "できる感・実行見通し・次の一歩を優先。",
-        "phase_focus": "強み・過去の成功体験・障壁への対処方法の語りから、できそう感と一歩を拾う。",
+        "focus_hint": "Prioritize self-efficacy, execution outlook, and the next step.",
+        "phase_focus": "From strengths, past successes, and coping with barriers, pick up feasibility and the next step.",
     },
     Phase.NEXT_STEP_DECISION: {
         "priority_slots": ("next_step_action", "execution_context", "commitment_level"),
-        "focus_hint": "次の一歩の具体化と実行意図を優先。",
-        "phase_focus": "次の一歩の具体化と実行意思を拾う。",
+        "focus_hint": "Prioritize concrete definition of the next step and intention to carry it out.",
+        "phase_focus": "Pick up concrete details of the next step and implementation intent.",
     },
     Phase.REVIEW_REFLECTION: {
         "priority_slots": ("session_learning", "key_takeaway", "carry_forward_intent"),
-        "focus_hint": "学びの言語化と継続意図を優先。",
-        "phase_focus": "学びと持ち帰り意図から、継続意思を拾う。",
+        "focus_hint": "Prioritize putting learning into words and intention to carry it forward.",
+        "phase_focus": "From learning and carry-forward intent, pick up willingness to continue.",
     },
     Phase.CLOSING: {
         "priority_slots": ("closing_end_signal",),
-        "focus_hint": "終結合意と終了意図を優先。",
-        "phase_focus": "別れの挨拶または終了への合意示唆を確認し、終結合意を整える。",
+        "focus_hint": "Prioritize agreement to close and intention to end.",
+        "phase_focus": "Check for goodbye signals or consent to end and consolidate closing agreement.",
     },
 }
 
@@ -9749,37 +9626,37 @@ _CHANGE_TALK_DIRECTION_ONLY_PHASES: Set[Phase] = {
     Phase.CLOSING,
 }
 _CHANGE_TALK_PROCESS_PREFERENCE_MARKERS: Tuple[str, ...] = (
-    "自分のペース",
-    "焦らず",
-    "様子を見ながら",
-    "進め方",
-    "どう進めれば",
-    "どこから始めれば",
-    "どこから手をつければ",
+    "my own pace",
+    "without rushing",
+    "while seeing how it goes",
+    "process preference",
+    "how should I proceed",
+    "where should I start",
+    "where should I begin",
 )
 _CHANGE_TALK_DIRECTION_MARKERS: Tuple[str, ...] = (
-    "整理",
-    "減ら",
-    "はっきり",
-    "活用",
-    "支え",
-    "条件",
-    "安定",
-    "一歩",
-    "行動",
-    "優先",
-    "大事",
-    "続け",
-    "持ち帰り",
-    "学び",
+    "sort out",
+    "reduce",
+    "clarify",
+    "use",
+    "support",
+    "condition",
+    "stability",
+    "one step",
+    "action",
+    "priority",
+    "important",
+    "continue",
+    "carry forward",
+    "learning",
 )
 _CHANGE_TALK_UNCERTAINTY_MARKERS: Tuple[str, ...] = (
-    "分から",
-    "掴めない",
-    "見えず",
-    "不安",
-    "迷い",
-    "確信",
+    "do not know",
+    "cannot grasp",
+    "cannot see",
+    "anxious",
+    "uncertain",
+    "confidence",
 )
 
 
@@ -9857,31 +9734,31 @@ def _build_review_reflection_bridge_slots(
         (
             Phase.PURPOSE_CONFIRMATION,
             "presenting_problem_raw",
-            "主訴",
+            "Presenting concern",
             purpose_slots.get("presenting_problem_raw") if isinstance(purpose_slots, Mapping) else "",
         ),
         (
             Phase.CURRENT_STATUS_CHECK,
             "problem_scene",
-            "問題場面",
+            "Problem scene",
             current_status_slots.get("problem_scene") if isinstance(current_status_slots, Mapping) else "",
         ),
         (
             Phase.IMPORTANCE_PROMOTION,
             "core_values",
-            "価値/大事",
+            "Values / what matters",
             importance_slots.get("core_values") if isinstance(importance_slots, Mapping) else "",
         ),
         (
             Phase.CONFIDENCE_PROMOTION,
             "supports_strengths",
-            "資源/強み",
+            "Resources / strengths",
             confidence_slots.get("supports_strengths") if isinstance(confidence_slots, Mapping) else "",
         ),
         (
             Phase.FOCUSING_TARGET_BEHAVIOR,
             "target_behavior",
-            "標的行動",
+            "Target behavior",
             "" if isinstance(confidence_slots, Mapping) and confidence_slots.get("supports_strengths") else raw_target_behavior,
         ),
     )
@@ -9942,7 +9819,7 @@ def _build_macro_bridge_anchor(
         return ""
 
     micro_focus = _sanitize_human_text(primary_focus_topic)
-    if micro_focus in {"", "直近の困りごと", "現在のテーマ"}:
+    if micro_focus in {"", "recent difficulty", "current theme"}:
         return ""
 
     purpose_slots = state.phase_slots.get(Phase.PURPOSE_CONFIRMATION.name, {})
@@ -9961,7 +9838,7 @@ def _build_macro_bridge_anchor(
     for macro_theme in macro_candidates:
         if _normalize_slot_text(macro_theme) == normalized_micro:
             continue
-        return f"「{micro_focus}」は「{macro_theme}」にも関わる話"
+        return f"'{micro_focus}' is also connected to '{macro_theme}'"
     return ""
 
 
@@ -10007,7 +9884,7 @@ def _summarize_phase_slots_for_change_talk(
     if not target_behavior_focus and use_target_behavior_only_policy and raw_target_behavior:
         target_behavior_focus = raw_target_behavior
         target_behavior_focus_source = "phase_slot_state"
-    target_behavior_focus_text = f"標的行動={target_behavior_focus}" if target_behavior_focus else "なし"
+    target_behavior_focus_text = f"target_behavior={target_behavior_focus}" if target_behavior_focus else "none"
 
     bridge_slots: List[Dict[str, str]] = []
     bridge_fields: List[str] = []
@@ -10077,8 +9954,8 @@ def _summarize_phase_slots_for_change_talk(
             if slot_key not in prompt_slot_keys:
                 prompt_slot_keys.append(slot_key)
 
-        _append_purpose_slot("today_focus_topic", "今日扱う中身")
-        _append_purpose_slot("presenting_problem_raw", "主訴")
+        _append_purpose_slot("today_focus_topic", "today's focus")
+        _append_purpose_slot("presenting_problem_raw", "presenting concern")
         if not prompt_slots:
             prompt_slot_policy = "all_confirmed_slots"
             prompt_slots = list(confirmed_slots)
@@ -10113,15 +9990,15 @@ def _summarize_phase_slots_for_change_talk(
 
     return {
         "confirmed_slots": confirmed_slots,
-        "confirmed_slots_text": " / ".join(confirmed_slot_items) if confirmed_slot_items else "なし",
+        "confirmed_slots_text": " / ".join(confirmed_slot_items) if confirmed_slot_items else "none",
         "confirmed_slot_keys": confirmed_slot_keys,
         "prompt_slots": prompt_slots,
-        "prompt_slots_text": " / ".join(prompt_slot_items) if prompt_slot_items else "なし",
+        "prompt_slots_text": " / ".join(prompt_slot_items) if prompt_slot_items else "none",
         "prompt_slot_keys": prompt_slot_keys,
         "prompt_slot_policy": prompt_slot_policy,
         "bridge_slots": bridge_slots,
         "bridge_fields": bridge_fields,
-        "bridge_fields_text": " / ".join(bridge_fields) if bridge_fields else "なし",
+        "bridge_fields_text": " / ".join(bridge_fields) if bridge_fields else "none",
         "target_behavior_focus": target_behavior_focus,
         "target_behavior_focus_text": target_behavior_focus_text,
         "target_behavior_focus_enabled": bool(target_behavior_focus),
@@ -10140,8 +10017,8 @@ def _decide_change_talk_direction(
         state.phase,
         {
             "priority_slots": (),
-            "focus_hint": "変化側の糸口を丁寧に拾う。",
-            "phase_focus": "直近の語りから、変化側の糸口を丁寧に拾う。",
+            "focus_hint": "Carefully pick up openings on the change side.",
+            "phase_focus": "From the recent talk, carefully pick up openings on the change side.",
         },
     )
     priority_slots = tuple(rule.get("priority_slots") or ())
@@ -10184,50 +10061,50 @@ def _decide_change_talk_direction(
 
     if not selected_anchors:
         other_phase_text = str(slot_context.get("other_phase_text") or "").strip()
-        if other_phase_text and other_phase_text != "なし":
+        if other_phase_text and other_phase_text != "none":
             selected_anchors = [part.strip() for part in other_phase_text.split(" / ") if part.strip()][:2]
             source = "other_phase_slots"
 
     if not selected_anchors:
-        selected_anchors = ["最新発話の語りと文脈"]
+        selected_anchors = ["the latest utterance and its context"]
         source = "user_text_only"
 
     if features.resistance >= 0.6 or features.discord >= 0.5:
-        tone_hint = "抵抗や不協和を尊重し、維持トークを否定せずに変化側を小さく拾う。"
+        tone_hint = "Respect resistance or discord, avoid negating sustain talk, and pick up the change side in a small, careful way."
     elif features.change_talk >= 0.65:
-        tone_hint = "明示された変化語を具体化し、行動につながる表現を優先する。"
+        tone_hint = "Make explicit change language more concrete and prioritize wording that connects to action."
     else:
-        tone_hint = "言外の意図や理由を控えめに補い、過度な断定を避ける。"
+        tone_hint = "Gently supplement implied intention or reasons and avoid overstatement."
     if prioritize_target_behavior_anchor:
         if target_behavior_focus_source == "confirmed":
-            tone_hint += " 確定済み標的行動との関連を最優先で候補化する。"
+            tone_hint += " Prioritize candidates tied to the confirmed target behavior."
         else:
-            tone_hint += " 標的行動アンカーとの関連を最優先で候補化する。"
+            tone_hint += " Prioritize candidates tied to the target-behavior anchor."
     elif state.phase in {Phase.REVIEW_REFLECTION, Phase.CLOSING}:
-        tone_hint += " 主訴・問題場面・価値・標的行動を同等に参照し、いずれか1点への偏りを避ける。"
+        tone_hint += " Reference the presenting concern, problem scene, values, and target behavior with equal weight rather than over-focusing on one."
 
     preferred_focus = _preferred_change_talk_motivation_focus(
         importance_estimate=features.importance_estimate,
     )
     if preferred_focus == "importance_related":
         scoring_hint = (
-            f"重要度推定が{_CHANGE_TALK_IMPORTANCE_FOCUS_THRESHOLD:.1f}未満のため、"
-            "重要度関連（価値・理由・必要感）を高めに採点する。"
+            f"Because the estimated importance is below {_CHANGE_TALK_IMPORTANCE_FOCUS_THRESHOLD:.1f}, "
+            "score importance-related content (values, reasons, need) more strongly."
         )
     elif preferred_focus == "confidence_related":
         scoring_hint = (
-            f"重要度推定が{_CHANGE_TALK_IMPORTANCE_FOCUS_THRESHOLD:.1f}以上のため、"
-            "自信度関連（できる感・実行見通し）を高めに採点する。"
+            f"Because the estimated importance is at least {_CHANGE_TALK_IMPORTANCE_FOCUS_THRESHOLD:.1f}, "
+            "score confidence-related content (feasibility, execution outlook) more strongly."
         )
     else:
-        scoring_hint = "重要度推定が不明のため、重要度/自信度の両軸を同程度に扱う。"
+        scoring_hint = "Because the importance estimate is unknown, treat importance and confidence as equally weighted."
 
     phase_focus = str(rule.get("phase_focus") or "")
-    focus_hint = str(rule.get("focus_hint") or "変化側の糸口を丁寧に拾う。")
+    focus_hint = str(rule.get("focus_hint") or "Carefully pick up openings on the change side.")
     anchor_text = " / ".join(selected_anchors)
     direction = (
         f"{phase_focus} {focus_hint} "
-        f"焦点スロット: {anchor_text}。{tone_hint} {scoring_hint}"
+        f"Focus slots: {anchor_text}. {tone_hint} {scoring_hint}"
     )
     debug = {
         "phase": state.phase.value,
@@ -10262,7 +10139,7 @@ def _parse_change_talk_items(
         if not cleaned:
             continue
         cleaned = re.sub(
-            r"^(?:change[_\-\s]?talk|チェンジトーク)\s*[:：]\s*",
+            r"^(?:change[_\-\s]?talk)\s*[:：]\s*",
             "",
             cleaned,
             flags=re.IGNORECASE,
@@ -10277,30 +10154,31 @@ def _parse_change_talk_items(
     if not clauses:
         compact = re.sub(r"\s+", " ", raw).strip().strip("「」\"'`")
         compact = re.sub(
-            r"^(?:change[_\-\s]?talk|チェンジトーク)\s*[:：]\s*",
+            r"^(?:change[_\-\s]?talk)\s*[:：]\s*",
             "",
             compact,
             flags=re.IGNORECASE,
         )
         compact = re.sub(
-            r"(?:チェンジトークは[、,\s]*){2,}",
-            "チェンジトークは",
+            r"(?:change[_\-\s]?talk(?:\s+is)?[、,\s]*){2,}",
+            "change talk is ",
             compact,
+            flags=re.IGNORECASE,
         )
         clauses = [part.strip().strip("「」\"'`") for part in re.split(r"[。．!?？！\n]+", compact) if part.strip()]
 
     items: List[str] = []
     for clause in clauses:
         seed = clause.strip().strip("「」\"'`")
-        seed = re.sub(r"^チェンジトークは[、,\s]*", "", seed)
-        seed = re.sub(r"^チェンジトーク", "", seed).lstrip("は:： ")
+        seed = re.sub(r"^change[_\-\s]?talk(?:\s+is)?[、,\s]*", "", seed, flags=re.IGNORECASE)
+        seed = re.sub(r"^change[_\-\s]?talk", "", seed, flags=re.IGNORECASE).lstrip(":： ")
         seed = seed.strip().rstrip("。．!?？！")
         if not seed:
             continue
 
         raw_parts = [part.strip() for part in re.split(r"[、,，/・]", seed) if part.strip()]
-        if for_focus_terms and len(raw_parts) <= 1 and "と" in seed:
-            tentative = [part.strip() for part in seed.split("と") if part.strip()]
+        if for_focus_terms and len(raw_parts) <= 1 and " and " in seed.lower():
+            tentative = [part.strip() for part in re.split(r"\band\b", seed, flags=re.IGNORECASE) if part.strip()]
             if len(tentative) >= 2 and all(len(re.sub(r"\s+", "", part)) >= 2 for part in tentative):
                 raw_parts = tentative
         if not raw_parts:
@@ -10310,11 +10188,12 @@ def _parse_change_talk_items(
             token = re.sub(r"\s+", " ", part or "").strip().strip("「」\"'`")
             token = token.rstrip("。．!?？！")
             if for_focus_terms:
-                token = re.sub(r"^(?:少し|やや|まだ|今は|本当は)", "", token)
+                token = re.sub(r"^(?:a little|slightly|still|for now|honestly)\s+", "", token, flags=re.IGNORECASE)
                 token = re.sub(
-                    r"(?:が示されています|が示されている|がある|がうかがえます|がうかがえる|への関心|の芽|を中心)$",
+                    r"(?:is showing up|is present|is there|seems present|appears present|interest in|signs of|mainly)$",
                     "",
                     token,
+                    flags=re.IGNORECASE,
                 )
             token = token.strip("。．!?？！「」\"'` ")
             if len(re.sub(r"\s+", "", token)) < 2:
@@ -10348,19 +10227,19 @@ def _infer_change_talk_kind(text: str) -> str:
     normalized = re.sub(r"\s+", "", str(text or ""))
     if not normalized:
         return "desire"
-    if re.search(r"(やる|します|やっていく|続ける|決めた|決めます|つもり)", normalized):
+    if re.search(r"(willdo|doit|keepgoing|continue|decidedto|planto|intendto)", normalized):
         return "commitment"
-    if re.search(r"(やってみる|試してみる|始めてみる|取り組んでみる)", normalized):
+    if re.search(r"(tryit|giveitatry|startdoing|workonit)", normalized):
         return "activation"
-    if re.search(r"(できた|できている|続けられた|始めた|試した)", normalized):
+    if re.search(r"(didit|havedone|keptitup|started|triedit)", normalized):
         return "taking_step"
-    if re.search(r"(できそう|できるかも|やれそう|いけそう|自信)", normalized):
+    if re.search(r"(mightbeableto|candoit|seemsdoable|confidence)", normalized):
         return "ability"
-    if re.search(r"(必要|ねば|したほうが|しないと|このままでは)", normalized):
+    if re.search(r"(needto|haveto|should|otherwise|ifthiskeepsgoing)", normalized):
         return "need"
-    if re.search(r"(理由|ため|ので|から|だから)", normalized):
+    if re.search(r"(because|reason|sothat|thatswhy)", normalized):
         return "reason"
-    has_change = bool(re.search(r"(したい|変えたい|やめたい|良くしたい|整えたい)", normalized))
+    has_change = bool(re.search(r"(wantto|change|stop|improve|getbackontrack)", normalized))
     has_sustain = bool(any(marker in normalized for marker in _AMBIVALENCE_SUSTAIN_HINTS))
     if has_change and has_sustain:
         return "reason"
@@ -10375,10 +10254,10 @@ def _infer_change_talk_motivation_focus(*, text: str) -> str:
         return "importance_related"
 
     confidence_patterns = (
-        r"(自信|できる|できそう|やれそう|続けられ|実行|やってみる|試してみる|一歩|具体的|準備)",
+        r"(confidence|cando|doable|keepitup|carryout|tryit|nextstep|concrete|preparation)",
     )
     importance_patterns = (
-        r"(大事|重要|意味|理由|価値|必要|このままでは|困る|避けたい|変えたい|良くしたい|整えたい)",
+        r"(important|meaning|reason|value|need|otherwise|trouble|avoid|change|improve|getbackontrack)",
     )
     if any(re.search(pattern, normalized) for pattern in confidence_patterns):
         return "confidence_related"
@@ -10412,7 +10291,7 @@ def _normalize_change_talk_motivation_focus(
     if raw in _CHANGE_TALK_MOTIVATION_FOCUS_TYPES:
         return raw
 
-    # 旧スキーマ（darn/cat）は後方互換として受け取り、内部の新軸へ写像する。
+    # Accept the old DARN/CAT schema for backward compatibility and map it onto the newer internal axis.
     legacy_raw = str(legacy_category or "").strip().lower().replace("-", "_").replace(" ", "_")
     if legacy_raw in {"cat", "action", "planning", "mobilizing"}:
         return "confidence_related"
@@ -11300,15 +11179,15 @@ def _build_change_talk_hint_from_candidates(
             break
     if not phrases:
         return ""
-    return "チェンジトークは" + " / ".join(phrases) + "。"
+    return "Change talk: " + " / ".join(phrases) + "."
 
 
 @dataclass
 class LLMChangeTalkInferer:
     """
-    明示/言外のチェンジトーク候補を構造化して推論する補助エージェント。
-    - 候補は複数保持する（Layer2では候補抽出に専念）。
-    - 互換のため change_talk_inference（文字列ヒント）を同梱する。
+    Helper agent that structures and infers explicit or implied change-talk candidates.
+    - Keep multiple candidates rather than collapsing to one; Layer2 should focus on extraction.
+    - Include change_talk_inference as a string hint for backward compatibility.
     """
 
     llm: LLMClient
@@ -11345,7 +11224,7 @@ class LLMChangeTalkInferer:
                     continue
                 linked_slots_hint.append(slot_key)
         prompt_slot_policy = _normalize_slot_text(slot_context.get("prompt_slot_policy")) or "all_confirmed_slots"
-        direction_hint = "最新発話を主根拠に、推論用スロットとの関連でチェンジトーク候補を抽出する。"
+        direction_hint = "Extract change-talk candidates from the latest utterance, prioritizing links to the inference slots."
         direction_debug = {
             "source": prompt_slot_policy,
             "selected_slot_keys": list(linked_slots_hint),
@@ -11353,71 +11232,71 @@ class LLMChangeTalkInferer:
         }
 
         system = (
-            "あなたは動機づけ面接（MI）のチェンジトーク推論エージェントです。\n"
-            "目的: 最新のクライアント発話に含まれる、明示または言外のチェンジトーク候補を構造化して抽出する。\n"
-            "推論対象: DARN-CAT（Desire/Ability/Reasons/Need/Commitment/Activation/Taking steps）。\n"
-            "出力制約: JSONオブジェクトのみを1つ返す。説明文やコードブロックは禁止。\n"
-            "形式:\n"
+            "You are a change-talk inference agent for motivational interviewing (MI).\n"
+            "Goal: extract and structure explicit or implied change-talk candidates from the latest client utterance.\n"
+            "Inference target: DARN-CAT (Desire / Ability / Reasons / Need / Commitment / Activation / Taking steps).\n"
+            "Output constraint: return exactly one JSON object. Do not include explanations or code blocks.\n"
+            "Format:\n"
             "{\n"
             '  "focus_candidates":[{"id":"ct_1","motivation_focus":"importance_related|confidence_related","origin_type":"user_utterance|system_reframed","normalized_text":"...","evidence_quote":"...","evidence_turn":12,"explicitness":"explicit|inferred","confidence":0.0,"slot_relevance":0.0,"all_phase_slot_relevance":0.0,"target_behavior_relevance":0.0,"linked_slots":["..."]}],\n'
             '  "change_talk_inference":"..."\n'
             "}\n"
-            "- focus_candidates は 0〜4 件。\n"
-            "- 各候補の slot_relevance は、スロット文脈との関連度を 0.0〜1.0 で返す。\n"
-            "- 各候補の all_phase_slot_relevance は、confirmed全スロットとの関連度を 0.0〜1.0 で返す。\n"
-            "- 各候補の target_behavior_relevance は、標的行動アンカー（確定済み優先）との関連度を 0.0〜1.0 で返す。\n"
-            "- origin_type は必須。ユーザ発話の表現を直接使う候補は user_utterance、維持トークから再表現した候補は system_reframed とする。\n"
-            "- motivation_focus は必須。重要度関連（importance_related）か自信度関連（confidence_related）のどちらかを必ず付与する。\n"
-            "- importance_related は「なぜ変わるか（価値・理由・必要感）」、confidence_related は「どう実行できるか（できる感・見通し・一歩）」を意味する。\n"
-            "- normalized_text / change_talk_inference など人が読む文字列は日本語で書く。JSONキー・enum・linked_slots 以外に英単語・ローマ字・プレースホルダを混ぜない。\n"
-            "- evidence_quote は原文引用なので改変しなくてよい。\n"
-            "- 最新のクライアント発話を主根拠に抽出する（履歴の補完推論は行わない）。\n"
-            "- 与えられた推論用スロットとの関連が高い内容を優先する。\n"
-            "- 標的行動アンカーが与えられる場合、target_behavior_relevance が高い候補を最優先し、関連度0.70以上の候補を最低1件含める。\n"
-            "- 相談の進め方・話し方・関わり方への要望（例: ゆっくり進めたい、まず話を聞いてほしい、提案はまだ要らない）は、チェンジトーク候補として抽出しない。\n"
-            "- 特に「焦らず進めたい」「自分のペースで」「どこから始めればいいか分からない」は、同一文脈に具体場面（いつ/どこで）と行動（何をする）が無い限り必ず除外する。\n"
-            "- 「自分のペースを守りたい」は単独では抽出しない。例外は、締切前の会議で要点を一文で伝える等の具体行動と結びつく場合のみ。\n"
-            "- focus_candidates.normalized_text には、維持トーク文や process preference 文をそのまま入れない。必ず『何をどう変えたいか』に接続した変化側だけを書く。\n"
-            "- change_talk_inference には維持トーク文や process preference 文を直接入れない。1ターン1〜2命題で、変化方向のみを簡潔に書く。\n"
-            "- 最新発話に英単語混入や崩れた語（例: night）があっても、normalized_text / change_talk_inference ではその表記をそのまま反射しない。意味が明確なら自然な日本語へ正規化し、不明ならその語を避けて変化方向だけを書く。\n"
-            "- 「自分のペースで」「焦らず」「様子を見ながら」は、その語を単独で残さない。残す場合は、変化目標に接続した部分だけ残す。\n"
-            "- 最新発話に具体場面・瞬間・手ごたえ・身体感覚・行動の手がかりがある場合、normalized_text / change_talk_inference でもその具体語を残す。抽象名詞だけへ言い換えない。\n"
-            "- normalized_text / change_talk_inference は、書き手メタ（意図/流れ/焦点/支え/安定化/整理）ではなく、クライアントが体験として言えそうな1文にする。\n"
-            "- 発話が一語・短句（例: 「継続感」）のときは、会話内の根拠を超えて物語化しない。その語に短い方向づけを添える程度にとどめる。\n"
-            "- 最新発話が進め方の希望だけで、変化方向が立っていない場合は、focus_candidates=[] / change_talk_inference=\"\" を返してよい。無理にチェンジトーク化しない。\n"
-            "- ユーザ発話に明示的な表現が弱い場合でも、文脈から推測できる範囲で言外を補う。\n"
-            "- 迷い、重要度の不確信、自信のなさなどの維持トーク寄りの発言でも、その裏にある変化側の思いを想像し、DARN-CAT に再表現して候補化する。\n"
-            "- 問題・課題・ネガティブ感情・悩み・揺れが述べられた場合は、「それをどう解消/軽減/改善したいか」をチェンジトーク候補として必ず1件以上含める。\n"
-            "- 例: 「夜に不安で考え込みが止まらない」→「夜の不安を和らげたい」(Need/Desire)。\n"
-            "- 例: 「何のために働くかの意味が薄い」→「働く意味を言葉にしたい」(Reasons/Need)。\n"
-            "- 例: 「価値観を言葉にできず揺れる」→「価値観を言葉にして整理したい」(Desire/Activation)。\n"
-            "- 例: 「資格学習の中で『これが自分にとって大事だ』と感じる」→「資格学習で『これが自分にとって大事だ』と感じる瞬間を手がかりに、自分が大事にしていることを言葉にしたい」(Reasons/Desire)。\n"
-            "- 例: 「話すペースは自分で決めたい」だけなら process preference なので抽出しない。\n"
-            "【抽出ゲート（厳格）】\n"
-            "- チェンジトーク候補として採用してよいのは、「望む変化の方向」が1文で言える内容のみ。\n"
-            "- 次は抽出禁止:\n"
-            "  1. 不安・戸惑い・自信のなさの記述だけ（例: 始め方が分からない、確信が持てない、自信がない）。\n"
-            "  2. 相談の進め方/話し方/表現スタイルへの評価や好み（例: 自分に合っているか、短く切るのが合うか）。\n"
-            "  3. 意味づけや対人印象のメタ評価のみで、行動/状態の改善方向がない文。\n"
-            "- 「分からない」「掴めない」「自信がない」「確信が持てない」を含む文は、同一文脈に「何をどう変えたいか」が明示されない限り除外する。\n"
-            "- 具体語があるのに「価値観を整理したい」「意味づけを安定させたい」のような抽象化だけに置き換えるのは禁止。\n"
-            "- 曖昧な場合は“採用しない”を優先する。\n"
-            "- 「一方」を含む両価的な表現は用いない。両価性がある場合は DARN-CAT を表す側面のみ採用する。\n"
+            "- Return 0-4 items in `focus_candidates`.\n"
+            "- For each candidate, return `slot_relevance` as a 0.0-1.0 score for relevance to the slot context.\n"
+            "- For each candidate, return `all_phase_slot_relevance` as a 0.0-1.0 score for relevance to all confirmed slots.\n"
+            "- For each candidate, return `target_behavior_relevance` as a 0.0-1.0 score for relevance to the target-behavior anchor (prefer confirmed anchors).\n"
+            "- `origin_type` is required. Use `user_utterance` when the candidate directly uses the user's wording, and `system_reframed` when it is reframed from sustain talk.\n"
+            "- `motivation_focus` is required. Always assign either `importance_related` or `confidence_related`.\n"
+            "- `importance_related` means why change matters (values, reasons, need). `confidence_related` means how change might be carried out (ability, confidence, next-step feasibility).\n"
+            "- Write human-readable fields such as `normalized_text` and `change_talk_inference` in natural English. Do not mix in placeholders or internal labels.\n"
+            "- `evidence_quote` is a direct quote and may remain unchanged.\n"
+            "- Extract primarily from the latest client utterance; do not fill gaps from older history.\n"
+            "- Prioritize content that is strongly related to the provided inference slots.\n"
+            "- If a target-behavior anchor is available, prioritize candidates with high `target_behavior_relevance` and include at least one candidate at 0.70 or above when possible.\n"
+            "- Do not extract process-preference requests or preferences about pacing, style, or counselor involvement (for example: wanting to go slowly, wanting the listener to just listen first, not wanting suggestions yet) as change-talk candidates.\n"
+            "- In particular, always exclude phrases like 'I want to go at my own pace', 'without rushing', or 'I do not know where to start' unless the same context also contains a concrete situation (when/where) and behavior (what to do).\n"
+            "- Do not extract 'I want to protect my own pace' by itself unless it is tied to a concrete action, such as stating key points in one sentence before a deadline meeting.\n"
+            "- In `focus_candidates.normalized_text`, never copy sustain-talk or process-preference sentences as-is. Write only the change-side proposition connected to what the client wants to change and how.\n"
+            "- In `change_talk_inference`, never include sustain-talk or process-preference sentences directly. Keep it to 1-2 propositions that state only the change direction.\n"
+            "- If the latest utterance contains broken wording or stray English tokens (for example `night`), do not mirror them verbatim in `normalized_text` or `change_talk_inference`. If the meaning is clear, normalize it into natural English; if unclear, avoid the token and keep only the change direction.\n"
+            "- Do not leave phrases like 'at my own pace', 'without rushing', or 'while feeling things out' standing on their own. If kept, keep only the part tied to the change goal.\n"
+            "- If the latest utterance contains concrete cues such as situations, moments, felt sense, bodily sensations, or action clues, preserve those specifics in `normalized_text` / `change_talk_inference` rather than abstracting them away.\n"
+            "- `normalized_text` / `change_talk_inference` should not sound like writer meta-language (intent, flow, focus, support, stabilization, organizing). Write a sentence the client could plausibly say from lived experience.\n"
+            "- If the utterance is a single word or short phrase (for example, 'sense of continuity'), do not invent a story beyond the evidence. Add only a short directional framing if needed.\n"
+            "- If the latest utterance contains only process-preference wishes and no direction of change, it is acceptable to return `focus_candidates=[]` and `change_talk_inference=\"\"`. Do not force change talk.\n"
+            "- Even when the user's wording is only weakly explicit, you may infer implied meaning within what the context reasonably supports.\n"
+            "- Even for sustain-leaning statements such as ambivalence, uncertainty about importance, or low confidence, imagine the change-side motivation behind them and reframe it into DARN-CAT candidates.\n"
+            "- When problems, burdens, negative emotions, worries, or ambivalence are described, always include at least one candidate about how the person wants that difficulty relieved, reduced, or improved.\n"
+            "- Example: 'At night I get anxious and cannot stop overthinking' -> 'I want to ease that nighttime anxiety' (Need/Desire).\n"
+            "- Example: 'The meaning of working feels thin right now' -> 'I want to put the meaning of working into words' (Reasons/Need).\n"
+            "- Example: 'I am wavering because I cannot put my values into words' -> 'I want to put my values into words and sort them out' (Desire/Activation).\n"
+            "- Example: 'During certification study I sometimes feel this really matters to me' -> 'I want to use those moments in certification study when something feels important to me as clues to put what I care about into words' (Reasons/Desire).\n"
+            "- Example: 'I want to decide my speaking pace myself' alone is just a process preference and should not be extracted.\n"
+            "[Strict extraction gate]\n"
+            "- Only adopt content as a change-talk candidate when the desired direction of change can be stated in a single sentence.\n"
+            "- Do not extract the following:\n"
+            "  1. Mere descriptions of anxiety, confusion, or low confidence (for example: not knowing how to begin, lacking confidence, not feeling sure).\n"
+            "  2. Evaluations or preferences about consultation process, speaking style, or expression style (for example: whether it feels like a good fit, whether keeping it short works better).\n"
+            "  3. Meta-evaluations about meaning or interpersonal impression that do not include a direction for improving behavior or state.\n"
+            "- Exclude sentences containing 'do not know', 'cannot grasp it', 'not confident', or 'cannot feel sure' unless the same context also explicitly states what the person wants to change and how.\n"
+            "- If concrete cues are present, do not replace them with only abstract paraphrases such as 'I want to organize my values' or 'I want to stabilize the meaning-making'.\n"
+            "- When in doubt, prefer not adopting the candidate.\n"
+            "- Do not use explicitly double-sided formulations containing 'on the one hand'. If ambivalence exists, keep only the side that expresses DARN-CAT.\n"
         )
         system = inject_mi_knowledge(system, agent_name="change_talk_inferer")
         user = (
-            f"【現在フェーズ】{state.phase.value}\n"
-            f"【スロット入力ポリシー】{prompt_slot_policy}\n"
-            f"【confirmed全スロット】{slot_context.get('confirmed_slots_text')}\n"
-            f"【confirmed全スロット(JSON)】{json.dumps(confirmed_slots, ensure_ascii=False)}\n"
-            f"【推論用スロット】{slot_context.get('prompt_slots_text')}\n"
-            f"【推論用スロット(JSON)】{json.dumps(prompt_slots, ensure_ascii=False)}\n"
-            f"【標的行動アンカー（確定済み優先）】{slot_context.get('target_behavior_focus_text')}\n"
-            f"【bridge_slots】{slot_context.get('bridge_fields_text')}\n"
-            f"【bridge_slots(JSON)】{json.dumps(slot_context.get('bridge_slots') or [], ensure_ascii=False)}\n"
-            f"【推論方向性】{direction_hint}\n"
-            f"【今回のクライアント発話】{user_text}\n"
-            "最新発話を主根拠として、JSONのみで出力してください。"
+            f"[Current phase]{state.phase.value}\n"
+            f"[Slot input policy]{prompt_slot_policy}\n"
+            f"[All confirmed slots]{slot_context.get('confirmed_slots_text')}\n"
+            f"[All confirmed slots (JSON)]{json.dumps(confirmed_slots, ensure_ascii=False)}\n"
+            f"[Inference slots]{slot_context.get('prompt_slots_text')}\n"
+            f"[Inference slots (JSON)]{json.dumps(prompt_slots, ensure_ascii=False)}\n"
+            f"[Target-behavior anchor (prefer confirmed)]{slot_context.get('target_behavior_focus_text')}\n"
+            f"[Bridge slots]{slot_context.get('bridge_fields_text')}\n"
+            f"[Bridge slots (JSON)]{json.dumps(slot_context.get('bridge_slots') or [], ensure_ascii=False)}\n"
+            f"[Inference direction]{direction_hint}\n"
+            f"[Current client utterance]{user_text}\n"
+            "Use the latest utterance as the primary evidence source and return JSON only."
         )
         messages = [
             {"role": "system", "content": system},
@@ -11493,8 +11372,8 @@ class LLMChangeTalkInferer:
 @dataclass
 class LLMAffirmationDecider:
     """
-    LLMに NONE/SIMPLE/COMPLEX の各スコアを推定させ、スコアに基づいて是認モードを決める。
-    失敗時は既存ルール判定へフォールバックする。
+    Use the LLM to estimate NONE/SIMPLE/COMPLEX scores and choose the affirmation mode from them.
+    Fall back to the existing rule-based decision on failure.
     """
 
     llm: LLMClient
@@ -11530,33 +11409,33 @@ class LLMAffirmationDecider:
 
         try:
             system = (
-                "あなたはMI対話の是認モード判定エージェントです。\n"
-                "目的: 最新のクライアント発話に対して、add_affirm の3モード NONE/SIMPLE/COMPLEX の適合度を同時に採点する。\n"
-                "出力制約: JSONオブジェクト1つのみ。説明文・コードブロックは禁止。\n"
-                "採点方針:\n"
-                "- NONE: 是認を入れない方が自然・安全・過不足が少ない。\n"
-                "- SIMPLE: 短い是認を入れると関係維持と前進に寄与する。\n"
-                "- COMPLEX: 価値・強み・意味を織り込んだ是認が適切で、言い過ぎにならない。\n"
-                "注意:\n"
-                "- SINGLE は SIMPLE と同義として扱う。\n"
-                "- 3スコアは 0.0〜1.0。高いほどそのモードが適切。\n"
-                "- selected_mode は任意だが、scores と整合させる。\n"
-                "出力形式:\n"
+                "You are the affirmation-mode scoring agent for an MI dialogue.\n"
+                "Goal: score the fit of the three `add_affirm` modes (NONE / SIMPLE / COMPLEX) for the latest client utterance.\n"
+                "Output constraint: return exactly one JSON object and nothing else; no explanation or code block.\n"
+                "Scoring policy:\n"
+                "- NONE: better to omit affirmation because it is more natural, safer, or better calibrated.\n"
+                "- SIMPLE: a short affirmation helps preserve rapport and support forward movement.\n"
+                "- COMPLEX: an affirmation that weaves in values, strengths, or meaning is appropriate without becoming excessive.\n"
+                "Notes:\n"
+                "- Treat `SINGLE` as synonymous with `SIMPLE`.\n"
+                "- All three scores range from 0.0 to 1.0; higher means the mode is more appropriate.\n"
+                "- `selected_mode` is optional, but it must be consistent with `scores`.\n"
+                "Output format:\n"
                 '{'
                 '"scores":{"NONE":0.0,"SIMPLE":0.0,"COMPLEX":0.0},'
                 '"selected_mode":"NONE|SIMPLE|COMPLEX",'
                 '"confidence":0.0,'
-                '"rationale":"短い理由"'
+                '"rationale":"brief reason"'
                 '}'
             )
             system = inject_mi_knowledge(system, agent_name="affirmation_decider")
             user = (
-                f"【現在フェーズ】{state.phase.value}\n"
-                f"【特徴量】{feature_json}\n"
-                f"【是認判定シグナル】{gate_signal_json}\n"
-                f"【直近の対話】\n{dialogue}\n"
-                f"【今回のクライアント発話】{user_text}\n"
-                "JSONのみで返してください。"
+                f"[Current phase]{state.phase.value}\n"
+                f"[Features]{feature_json}\n"
+                f"[Affirmation-decision signals]{gate_signal_json}\n"
+                f"[Recent dialogue]\n{dialogue}\n"
+                f"[Current client utterance]{user_text}\n"
+                "Return JSON only."
             )
             messages = [
                 {"role": "system", "content": system},
@@ -11610,53 +11489,53 @@ class LLMAffirmationDecider:
 
 
 # ----------------------------
-# Risk detection（安全レイヤ）
+# Risk detection (safety layer)
 # ----------------------------
 _RISK_SELF_HARM = [
-    "死にたい", "消えたい", "自殺", "首を", "命を絶", "生きていたくない", "希死念慮", "リストカット", "オーバードーズ",
+    "want to die", "want to disappear", "suicide", "hang myself", "end my life", "do not want to keep living", "suicidal ideation", "self-cutting", "overdose",
 ]
-_RISK_HARM_OTHERS = ["殺す", "傷つけてやる", "復讐", "危害を加える"]
-_RISK_SEVERE = ["幻聴", "幻覚", "妄想", "制御できない", "パニックで", "手がつけられない"]
+_RISK_HARM_OTHERS = ["kill", "hurt you", "revenge", "harm"]
+_RISK_SEVERE = ["auditory hallucination", "hallucination", "delusion", "cannot control it", "in panic", "out of control"]
 
-# 是認（affirmation）を検知するためのシンプルなパターン群
+# Simple patterns for detecting affirmation
 _AFFIRM_PATTERNS = [
-    r"すばらしい",
-    r"素晴らしい",
-    r"頑張っ",
-    r"がんばっ",
-    r"続けて",
-    r"取り組んで",
-    r"大変な中",
-    r"努力",
-    r"勇気",
-    r"できてい",
-    r"えらい",
-    r"偉い",
-    r"工夫",
-    r"大切な一歩",
-    r"向き合っ",
-    r"前に進",
+    r"great",
+    r"great",
+    r"working hard",
+    r"working hard",
+    r"keeping at it",
+    r"engaging with",
+    r"despite how hard it has been",
+    r"effort",
+    r"courage",
+    r"have been able to",
+    r"impressive",
+    r"impressive",
+    r"resourcefulness",
+    r"important step",
+    r"facing",
+    r"moving forward",
 ]
 
 _AFFIRM_COMPLEX_PATTERNS = [
-    r"価値",
-    r"大切にして",
-    r"大事にして",
-    r"自分らし",
-    r"信念",
-    r"責任感",
-    r"誠実",
-    r"粘り強",
-    r"姿勢",
-    r"選び取",
-    r"軸",
+    r"value",
+    r"treasuring",
+    r"valuing",
+    r"authentic",
+    r"belief",
+    r"sense of responsibility",
+    r"sincerity",
+    r"persistence",
+    r"stance",
+    r"choosing",
+    r"core axis",
 ]
 
 
 @dataclass
 class RuleBasedRiskDetector:
     """
-    自傷他害リスクの単純なルール検出器（軽量フォールバック）。
+    Simple rule-based detector for self-harm / harm-to-others risk (lightweight fallback).
     """
 
     def detect(
@@ -11678,14 +11557,14 @@ class RuleBasedRiskDetector:
         reason = None
         if level != RiskLevel.NONE:
             terms = {kw for kw in _RISK_SELF_HARM + _RISK_HARM_OTHERS + _RISK_SEVERE if kw in text}
-            reason = "ルール検出: " + ", ".join(sorted(terms)) if terms else "ルール検出"
+            reason = "rule detection: " + ", ".join(sorted(terms)) if terms else "rule detection"
         return RiskAssessment(level=level, reason=reason)
 
 
 @dataclass
 class LLMRiskDetector:
     """
-    LLMで危機度を判定する検出器。none/mild/high の3段階で返す。
+    Detector that uses the LLM to assess risk severity and returns one of none/mild/high.
     """
 
     llm: LLMClient
@@ -11702,19 +11581,19 @@ class LLMRiskDetector:
     ) -> RiskAssessment:
         dialogue = _history_to_dialogue(history, max_turns=self.max_history_turns)
         system = (
-            "あなたは対話の安全リスクを判定する分類器です。\n"
-            "レベル: none / mild / high のいずれかを JSON で返してください。\n"
-            "- high: 自殺企図・具体的計画・他害の意思など差し迫った危険\n"
-            "- mild: 希死念慮の示唆、体調の著しい悪化が疑われる\n"
-            "- none: 上記に該当しない\n"
-            '出力例: {"level":"high","reason":"死にたいと繰り返し発言"}'
+            "You are a classifier that judges safety risk in dialogue.\n"
+            "Return one of `none / mild / high` in JSON.\n"
+            "- high: imminent danger such as suicide attempt, concrete plan, or intent to harm others\n"
+            "- mild: signs of suicidal ideation or suspected severe deterioration\n"
+            "- none: none of the above\n"
+            'Example output: {"level":"high","reason":"repeatedly says they want to die"}'
         )
         system = inject_mi_knowledge(system, agent_name="risk_detector")
         user = (
-            f"【現在フェーズ】{state.phase.value}\n"
-            f"【直近の対話】\n{dialogue}\n"
-            f"【今回のクライアント発話】{user_text}\n"
-            "安全リスクを判定し、短い理由を付けてください。"
+            f"[Current phase]{state.phase.value}\n"
+            f"[Recent dialogue]\n{dialogue}\n"
+            f"[Current client utterance]{user_text}\n"
+            "Assess the safety risk and add a short reason."
         )
         messages = [
             {"role": "system", "content": system},
@@ -11745,7 +11624,7 @@ class LLMRiskDetector:
 @dataclass
 class LLMMIEvaluator:
     """
-    応答がMIの原則に沿っているかを簡易採点する LLM 評価器。
+    LLM evaluator that gives a lightweight score for whether the response follows MI principles.
     """
 
     llm: LLMClient
@@ -11762,18 +11641,18 @@ class LLMMIEvaluator:
     ) -> OutputEvaluation:
         dialogue = _history_to_dialogue(history, max_turns=self.max_history_turns)
         system = (
-            "あなたは動機づけ面接（MI）の対話応答を採点するレビュアーです。\n"
-            "共感的・非指示的・自律尊重・抵抗への順応が守られているかを 0〜10 で評価してください。\n"
-            'JSONのみを出力してください。例: {"score":8.5,"feedback":"丁寧な反射だが質問が誘導的"}\n'
-            "- スコアが低い場合は短く改善ポイントを feedback に入れてください。\n"
+            "You are a reviewer that scores MI dialogue responses.\n"
+            "Rate from 0 to 10 whether empathy, non-directiveness, autonomy support, and rolling with resistance are maintained.\n"
+            'Output JSON only. Example: {"score":8.5,"feedback":"careful reflection but the question is leading"}\n'
+            "- If the score is low, put a short improvement point in `feedback`.\n"
         )
         system = inject_mi_knowledge(system, agent_name="mi_evaluator")
         user = (
-            f"【現在フェーズ】{state.phase.value}\n"
-            f"【主動作】{action.value}\n"
-            f"【直近の対話】\n{dialogue}\n"
-            f"【今回のアシスタント発話】{assistant_text}\n"
-            "MI準拠性を採点し、必要なら改善のヒントを短く書いてください。"
+            f"[Current phase]{state.phase.value}\n"
+            f"[Main action]{action.value}\n"
+            f"[Recent dialogue]\n{dialogue}\n"
+            f"[Assistant response for this turn]{assistant_text}\n"
+            "Score MI adherence and, if needed, write a short improvement hint."
         )
         messages = [
             {"role": "system", "content": system},
@@ -11846,16 +11725,16 @@ def _render_first_turn_note(
     if first_turn_hint == FirstTurnHint.GREETING_ONLY:
         return (
             True,
-            "初回特例: クライアントは挨拶のみ。挨拶への返礼と感謝を短く伝え、質問は入れない。可能なら短い反射（受け止め）を1文添える。",
+            "First-turn exception: the client only greeted you. Briefly return the greeting and appreciation, do not ask a question, and add one short reflection if possible.",
         )
     if first_turn_hint == FirstTurnHint.GREETING_WITH_TOPIC:
         return (
             True,
-            "初回特例: クライアントは挨拶＋相談。挨拶の返礼と感謝を述べたうえで、まず短い反射を1つだけ行う（質問はまだしない）。",
+            "First-turn exception: the client greeted you and raised a topic. Return the greeting, express appreciation, and start with one short reflection only; do not ask a question yet.",
         )
     return (
         True,
-        "初回特例: クライアントは相談のみ。こちらから丁寧に挨拶と感謝を伝え、まず短い反射を1つだけ行う（質問はまだしない）。",
+        "First-turn exception: the client opened with a topic only. Offer a polite greeting and appreciation from your side, then give one short reflection only; do not ask a question yet.",
     )
 
 
@@ -11863,17 +11742,17 @@ def _render_risk_note(risk_assessment: Optional[RiskAssessment]) -> str:
     if risk_assessment is None:
         return ""
     if risk_assessment.level == RiskLevel.HIGH:
-        return "高リスクが検知されています。通常の進行を中断し、安全確保と専門窓口案内を最優先してください。"
+        return "High risk has been detected. Pause the normal flow and prioritize immediate safety and referral to appropriate support."
     if risk_assessment.level == RiskLevel.MILD:
-        return "安全面での懸念が少しあります。慎重に、安心を優先してください。"
+        return "There is some safety concern. Proceed carefully and prioritize a sense of safety."
     return ""
 
 
 def _extract_phase_debug_hints(
     phase_prediction_debug: Optional[Dict[str, Any]],
 ) -> Tuple[str, str]:
-    phase_hint = "なし"
-    phase_transition_note = "なし"
+    phase_hint = "none"
+    phase_transition_note = "none"
     if not isinstance(phase_prediction_debug, Mapping):
         return phase_hint, phase_transition_note
 
@@ -11908,8 +11787,8 @@ def _extract_rank_and_feature_hints(
     action_ranking_debug: Optional[Dict[str, Any]],
     features: Optional[PlannerFeatures],
 ) -> Tuple[str, str, str]:
-    rank_hint = "なし"
-    proposed_action_hint = "なし"
+    rank_hint = "none"
+    proposed_action_hint = "none"
 
     if action_ranking_debug:
         if action_ranking_debug.get("error"):
@@ -11924,7 +11803,7 @@ def _extract_rank_and_feature_hints(
         if proposed_main_action:
             proposed_action_hint = str(proposed_main_action)
 
-    feature_hint = "なし"
+    feature_hint = "none"
     if features is not None:
         feature_hint = json.dumps(dataclasses.asdict(features), ensure_ascii=False)
     return rank_hint, proposed_action_hint, feature_hint
@@ -11948,7 +11827,7 @@ def _normalize_prompt_inputs(
     phase_slot_memory = _copy_phase_slot_memory(state.phase_slots)
     current_phase_slots = phase_slot_memory.get(state.phase.name, {})
     current_phase_slot_desc = ", ".join(
-        f"{_PHASE_SLOT_LABELS.get(slot_key, slot_key)}={current_phase_slots.get(slot_key) or '未設定'}"
+        f"{_PHASE_SLOT_LABELS.get(slot_key, slot_key)}={current_phase_slots.get(slot_key) or 'unset'}"
         for slot_key in _PHASE_SLOT_SCHEMA.get(state.phase, ())
     )
     target_behavior_focus = _get_confirmed_target_behavior_for_change_talk(state=state)
@@ -11964,8 +11843,8 @@ def _normalize_prompt_inputs(
     if reflection_style_effective is None and _is_reflect_action(action):
         reflection_style_effective = _reflection_style_from_action(action)
 
-    change_talk_hint = (change_talk_inference or "").strip() or "なし"
-    has_change_talk_hint = change_talk_hint != "なし"
+    change_talk_hint = (change_talk_inference or "").strip() or "none"
+    has_change_talk_hint = change_talk_hint != "none"
 
     is_first_turn_greeting, first_turn_note = _render_first_turn_note(
         state=state,
@@ -11997,19 +11876,19 @@ def _normalize_prompt_inputs(
 
 def _render_role_and_style() -> str:
     return (
-        "【役割・口調】\n"
-        "- あなたは動機づけ面接（Motivational Interviewing: MI）のスタイルで支援する対話エージェントです。\n"
-        "- 口調は丁寧で、相手を尊重し、決めつけず、対立せず、自己決定を支えます。"
+        "[Role and Tone]\n"
+        "- You are a dialogue agent who supports people in the style of Motivational Interviewing (MI).\n"
+        "- Your tone is polite, respectful, non-presumptive, non-confrontational, and supportive of autonomy."
     )
 
 
 def _render_safety_rules(*, risk_note: str) -> str:
     lines = [
-        "- 自傷他害や差し迫った危険が疑われる場合は、通常進行を中断して安全確保と専門窓口案内を優先する。",
+        "- If self-harm, harm to others, or imminent danger is suspected, pause the normal flow and prioritize safety and referral to appropriate support.",
     ]
     if risk_note:
-        lines.append(f"- 今回の安全メモ: {risk_note}")
-    return "【安全ルール（最優先の例外）】\n" + "\n".join(lines)
+        lines.append(f"- Safety note for this turn: {risk_note}")
+    return "[Safety Rules: Highest-Priority Exception]\n" + "\n".join(lines)
 
 
 def _render_hard_constraints(
@@ -12021,18 +11900,18 @@ def _render_hard_constraints(
     reflection_style_line = (
         normalized.reflection_style_effective.value
         if normalized.reflection_style_effective
-        else "指定なし"
+        else "not_specified"
     )
     lines = [
-        f"- 現在のフェーズ: {state.phase.value}",
-        f"- 今回の主動作: {action.value}",
-        f"- 是認指示: {normalized.affirm_mode.value}",
-        f"- 今回の反射スタイル: {reflection_style_line}",
-        "- 生成時に再判定しない: 現在のフェーズ / 今回の主動作 / 是認指示。",
+        f"- Current phase: {state.phase.value}",
+        f"- Main action for this turn: {action.value}",
+        f"- Affirmation instruction: {normalized.affirm_mode.value}",
+        f"- Reflection style for this turn: {reflection_style_line}",
+        "- Do not re-decide the current phase, the main action for this turn, or the affirmation instruction during generation.",
     ]
     if normalized.first_turn_note:
         lines.append(f"- {normalized.first_turn_note}")
-    return "【今回の確定指示（ハード制約）】\n" + "\n".join(lines)
+    return "[Locked Instructions for This Turn: Hard Constraints]\n" + "\n".join(lines)
 
 
 def _render_phase_guidance(phase: Phase) -> str:
@@ -12040,7 +11919,7 @@ def _render_phase_guidance(phase: Phase) -> str:
     if not planning:
         return ""
     return (
-        "【フェーズ目的とplanning注意】\n"
+        "[Phase Goal and Planning Boundary]\n"
         f"- {phase.value} [{phase.name}]: {planning}"
     )
 
@@ -12050,21 +11929,21 @@ def _render_context_summary(
     normalized: _PromptNormalizedInputs,
 ) -> str:
     lines = [
-        f"- フェーズ補足: {normalized.phase_transition_note}（用途: stay/advance理由に沿った応答方針を保つ）",
-        f"- feature_extractor 出力: {normalized.feature_hint}（用途: 抵抗・変化語・短答などの会話シグナルを把握する）",
-        f"- チェンジトーク要約: {normalized.change_talk_hint}（用途: 反射/質問/要約で扱う焦点候補を揃える）",
-        f"- 現在フェーズスロット(JSON): {json.dumps(normalized.current_phase_slots, ensure_ascii=False)}（用途: 現在フェーズで未充足情報を見つける）",
-        f"- 全フェーズスロット(JSON): {json.dumps(normalized.phase_slot_memory, ensure_ascii=False)}（用途: 既存情報との整合確認のみ。主焦点は現在フェーズ）",
+        f"- Phase note: {normalized.phase_transition_note} (use: keep the response aligned with the stay/advance rationale)",
+        f"- feature_extractor output: {normalized.feature_hint} (use: capture dialogue signals such as resistance, change talk, and short replies)",
+        f"- Change talk summary: {normalized.change_talk_hint} (use: align the focus candidates for reflections, questions, and summaries)",
+        f"- Current phase slots (JSON): {json.dumps(normalized.current_phase_slots, ensure_ascii=False)} (use: find missing information in the current phase)",
+        f"- All phase slots (JSON): {json.dumps(normalized.phase_slot_memory, ensure_ascii=False)} (use: check consistency with existing information; the main focus is still the current phase)",
     ]
     if normalized.current_phase_slot_desc:
         lines.insert(
             3,
-            f"- 現在フェーズの必須スロット: {normalized.current_phase_slot_desc}",
+            f"- Required slots in the current phase: {normalized.current_phase_slot_desc}",
         )
     usage_lines = [
-        "- 利用優先順位: 対話履歴 > 現在フェーズ必須スロット > 全フェーズ整合確認。",
-        "- 応答方針: 現在フェーズの未充足スロットが埋まるように、反射/質問/要約の焦点を選ぶ。",
-        "- 禁止: JSONキー名やラベル名をそのまま返答文に出力しない。",
+        "- Usage priority: dialogue history > required slots in the current phase > cross-phase consistency checks.",
+        "- Response policy: choose the focus of reflections, questions, and summaries so that missing current-phase slots can be filled.",
+        "- Prohibited: do not copy JSON key names or label names into the final response.",
     ]
     if normalized.phase in {Phase.REVIEW_REFLECTION, Phase.CLOSING}:
         raw_target_behavior = ""
@@ -12075,29 +11954,29 @@ def _render_context_summary(
             phase_slot_memory=normalized.phase_slot_memory,
             raw_target_behavior=(raw_target_behavior or normalized.target_behavior_focus),
         )
-        review_anchor_text = " / ".join(review_anchor_fields) if review_anchor_fields else "なし"
+        review_anchor_text = " / ".join(review_anchor_fields) if review_anchor_fields else "none"
         phase_code = normalized.phase.name
         lines.append(
-            f"- {phase_code}統合アンカー: {review_anchor_text}"
-            "（用途: 主訴・問題場面・価値・標的行動を同等に参照して振り返る）"
+            f"- {phase_code} integration anchors: {review_anchor_text}"
+            " (use: review the conversation by referencing the presenting problem, problem scene, values, and target behavior in parallel)"
         )
         usage_lines.insert(
             1,
-            f"- 特例: {phase_code}では presenting_problem_raw / problem_scene / core_values / target_behavior を同等に扱い、いずれか1点への偏りを避ける。",
+            f"- Exception: in {phase_code}, treat presenting_problem_raw / problem_scene / core_values / target_behavior with equal weight and avoid over-centering only one of them.",
         )
     elif normalized.target_behavior_focus_enabled:
         lines.append(
             f"- FOCUSING_TARGET_BEHAVIOR.target_behavior(confirmed, quality>=0.80): {normalized.target_behavior_focus}"
-            "（用途: 全フェーズで応答内容の整合性アンカーとして最優先）"
+            " (use: highest-priority anchor for response consistency across all phases)"
         )
         usage_lines.insert(
             1,
-            "- 特例: 上記 target_behavior が確定済み（quality>=0.80）の場合、応答内容はその標的行動との整合性を最優先する。",
+            "- Exception: if the target_behavior above is already confirmed (quality>=0.80), prioritize consistency with that target behavior above all else.",
         )
     return (
-        "【コンテキスト要約（状況メモ）】\n"
+        "[Context Summary]\n"
         + "\n".join(lines)
-        + "\n【この章の使い方】\n"
+        + "\n[How to Use This Section]\n"
         + "\n".join(usage_lines)
     )
 
@@ -12125,17 +12004,17 @@ def _render_layer3_shared_inputs(
     focus_choice_options: Sequence[str] = (),
 ) -> str:
     reflection_style_text = reflection_style.value if reflection_style else "none"
-    phase_boundary = _PHASE_PLANNING_BOUNDARY.get(state.phase, "なし")
-    current_phase_required_slots = normalized.current_phase_slot_desc or "なし"
+    phase_boundary = _PHASE_PLANNING_BOUNDARY.get(state.phase, "none")
+    current_phase_required_slots = normalized.current_phase_slot_desc or "none"
     current_phase_slots_json = json.dumps(normalized.current_phase_slots, ensure_ascii=False)
     all_phase_slots_json = json.dumps(normalized.phase_slot_memory, ensure_ascii=False)
 
-    primary_focus_seed = selected_focus_lines[0] if selected_focus_lines else "なし"
-    change_talk_seed = focus_contract_hint_text or "なし"
-    missing_info_seed = slot_target_label or "なし"
-    target_behavior_anchor = target_behavior_focus or "なし"
-    focus_choice_options_text = _join_writer_items(list(focus_choice_options), fallback="なし")
-    end_phase_equal_anchors = "なし"
+    primary_focus_seed = selected_focus_lines[0] if selected_focus_lines else "none"
+    change_talk_seed = focus_contract_hint_text or "none"
+    missing_info_seed = slot_target_label or "none"
+    target_behavior_anchor = target_behavior_focus or "none"
+    focus_choice_options_text = _join_writer_items(list(focus_choice_options), fallback="none")
+    end_phase_equal_anchors = "none"
     if state.phase in {Phase.REVIEW_REFLECTION, Phase.CLOSING}:
         raw_target_behavior = ""
         focusing_slots = normalized.phase_slot_memory.get(Phase.FOCUSING_TARGET_BEHAVIOR.name, {})
@@ -12146,22 +12025,22 @@ def _render_layer3_shared_inputs(
             raw_target_behavior=(raw_target_behavior or target_behavior_focus),
         )
         end_phase_equal_anchors = (
-            " / ".join(review_anchor_fields) if review_anchor_fields else "なし"
+            " / ".join(review_anchor_fields) if review_anchor_fields else "none"
         )
-    last_user_text = state.last_user_text or "なし"
-    last_substantive_user_text = state.last_substantive_user_text or "なし"
+    last_user_text = state.last_user_text or "none"
+    last_substantive_user_text = state.last_substantive_user_text or "none"
 
     return (
-        "【Layer3共通変数】\n"
+        "[Layer3 Shared Variables]\n"
         f"- fixed_phase: {state.phase.value} [{state.phase.name}]\n"
         f"- fixed_main_action: {action.value}\n"
         f"- fixed_affirm_mode: {add_affirm.value}\n"
         f"- fixed_reflection_style: {reflection_style_text}\n"
         f"- primary_focus_seed: {primary_focus_seed}\n"
         f"- change_talk_seed: {change_talk_seed}\n"
-        f"- ct_anchor_seed: {ct_anchor_seed_text or 'なし'}\n"
-        f"- ct_operation_goal_seed: {ct_operation_goal or 'なし'}\n"
-        f"- slot_target_label: {slot_target_label or 'なし'}\n"
+        f"- ct_anchor_seed: {ct_anchor_seed_text or 'none'}\n"
+        f"- ct_operation_goal_seed: {ct_operation_goal or 'none'}\n"
+        f"- slot_target_label: {slot_target_label or 'none'}\n"
         f"- missing_info_seed: {missing_info_seed}\n"
         f"- clarify_preference_mode: {clarify_preference_mode or 'default'}\n"
         f"- focus_choice_options_seed: {focus_choice_options_text}\n"
@@ -12169,13 +12048,12 @@ def _render_layer3_shared_inputs(
         f"- selected_slot_quality_target_example_json: {selected_slot_quality_target_example_text}\n"
         f"- selected_target_information_seed: {selected_target_information_seed}\n"
         f"- evocation_move_seed: {evocation_move_seed}\n"
-        f"- macro_bridge_anchor: {macro_bridge_anchor or 'なし'}\n"
+        f"- macro_bridge_anchor: {macro_bridge_anchor or 'none'}\n"
         f"- slot_quality_target_example_detail_seed: {slot_quality_target_example_details}\n"
-        "- slot_quality_target_example_detail_seed は時間/場所/数量/道具/手順などの具体アンカー候補。"
-        "本文で自然に使えるものは抽象化せず残す。\n"
-        "- slot_quality_target_example_detail_seed が質問文・合意文・メタ文に見える場合は、その文型を写さず、場面/行動/手ごたえなどの具体語だけを抜き出す。\n"
+        "- slot_quality_target_example_detail_seed gives concrete anchor candidates such as time, place, quantity, tools, or steps. Keep anything that can be used naturally in the response without abstracting it.\n"
+        "- If slot_quality_target_example_detail_seed looks like a question, agreement sentence, or meta sentence, do not copy the sentence pattern. Extract only the concrete wording about scene, action, or felt sense.\n"
         f"- current_phase_required_slots: {current_phase_required_slots}\n"
-        f"- 現在フェーズスロット(JSON): {current_phase_slots_json}\n"
+        f"- Current phase slots (JSON): {current_phase_slots_json}\n"
         f"- current_phase_slots_json: {current_phase_slots_json}\n"
         f"- all_phase_slots_json: {all_phase_slots_json}\n"
         f"- target_behavior_anchor(confirmed, quality>=0.80): {target_behavior_anchor}\n"
@@ -12184,8 +12062,8 @@ def _render_layer3_shared_inputs(
         f"- last_user_text: {last_user_text}\n"
         f"- last_substantive_user_text: {last_substantive_user_text}\n"
         f"- phase_boundary: {phase_boundary}\n"
-        f"- quality>=0.80 は確定/整合アンカー、quality={_SLOT_REPAIR_HINT_TARGET_QUALITY:.2f} は修復目標文の基準として使い分ける。\n"
-        "- internal label や変数名は、返答本文に出さない。"
+        f"- Use quality>=0.80 as a confirmed/consistency anchor, and use quality={_SLOT_REPAIR_HINT_TARGET_QUALITY:.2f} as the threshold for repair-target phrasing.\n"
+        "- Do not expose internal labels or variable names in the response body."
     )
 
 
@@ -12194,9 +12072,9 @@ def _render_action_rule_safety_override() -> str:
         "action_rules",
         "safety_override",
         default=(
-            "出力要件（安全確保モード）:\n"
-            "- まず安全確保を優先する。\n"
-            "- 危機対応に専念し、通常のMI進行は一旦止める。"
+            "Output requirements (safety mode):\n"
+            "- Prioritize immediate safety first.\n"
+            "- Focus on crisis response and pause the normal MI flow for now."
         ),
     )
 
@@ -12210,8 +12088,8 @@ def _render_action_rule_first_turn(
             "first_turn",
             "greeting_only",
             default=(
-                "出力要件（初回: 挨拶のみのケース）:\n"
-                "- 丁寧に挨拶し、1〜2文で簡潔に。"
+                "Output requirements (first turn: greeting only):\n"
+                "- Respond with a polite greeting in 1-2 concise sentences."
             ),
         )
     if first_turn_hint == FirstTurnHint.GREETING_WITH_TOPIC:
@@ -12220,8 +12098,8 @@ def _render_action_rule_first_turn(
             "first_turn",
             "greeting_with_topic",
             default=(
-                "出力要件（初回: 挨拶＋相談のケース）:\n"
-                "- 短い挨拶と反射を入れ、2〜3文で簡潔に。"
+                "Output requirements (first turn: greeting plus topic):\n"
+                "- Include a brief greeting and reflection in 2-3 concise sentences."
             ),
         )
     return _get_layer3_action_prompt(
@@ -12229,8 +12107,8 @@ def _render_action_rule_first_turn(
         "first_turn",
         "topic_only",
         default=(
-            "出力要件（初回: 相談のみで挨拶がないケース）:\n"
-            "- 丁寧な挨拶を補い、2〜3文で簡潔に。"
+            "Output requirements (first turn: topic only, no greeting):\n"
+            "- Add a polite greeting and keep it concise in 2-3 sentences."
         ),
     )
 
@@ -12246,9 +12124,9 @@ def _render_reflect_action_rule(context: _ActionRuleContext) -> str:
         "reflect",
         "base",
         default=(
-            "出力要件（聞き返し/言い換え）:\n"
-            "- チェンジトークに関連する重要点を選んで言い換える。\n"
-            "- 質問しない（文末に「？」を付けない）。"
+            "Output requirements (reflection / paraphrase):\n"
+            "- Select and reflect the key point related to change talk.\n"
+            "- Do not ask a question (do not end with a question mark)."
         ),
     )
     if context.state.phase == Phase.REVIEW_REFLECTION and context.state.phase_turns >= 1:
@@ -12259,7 +12137,7 @@ def _render_reflect_action_rule(context: _ActionRuleContext) -> str:
                 "reflect",
                 "review_feedback_append",
                 default=(
-                    "- 振り返りフェーズでは、相手が一番残っていることや次に意識したいこととして触れた内容を足場にする。"
+                    "- In the review phase, anchor the response in what the client says is staying with them most or what they want to keep in mind next."
                 ),
             )
         )
@@ -12271,7 +12149,7 @@ def _render_reflect_action_rule(context: _ActionRuleContext) -> str:
                 "reflect",
                 "short_user_append",
                 default=(
-                    "- 直前が短文・あいづちの場合は、それ単体を言い換えない。"
+                    "- If the latest user turn is only a short reply or backchannel, do not merely paraphrase that turn by itself."
                 ),
             )
         )
@@ -12281,19 +12159,19 @@ def _render_reflect_action_rule(context: _ActionRuleContext) -> str:
             "action_rules",
             "reflect",
             "style_simple",
-            default="- スタイル: simple",
+            default="- Style: simple",
         ),
         ReflectionStyle.COMPLEX: _get_layer3_action_prompt(
             "action_rules",
             "reflect",
             "style_complex",
-            default="- スタイル: complex",
+            default="- Style: complex",
         ),
         ReflectionStyle.DOUBLE_SIDED: _get_layer3_action_prompt(
             "action_rules",
             "reflect",
             "style_double",
-            default="- スタイル: double",
+            default="- Style: double",
         ),
     }.get(context.reflection_style_effective or ReflectionStyle.COMPLEX)
     if style_specific_rule:
@@ -12311,10 +12189,10 @@ def _render_question_action_rule(context: _ActionRuleContext) -> str:
             "question",
             "short_reply",
             default=(
-                "出力要件（質問：短答時のシンプル版）:\n"
-                "- 基本構成は最大2文。\n"
-                "- add_affirm != NONE なら、1文目は短い是認、2文目は utterance_target に関する質問だけにする。\n"
-                "- add_affirm == NONE なら、1文目は question_reflect_seed に沿った簡単反射、2文目は utterance_target に関する質問だけにする。"
+                "Output requirements (Question: simple version for short replies):\n"
+                "- Use at most two sentences in the basic structure.\n"
+                "- If add_affirm != NONE, make sentence 1 a short affirmation and sentence 2 only a question about utterance_target.\n"
+                "- If add_affirm == NONE, make sentence 1 a simple reflection grounded in question_reflect_seed and sentence 2 only a question about utterance_target."
             ),
         )
     else:
@@ -12323,11 +12201,11 @@ def _render_question_action_rule(context: _ActionRuleContext) -> str:
             "question",
             "default",
             default=(
-                "出力要件（質問）:\n"
-                "- 基本構成は最大2文。\n"
-                "- add_affirm != NONE なら、1文目は短い是認、2文目は utterance_target に関する質問だけにする。\n"
-                "- add_affirm == NONE なら、1文目は question_reflect_seed に沿った簡単反射、2文目は utterance_target に関する質問だけにする。\n"
-                "- 質問は原則1つだけにする。"
+                "Output requirements (Question):\n"
+                "- Use at most two sentences in the basic structure.\n"
+                "- If add_affirm != NONE, make sentence 1 a short affirmation and sentence 2 only a question about utterance_target.\n"
+                "- If add_affirm == NONE, make sentence 1 a simple reflection grounded in question_reflect_seed and sentence 2 only a question about utterance_target.\n"
+                "- Use only one question in principle."
             ),
         )
     if _is_scale_followup_pending(context.state):
@@ -12336,9 +12214,9 @@ def _render_question_action_rule(context: _ActionRuleContext) -> str:
         if followup_step == _SCALE_FOLLOWUP_STEP_PLUS_ONE:
             action_rule += (
                 "\n"
-                "- 直前の回答を短く受け止めたうえで、今回は1点アップ条件の確認に限定する。\n"
-                f"- 質問は1つだけにし、「何があると{score_text}点から1点上がるか」を尋ねる。\n"
-                "- 理由の深掘り質問はここで重ねない。"
+                "- Briefly acknowledge the previous answer, then focus only on what would raise it by one point.\n"
+                f"- Ask exactly one question: what would move it from {score_text} up by one point?\n"
+                "- Do not stack a deeper reason-question here."
             )
         elif (context.state.scale_followup_score or 0.0) > 0.0:
             score = context.state.scale_followup_score
@@ -12348,19 +12226,19 @@ def _render_question_action_rule(context: _ActionRuleContext) -> str:
             )
             action_rule += (
                 "\n"
-                "- 直前のスケーリング回答を短く受け止めたうえで、今回は理由質問に限定する。\n"
-                f"- 質問は1つだけにし、「0点ではなく{score_text}点なのはなぜか」を尋ねる。\n"
+                "- Briefly acknowledge the previous scaling answer, and in this turn focus only on the reason question.\n"
+                f"- Ask exactly one question: why is it {score_text} rather than 0?\n"
                 + (
-                    "- 1点アップ条件の質問は次ターンに分ける。"
+                    "- Save the one-point-up follow-up for the next turn."
                     if should_continue_plus_one
-                    else "- このターンで理由確認を完了し、追加の追質問は重ねない。"
+                    else "- Complete the reason check in this turn and do not stack additional follow-up questions."
                 )
             )
         else:
             action_rule += (
                 "\n"
-                "- 直前のスケーリング回答を短く受け止めたうえで、今回は1点アップ条件を1問だけ尋ねる。\n"
-                "- 質問は「何があると1点上がるか」に限定する。"
+                "- Briefly acknowledge the previous scaling answer, then ask only one question about what would raise it by one point.\n"
+                "- Limit the question to what would move it up by one point."
             )
     return action_rule
 
@@ -12371,8 +12249,8 @@ def _render_scaling_question_action_rule(context: _ActionRuleContext) -> str:
         "scaling_question",
         "base",
         default=(
-            "出力要件（スケーリング質問）:\n"
-            "- 0〜10の尺度を明示し、数値だけを1つの質問でたずねる。"
+            "Output requirements (Scaling question):\n"
+            "- Explicitly use a 0-10 scale and ask only for the number in a single question."
         ),
     )
     phase_specific_rule = _get_layer3_action_prompt(
@@ -12393,8 +12271,8 @@ def _render_summary_action_rule(context: _ActionRuleContext) -> str:
         "summary",
         "base",
         default=(
-            "出力要件（要約）:\n"
-            "- 要点を整理し、質問は入れない。"
+            "Output requirements (Summary):\n"
+            "- Organize the key points and do not include a question."
         ),
     )
     return action_rule
@@ -12406,8 +12284,8 @@ def _render_clarify_preference_action_rule(context: _ActionRuleContext) -> str:
         "clarify_preference",
         "base",
         default=(
-            "出力要件（選好確認：反射＋選択肢質問）:\n"
-            "- 反射1文＋選択肢質問1文。"
+            "Output requirements (Preference clarification: reflection + choice question):\n"
+            "- One reflection sentence plus one choice question."
         ),
     )
     if (
@@ -12419,13 +12297,13 @@ def _render_clarify_preference_action_rule(context: _ActionRuleContext) -> str:
             "clarify_preference",
             "focus_choice",
             default=(
-                "- 今回は進め方ではなく、どの話題から入るかを確かめる。\n"
-                "- 選択肢質問では、{focus_choice_options} のうち2〜3件を短く並べる。\n"
-                "- 選ばれなかった話題も残っていてよい前提を崩さない。"
+                "- In this turn, check which topic to start with rather than discussing process preference.\n"
+                "- In the choice question, list 2-3 items from {focus_choice_options} briefly.\n"
+                "- Do not imply that unchosen topics disappear."
             ),
             focus_choice_options=_join_writer_items(
                 list(context.clarify_preference_options),
-                fallback="なし",
+                fallback="none",
             ),
         )
         if focus_choice_append:
@@ -12440,11 +12318,11 @@ def _render_ask_permission_action_rule(context: _ActionRuleContext) -> str:
             "ask_permission",
             "short_reply",
             default=(
-                "出力要件（許可取り：短答時のシンプル版）:\n"
-                "- 基本構成は最大2文。\n"
-                "- add_affirm != NONE なら、1文目は短い是認、2文目は情報共有の可否を確かめる質問だけにする。\n"
-                "- add_affirm == NONE なら、1文目は question_reflect_seed に沿った簡単反射、2文目は情報共有の可否を確かめる質問だけにする。\n"
-                "- 情報共有の詳細はまだ書かない。"
+                "Output requirements (Permission check: simple version for short replies):\n"
+                "- Use at most two sentences in the basic structure.\n"
+                "- If add_affirm != NONE, make sentence 1 a short affirmation and sentence 2 only a question checking whether information sharing is okay.\n"
+                "- If add_affirm == NONE, make sentence 1 a simple reflection grounded in question_reflect_seed and sentence 2 only a question checking whether information sharing is okay.\n"
+                "- Do not include the details of the information yet."
             ),
         )
     return _get_layer3_action_prompt(
@@ -12452,12 +12330,12 @@ def _render_ask_permission_action_rule(context: _ActionRuleContext) -> str:
         "ask_permission",
         "base",
         default=(
-            "出力要件（許可取り）:\n"
-            "- 基本構成は最大2文。\n"
-            "- add_affirm != NONE なら、1文目は短い是認、2文目は情報共有の可否を確かめる質問だけにする。\n"
-            "- add_affirm == NONE なら、1文目は question_reflect_seed に沿った簡単反射、2文目は情報共有の可否を確かめる質問だけにする。\n"
-            "- 情報共有の詳細はまだ書かない。\n"
-            "- 質問は最後の1つだけにする。"
+            "Output requirements (Permission check):\n"
+            "- Use at most two sentences in the basic structure.\n"
+            "- If add_affirm != NONE, make sentence 1 a short affirmation and sentence 2 only a question checking whether information sharing is okay.\n"
+            "- If add_affirm == NONE, make sentence 1 a simple reflection grounded in question_reflect_seed and sentence 2 only a question checking whether information sharing is okay.\n"
+            "- Do not include the details of the information yet.\n"
+            "- Only the final sentence may be a question."
         ),
     )
 
@@ -12468,8 +12346,8 @@ def _render_provide_info_action_rule(context: _ActionRuleContext) -> str:
         "provide_info",
         "base",
         default=(
-            "出力要件（情報共有：EPEのProvide→Elicit）:\n"
-            "- 中立に情報共有し、最後に反応を聞く質問を1つ置く。"
+            "Output requirements (Information sharing: EPE Provide -> Elicit):\n"
+            "- Share information neutrally and place one question at the end asking for the reaction."
         ),
     )
     return action_rule
@@ -12479,7 +12357,7 @@ def _render_unknown_action_rule(_: _ActionRuleContext) -> str:
     return _get_layer3_action_prompt(
         "action_rules",
         "unknown",
-        default="出力要件: 不明",
+        default="Output requirements: unknown",
     )
 
 
@@ -12489,8 +12367,8 @@ def _render_review_first_turn_action_rule(context: _ActionRuleContext) -> str:
         "review_first_turn",
         "base",
         default=(
-            "出力要件（振り返りフェーズ1ターン目: 固定構成）:\n"
-            "- 複雑反射→要約→振り返り質問1問の順で構成する。"
+            "Output requirements (Review phase, turn 1: fixed structure):\n"
+            "- Structure it as one complex reflection, then one summary, then one review question."
         ),
     )
     return action_rule
@@ -12503,8 +12381,8 @@ def _render_closing_first_turn_action_rule(context: _ActionRuleContext) -> str:
         "closing_first_turn",
         "base",
         default=(
-            "出力要件（クロージング1ターン目: 固定構成）:\n"
-            "- 短い反射1文のあとに終了確認の質問1問を置く。"
+            "Output requirements (Closing phase, first turn: fixed structure):\n"
+            "- After one short reflection sentence, place one end-check question."
         ),
         style_name=style_name,
     )
@@ -12518,12 +12396,12 @@ def _render_closing_final_turn_action_rule(context: _ActionRuleContext) -> str:
         "closing_final_turn",
         "base",
         default=(
-            "出力要件（クロージング最終ターン: 固定構成）:\n"
-            "- 選ばれた反射スタイル（{style_name}）で短い受け止めを1文置く。\n"
-            "- 続けて、今日のセッションをここで終える旨を1文で明示する。\n"
-            "- 質問は入れない（？は0）。\n"
-            "- 感謝を短く含める。\n"
-            "- 提案・助言はしない。"
+            "Output requirements (Closing phase, final turn: fixed structure):\n"
+            "- Use the selected reflection style ({style_name}) for one short reflective sentence.\n"
+            "- Then add one sentence explicitly stating that today's session will end here.\n"
+            "- Do not include a question (zero question marks).\n"
+            "- Include a brief thank-you.\n"
+            "- Do not add advice or suggestions."
         ),
         style_name=style_name,
     )
@@ -12626,13 +12504,13 @@ def _render_task_section(action_rule: str) -> str:
         "common_prompts",
         "task_section_template",
         default=(
-            "【今回のタスク（行動ルール）】\n"
-            "- 直近だけでなく、これまでのやり取りも踏まえる。\n"
-            "- 説教・押しつけ・断定を避ける。\n"
-            "- 提案・助言・具体策の提示は PROVIDE_INFO のときだけ行う。PROVIDE_INFO 以外では提案しない。\n"
-            "- 禁止表現: 「〜にしますね」「〜しておきますね」「今週は〜しますね」のように、支援者主導で決める言い方は使わない。\n"
-            "- 主導権はユーザに。必要に応じてカウンセラーの理解が正しいか確認する。\n"
-            "- PROVIDE_INFO以外では「～しましょう」などの提案は行わない。FOCUSING_TARGET_BEHAVIORやNEXT_STEP_DECISIONでも、カウンセラー側から提案するのではなく、ユーザの考えを引き出す。REFLECTでは質問化せず叙述の反映で返し、複雑反射では言外の意味を1点だけ足して喚起につなげる。\n"
+            "[Task for this turn: action rules]\n"
+            "- Use not only the most recent turn but also the flow of the conversation so far.\n"
+            "- Avoid lecturing, pushing, or speaking in absolute terms.\n"
+            "- Offer advice, suggestions, or concrete options only in PROVIDE_INFO. Do not suggest actions in other main actions.\n"
+            "- Forbidden style: avoid counselor-led wording such as 'I'll make it ...', 'I'll take care of ...', or 'Let's set this week's plan as ...'.\n"
+            "- Keep agency with the user. When needed, briefly check whether the counselor's understanding is correct.\n"
+            "- Outside PROVIDE_INFO, do not make proposal-style moves such as 'let's do ...'. Even in FOCUSING_TARGET_BEHAVIOR or NEXT_STEP_DECISION, draw out the user's own thinking rather than proposing from the counselor side. In REFLECT, respond as a reflective statement rather than turning it into a question; in complex reflection, add only one small implied meaning to support evocation.\n"
             "{action_rule}"
         ),
         action_rule=action_rule,
@@ -12644,14 +12522,14 @@ def _render_output_format_constraints() -> str:
         "common_prompts",
         "output_format_constraints",
         default=(
-            "【出力フォーマット制約】\n"
-            "- 1文は長くなりすぎない。1文あたりの読点（、）は2回以内を目安にする。\n"
-            "- 読点（、）を減らす必要があるときは、記号だけを削らず、不要語の削除・語順調整・主語述語の簡素化で自然な文にする。\n"
-            "- 文分割で読点制約を回避しない。応答全体を短くしつつ、自然さを最優先する。\n"
-            "- 中高生にも理解できる平易な言葉を使う。\n"
-            "- 専門用語は避けるか、必要なら短く説明する。\n"
-            "- 出力直前に自然さを最終確認する。文脈にない急な指示語、同語反復、くどい前置きがあれば簡潔に言い換える。\n"
-            "- 最終文は、会話の流れに自然につながる、自然な日本語で表現することを優先する。"
+            "[Output format constraints]\n"
+            "- Keep each sentence from becoming too long.\n"
+            "- If a sentence feels crowded, shorten it by removing unnecessary words or simplifying the clause structure rather than relying on punctuation tricks.\n"
+            "- Do not dodge brevity constraints by splitting one idea into many short sentences. Keep the whole response concise while prioritizing natural flow.\n"
+            "- Use plain language that a teenager could understand.\n"
+            "- Avoid jargon, or explain it briefly if it is truly necessary.\n"
+            "- Right before output, do a final naturalness check. If there are abrupt pointers, repetitive wording, or padded lead-ins, rewrite them more simply.\n"
+            "- Prioritize a final sentence that connects naturally to the conversation and reads as natural English."
         ),
     )
 
@@ -12666,22 +12544,22 @@ def _render_writer_validation_checks(
     focus_choice_context: Optional[Mapping[str, Any]] = None,
 ) -> str:
     common_default = [
-        "- 返答本文のみを1件出力する。JSON・role名・コードブロックは出さない。",
-        "- 内部ラベルや英語スネークケース識別子（内部ID・内部キー名）を本文に出さない。",
-        "- 日常語（です・ます基調）で書き、敬語を重ねすぎない。スラング（w / www / 笑）は使わない。",
-        "- draft_response_text は意味アンカーであり、語彙アンカーではない。抽象名詞が残っている場合は、意味を保ったまま last_user_text に近い日常語へ言い戻す。",
-        "- 1文あたりの読点（、）は2回以内にする。",
-        "- 読点制約に合わせるときは「、」を機械的に削除せず、不要語の削除と語順調整で1文を自然に短くする。",
-        "- 禁止表現: 「〜にしますね」「〜しておきますね」「今週は〜しますね」。",
-        "- Layer3完成ドラフトの主題から外れる新規論点を追加しない。",
-        "- 主体・視点・所有権は変更しない。『あなた』『ご自身』『自分で決める』『あなたの感覚』などの自律性アンカーを『私』『こちら』へ置き換えない。",
-        "- ユーザの具体語を最低1つ保持する。must_include や slot_quality_target_examples.detail に具体語がある場合は、そのうち少なくとも1つを残す。",
-        "- must_include が空でも、last_user_text に身体感覚・行動・場面・音・時間帯の具体語がある場合は、そのうち少なくとも1つを残す。",
-        "- change talk の具体焦点を削らない。ct_anchors / utterance_target / evocation_move が示す具体方向を一般論に戻さない。",
-        "- 抽象語への置換は禁止寄り。短くするためでも、具体語を消して抽象語だけにしない。",
-        "- 「言語化」「整理」「見つめ直す」「意味」「きっかけ」「姿勢」「気づき」「学び」「持ち帰り」などの抽象名詞は、ユーザ自身がその語を使っていない限り優先的に動詞や感覚・行動・場面の語へ言い換える。",
-        "- 抽象語が必要でも1ターン1個までを目安にし、抽象語を連ねない。",
-        "- 最終文に、主体反転・視点反転・具体語の脱落・抽象化しすぎが残っていないか確認し、見つけたら短く自然な文のまま直す。",
+        "- Output exactly one response body only. Do not output JSON, role names, or code blocks.",
+        "- Do not expose internal labels or English snake_case identifiers (internal IDs or key names) in the response body.",
+        "- Use everyday language in a polite but not over-formal style. Do not use slang such as `w`, `www`, or `lol`-style markers.",
+        "- `draft_response_text` is a meaning anchor, not a wording anchor. If abstract nouns remain, recast them into everyday language closer to `last_user_text` while preserving meaning.",
+        "- Keep each sentence concise.",
+        "- When tightening a sentence, do not mechanically delete commas. Shorten it naturally by removing unnecessary words and adjusting word order.",
+        "- Forbidden style: wording such as 'I'll make it ...', 'I'll take care of ...', or 'Let's make this week's plan ...'.",
+        "- Do not add new themes that drift away from the main point of the completed Layer3 draft.",
+        "- Do not change agency, viewpoint, or ownership. Do not swap autonomy anchors such as 'you', 'your own sense', or 'decide for yourself' into counselor-centered phrasing such as 'I' or 'from our side'.",
+        "- Preserve at least one concrete term from the user's wording. If `must_include` or `slot_quality_target_examples.detail` contains concrete language, keep at least one of those items.",
+        "- Even if `must_include` is empty, keep at least one concrete cue from `last_user_text` when it contains bodily sensations, actions, settings, sounds, or times of day.",
+        "- Do not erase the concrete focus of change talk. Do not flatten the specific direction signaled by `ct_anchors`, `utterance_target`, or `evocation_move` into generalities.",
+        "- Strongly avoid replacing concrete content with abstraction. Even for brevity, do not delete the specifics and leave only abstract nouns.",
+        "- Abstract nouns such as 'put into words', 'organize', 'reconsider', 'meaning', 'trigger', 'stance', 'awareness', 'learning', or 'takeaway' should be paraphrased into verbs, felt sense, actions, or situations unless the user used that wording themselves.",
+        "- Even when abstract wording is needed, aim for no more than one such term in a turn and do not stack them.",
+        "- In the final sentence, check for agency reversal, viewpoint reversal, loss of concrete terms, or over-abstraction, and fix any of those while keeping the sentence short and natural.",
     ]
     lines = _get_layer4_writer_prompt_lines(
         "validation_checks",
@@ -12696,8 +12574,8 @@ def _render_writer_validation_checks(
                     "validation_checks",
                     "closing_final_turn",
                     default_lines=[
-                        "- クロージング最終ターンは、質問を入れない（？は0）。",
-                        "- 終了明示（例: ここで終える/これで終わり）を1文で含める。",
+                        "- In the final closing turn, do not include a question (zero question marks).",
+                        "- Include one sentence that explicitly signals ending (for example: ending here / this is where we stop today).",
                     ],
                 )
             )
@@ -12707,8 +12585,8 @@ def _render_writer_validation_checks(
                     "validation_checks",
                     "reflect_closing",
                     default_lines=[
-                        "- クロージング1ターン目は、反射1文のあとに終了可否を確認する質問を1つ置く。",
-                        "- 最後の質問は、今日のセッションをここで終えるかの確認にする。",
+                        "- In the first closing turn, place one reflection sentence followed by one question checking whether it is okay to end.",
+                        "- Make the final question about whether to end today's session here.",
                     ],
                 )
             )
@@ -12717,7 +12595,7 @@ def _render_writer_validation_checks(
                 _get_layer4_writer_prompt_lines(
                     "validation_checks",
                     "reflect_non_closing",
-                    default_lines=["- 反射アクションでは疑問符（？ / ?）を使わない。"],
+                    default_lines=["- In reflection actions, do not use a question mark."],
                 )
             )
         lines.extend(
@@ -12725,11 +12603,11 @@ def _render_writer_validation_checks(
                 "validation_checks",
                 "reflect_common",
                 default_lines=[
-                    "- 反射は draft_response_text より長くしない。意味を増やさず、必要なら削って自然にする。",
-                    "- 単なる言い換えで終わらせず、意味の整理を1段だけ進める。",
-                    "- 反射は draft_response_text の主命題だけを扱う。",
-                    "- 反射アクションでは助言・推奨・方針決定をしない。",
-                    "- 禁止例: 「〜してみるのはどうでしょう」「〜が有効です」「〜が適切です」「〜していきましょう」「おすすめは〜です」。",
+                    "- Do not make the reflection longer than `draft_response_text`. Do not add meaning; if needed, trim it to keep it natural.",
+                    "- Do not end with a mere paraphrase. Move the meaning forward by only one small step.",
+                    "- In reflection, work only with the main proposition of `draft_response_text`.",
+                    "- In reflection actions, do not give advice, recommendations, or decisions.",
+                    "- Forbidden examples include phrasing such as 'How about trying ...', '... is effective', '... is appropriate', 'Let's keep doing ...', or 'I recommend ...'.",
                 ],
             )
         )
@@ -12746,14 +12624,14 @@ def _render_writer_validation_checks(
                 _get_layer4_writer_prompt_lines(
                     "validation_checks",
                     "question_allow_questionless",
-                    default_lines=["- 初回挨拶のみケースでは、質問なしでもよい。"],
+                    default_lines=["- If this is only an initial greeting, a turn without a question is acceptable."],
                 )
             )
             lines.extend(
                 _get_layer4_writer_prompt_lines(
                     "validation_checks",
                     "question_target",
-                    default_lines=["- 質問対象は draft_response_text で未解決の1点1要求に限定する。"],
+                    default_lines=["- Limit the question target to one unresolved point or request from `draft_response_text`."],
                 )
             )
         else:
@@ -12762,8 +12640,8 @@ def _render_writer_validation_checks(
                     "validation_checks",
                     "question_general",
                     default_lines=[
-                        "- 質問は1つだけにし、疑問文を必ず含める。",
-                        "- 質問対象は draft_response_text で未解決の1点1要求に限定する。",
+                        "- Ask exactly one question, and make it an explicit interrogative sentence.",
+                        "- Limit the question target to one unresolved point or request from `draft_response_text`.",
                     ],
                 )
             )
@@ -12774,7 +12652,7 @@ def _render_writer_validation_checks(
                 _get_layer4_writer_prompt_lines(
                     "validation_checks",
                     "question_followup_intro",
-                    default_lines=["- 直前の回答を短く受け止めてから、フォローアップ質問を1つだけ置く。"],
+                    default_lines=["- Briefly acknowledge the previous answer, then place only one follow-up question."],
                 )
             )
             if followup_step == _SCALE_FOLLOWUP_STEP_PLUS_ONE:
@@ -12784,8 +12662,8 @@ def _render_writer_validation_checks(
                             "validation_checks",
                             "question_followup_plus_one_template",
                             default=(
-                                f"- 今回は「何があると{score_text}点から1点上がるか」を問う1問にする。\n"
-                                "- このターンで理由質問は重ねない。"
+                                f"- In this turn, ask only one question: what would raise it from {score_text} by one point?\n"
+                                "- Do not stack a reason question in this same turn."
                             ),
                             score_text=score_text,
                         )
@@ -12798,8 +12676,8 @@ def _render_writer_validation_checks(
                             "validation_checks",
                             "question_followup_reason_template",
                             default=(
-                                f"- 今回は「0点でなく{score_text}点なのはなぜか」を問う1問にする。\n"
-                                "- このターンで1点アップ質問は重ねない。"
+                                f"- In this turn, ask only one question: why is it {score_text} rather than 0?\n"
+                                "- Do not stack the one-point-up question in this same turn."
                             ),
                             score_text=score_text,
                         )
@@ -12810,7 +12688,7 @@ def _render_writer_validation_checks(
                     _get_layer4_writer_prompt_lines(
                         "validation_checks",
                         "question_followup_default",
-                        default_lines=["- 今回は「何があると1点上がるか」を問う1問にする。"],
+                        default_lines=["- In this turn, ask only one question about what would raise it by one point."],
                     )
                 )
         if action == MainAction.SCALING_QUESTION:
@@ -12819,9 +12697,9 @@ def _render_writer_validation_checks(
                     "validation_checks",
                     "scaling_question",
                     default_lines=[
-                        "- 0〜10の尺度を明示し、数値だけを尋ねる。",
-                        "- 理由質問や1点アップ質問は同じ質問内に入れない。",
-                        "- 尺度の対象を『この練習』『この方法』などへ抽象化しない。",
+                        "- Explicitly use a 0-10 scale and ask only for the number.",
+                        "- Do not combine a reason question or one-point-up question into the same question.",
+                        "- Do not abstract the scale target into vague labels such as 'this practice' or 'this method'.",
                     ],
                 )
             )
@@ -12831,9 +12709,9 @@ def _render_writer_validation_checks(
                     "validation_checks",
                     "review_first_turn",
                     default_lines=[
-                        "- 振り返りフェーズ1ターン目は、複雑反射1文→要約1文→振り返り質問1問の順で構成する。",
-                        "- 最後の質問は『今日の話で一番残っていること』『次に意識したいこと』などの日常語で開いて尋ねる。",
-                        "- このターンでは是認文を入れない。",
+                        "- In the first review-reflection turn, structure the turn as one complex reflection, one summary, then one review question.",
+                        "- The final question should open naturally in everyday language, such as asking what stands out most from today's talk or what the client wants to keep in mind next.",
+                        "- Do not include an affirmation sentence in this turn.",
                     ],
                 )
             )
@@ -12844,8 +12722,8 @@ def _render_writer_validation_checks(
                 "validation_checks",
                 "summary",
                 default_lines=[
-                    "- SUMMARYでは質問を入れない（？/?/ですか/ますか/でしょうかを使わない）。",
-                    "- SUMMARYの文数・構成・締め方は Layer3 action_rules に従う（Layer4で独自に増やさない）。",
+                    "- In SUMMARY, do not include a question.",
+                    "- Follow Layer3 action_rules for sentence count, structure, and ending in SUMMARY; do not add extra Layer4-only structure.",
                 ],
             )
         )
@@ -12856,9 +12734,9 @@ def _render_writer_validation_checks(
                 "validation_checks",
                 "clarify_preference",
                 default_lines=[
-                    "- 選択肢質問を1つだけ行い、「どちら / どっち / どのほう」のいずれかを含める。",
-                    "- 選択肢は短い語句に要約し、修飾語を詰め込みすぎない。",
-                    "- 「〜のと…のとでは」など同型反復の重い並列表現を避ける。",
+                    "- Ask exactly one choice question.",
+                    "- Summarize each option as a short phrase and avoid overloading them with modifiers.",
+                    "- Avoid heavy repeated paired constructions such as 'between ... and ...'.",
                 ],
             )
         )
@@ -12873,12 +12751,12 @@ def _render_writer_validation_checks(
                         "validation_checks",
                         "clarify_preference_focus_choice",
                         default=(
-                            "- 今回は進め方ではなく、どの話題から入るかを選ぶ質問にする。\n"
-                            "- 選択肢は {focus_choice_options} を使い、どこから扱うかが選べる形にする。"
+                            "- In this turn, ask a question about which topic to start with rather than about process preference.\n"
+                            "- Use {focus_choice_options} as the options so the client can choose where to begin."
                         ),
                         focus_choice_options=_join_writer_items(
                             focus_choice_options,
-                            fallback="なし",
+                            fallback="none",
                         ),
                     )
                 )
@@ -12890,9 +12768,9 @@ def _render_writer_validation_checks(
                 "validation_checks",
                 "ask_permission",
                 default_lines=[
-                    "- 基本構成は最大2文にし、最後の1文だけを質問にする。",
-                    "- add_affirm != NONE なら是認1文 + 許可確認1問、add_affirm == NONE なら simple reflection 1文 + 許可確認1問にする。",
-                    "- 「情報 / 共有 / 提案 / 方法 / 選択肢」のいずれかを最終質問に含める。",
+                    "- Keep the basic structure to at most two sentences, and make only the final sentence a question.",
+                    "- If add_affirm != NONE, use one affirmation sentence plus one permission-check question; if add_affirm == NONE, use one simple reflection sentence plus one permission-check question.",
+                    "- Include at least one of these ideas in the final question: information, sharing, options, methods, or suggestions.",
                 ],
             )
         )
@@ -12903,8 +12781,8 @@ def _render_writer_validation_checks(
                 "validation_checks",
                 "provide_info",
                 default_lines=[
-                    "- 「一つの方法として」または選択肢提示（A/B/C等）を入れる。",
-                    "- 最後に反応を聞く質問を1つだけ置く。",
+                    "- Include wording such as 'as one option' or present explicit options (A/B/C, etc.).",
+                    "- End with exactly one question asking for the client's reaction.",
                 ],
             )
         )
@@ -12915,8 +12793,8 @@ def _render_writer_validation_checks(
                 "validation_checks",
                 "affirm_none",
                 default_lines=[
-                    "- 今回は是認文を入れない。",
-                    "- 是認なしでは、努力/称賛語（例: 素晴らしい・頑張る・努力・工夫・向き合う・続ける）を避ける。",
+                    "- Do not include an affirmation sentence in this turn.",
+                    "- When there is no affirmation, avoid praise-oriented wording such as 'great', 'trying hard', 'effort', 'resourcefulness', 'facing it', or 'keeping at it'.",
                 ],
             )
         )
@@ -12926,9 +12804,9 @@ def _render_writer_validation_checks(
                 "validation_checks",
                 "affirm_simple",
                 default_lines=[
-                    "- 短い是認を1文入れる。",
-                    "- そのターンで観察できる発話・選択・行動の1点に接地させる。",
-                    "- 基本形は「不安や迷いがありながらも、〇〇しようとしているんですね」。",
+                    "- Include one short affirmation sentence.",
+                    "- Ground it in one observable piece of speech, choice, or action from this turn.",
+                    "- A basic form is: 'Even with the uncertainty or hesitation, you are trying to ...'.",
                 ],
             )
         )
@@ -12938,10 +12816,10 @@ def _render_writer_validation_checks(
                 "validation_checks",
                 "affirm_complex",
                 default_lines=[
-                    "- 文脈に根ざした是認を1文入れる。",
-                    "- まず観察された事実を書く。",
-                    "- その後に、その行動が向いている方向や大事にしたいことを1句だけ添える。",
-                    "- 持続的な強み・価値の名詞化は必須にしない。迷うときは性格ラベルより行動ベースの是認を優先する。",
+                    "- Include one affirmation sentence grounded in the context.",
+                    "- Start from the observed fact.",
+                    "- Then add only one short phrase about the direction that action points toward or what seems important to preserve.",
+                    "- Do not force a nominalized strength or value label. When unsure, prefer a behavior-based affirmation over a personality label.",
                 ],
             )
         )
@@ -12949,7 +12827,7 @@ def _render_writer_validation_checks(
     header = _get_layer4_writer_prompt(
         "validation_checks",
         "header",
-        default="【出力前チェック（必須）】",
+        default="[Pre-output check: required]",
     )
     return f"{header}\n" + "\n".join(lines)
 
@@ -12960,9 +12838,9 @@ def _render_affirm_rule(affirm_mode: AffirmationMode) -> str:
             "affirmation_rules",
             "none",
             default=(
-                "【是認（affirmation）】\n"
-                "- 今回は是認文を入れない。\n"
-                "- 努力や強みを評価する定型句（素晴らしい/頑張っている/工夫している等）は入れない。"
+                "[Affirmation]\n"
+                "- Do not include an affirmation sentence in this turn.\n"
+                "- Do not use stock praise phrases that evaluate effort or strengths (for example: great, working hard, being resourceful)."
             ),
         )
     if affirm_mode == AffirmationMode.SIMPLE:
@@ -12970,39 +12848,39 @@ def _render_affirm_rule(affirm_mode: AffirmationMode) -> str:
             "affirmation_rules",
             "simple",
             default=(
-                "【是認（affirmation: SIMPLE）】\n"
-                "- 短い是認を1文入れる（20〜40文字程度）。\n"
-                "- 努力・工夫・継続・向き合う姿勢のうち1点だけを、観察できる発話・選択・行動に接地して認める。\n"
-                "- 基本形は「不安や迷いがありながらも、〇〇しようとしているんですね」。\n"
-                "- 過度な称賛や断定は避ける。\n"
-                "- 「認めます」「評価します」などと伝えるのではなく、叙述で短く反映する。\n"
-                "- QUESTION / ASK_PERMISSION_TO_SHARE_INFO の場合は、質問の前に是認を配置する。\n"
+                "[Affirmation: SIMPLE]\n"
+                "- Add one short affirmation sentence.\n"
+                "- Ground it in only one observable sign of effort, resourcefulness, persistence, or willingness to face the issue.\n"
+                "- A basic form is: 'Even with the uncertainty or hesitation, you are trying to ...'.\n"
+                "- Avoid excessive praise or overconfident labeling.\n"
+                "- Do not say 'I acknowledge' or 'I evaluate'; reflect it briefly as a statement.\n"
+                "- In QUESTION / ASK_PERMISSION_TO_SHARE_INFO, place the affirmation before the question.\n"
             ),
         )
     return _get_layer4_writer_prompt(
         "affirmation_rules",
         "complex",
         default=(
-            "【是認（affirmation: COMPLEX）】\n"
-            "- 文脈に根ざした是認を1文入れる。\n"
-            "- 2段構成を基本にする（前半=観察された事実 / 後半=その行動が向いている方向・大事にしたいことを1句）。\n"
-            "- 持続的な強み・価値の名詞化は必須にしない。迷うときは性格ラベルより行動ベースの是認を優先する。\n"
-            "- 強すぎるラベルを弱めるときは、削除せず「〜しようとしている」「〜を続けようとしている」の形へ圧縮する。\n"
-            "- お世辞ではなく、発話に現れた具体的根拠を示す。\n"
-            "- 「認めます」「評価します」などと伝えるのではなく、叙述で短く反映する。\n"
-            "- QUESTION / ASK_PERMISSION_TO_SHARE_INFO の場合は、質問の前に是認を配置する。\n"
+            "[Affirmation: COMPLEX]\n"
+            "- Add one context-grounded affirmation sentence.\n"
+            "- Prefer a two-part structure: first the observed fact, then one short phrase about the direction it points toward or what seems important.\n"
+            "- Do not force a nominalized strength or value label. When unsure, prefer a behavior-based affirmation over a personality label.\n"
+            "- If a label feels too strong, soften it by compressing it into forms like 'trying to ...' or 'trying to keep ... going' rather than deleting it entirely.\n"
+            "- Base it on concrete evidence in the client's wording rather than on flattery.\n"
+            "- Do not say 'I acknowledge' or 'I evaluate'; reflect it briefly as a statement.\n"
+            "- In QUESTION / ASK_PERMISSION_TO_SHARE_INFO, place the affirmation before the question.\n"
         ),
     )
 
 
 def _render_debug_block(normalized: _PromptNormalizedInputs) -> str:
     return (
-        "【デバッグ情報（出力本文に反映しない）】\n"
-        "- この章はログ参照用。返答文には直接出力しない。\n"
-        f"- phase_debug 出力: {normalized.phase_hint}\n"
-        f"- action_ranker 出力: {normalized.rank_hint}\n"
-        f"- action_ranker 提案 main_action: {normalized.proposed_action_hint}\n"
-        f"- feature_extractor 出力: {normalized.feature_hint}"
+        "[Debug information: do not reflect in the output text]\n"
+        "- This section is only for log reference. Never output it directly in the response.\n"
+        f"- phase_debug output: {normalized.phase_hint}\n"
+        f"- action_ranker output: {normalized.rank_hint}\n"
+        f"- action_ranker proposed main_action: {normalized.proposed_action_hint}\n"
+        f"- feature_extractor output: {normalized.feature_hint}"
     )
 
 
@@ -13014,7 +12892,7 @@ def _assemble_system_with_runtime_tail(
     *,
     fixed_sections: Sequence[str],
     runtime_sections: Sequence[str],
-    runtime_header: str = "【実行時コンテキスト（毎ターン更新）】",
+    runtime_header: str = "[Runtime context: updated every turn]",
 ) -> str:
     fixed = _assemble_system(fixed_sections)
     runtime = _assemble_system(runtime_sections)
@@ -13029,7 +12907,7 @@ def _render_runtime_risk_note(risk_note: str) -> str:
     risk = _sanitize_human_text(risk_note)
     if not risk:
         return ""
-    return "【実行時安全メモ】\n" f"- 今回の安全メモ: {risk}"
+    return "[Runtime safety note]\n" f"- Safety note for this turn: {risk}"
 
 
 def _build_messages_with_history_limit(
@@ -13057,7 +12935,7 @@ def _history_to_numbered_dialogue(
     start = max(0, total - max(1, int(max_turns)))
     lines: List[str] = []
     for idx, (role, text) in enumerate(history[start:], start=start + 1):
-        prefix = "クライアント" if role == "user" else "カウンセラー"
+        prefix = "Client" if role == "user" else "Counselor"
         lines.append(f"T{idx} {prefix}: {text}")
     return "\n".join(lines), start + 1, total
 
@@ -13101,9 +12979,9 @@ def _format_focus_candidate_for_prompt(candidate: ChangeTalkCandidate) -> str:
     evidence = _sanitize_human_text(candidate.evidence_quote)
     detail_parts: List[str] = []
     if evidence and evidence != topic:
-        detail_parts.append(f"根拠:「{evidence}」")
+        detail_parts.append(f'Evidence: "{evidence}"')
     if isinstance(candidate.evidence_turn, int) and candidate.evidence_turn > 0:
-        detail_parts.append(f"出典:T{candidate.evidence_turn}")
+        detail_parts.append(f"Source: T{candidate.evidence_turn}")
     if detail_parts:
         return f"{topic}（{' / '.join(detail_parts)}）"
     return topic
@@ -13127,7 +13005,7 @@ def _format_focus_candidates_for_prompt(
 
 def _format_focus_for_writer(focus: Optional[Mapping[str, Any]]) -> str:
     if not isinstance(focus, Mapping):
-        return "なし"
+        return "none"
     topic = _sanitize_human_text(focus.get("topic"))
     meaning = _sanitize_human_text(focus.get("meaning"))
     why_now = _sanitize_human_text(focus.get("why_now"))
@@ -13137,13 +13015,13 @@ def _format_focus_for_writer(focus: Optional[Mapping[str, Any]]) -> str:
     else:
         core = topic or meaning
     if core and why_now:
-        return f"{core} / 優先理由: {why_now}"
+        return f"{core} / Priority reason: {why_now}"
     if why_now:
-        return f"優先理由: {why_now}"
-    return core or "なし"
+        return f"Priority reason: {why_now}"
+    return core or "none"
 
 
-def _join_writer_items(values: Sequence[str], *, fallback: str = "なし") -> str:
+def _join_writer_items(values: Sequence[str], *, fallback: str = "none") -> str:
     cleaned: List[str] = []
     for value in values:
         text = _sanitize_human_text(value)
@@ -13162,7 +13040,7 @@ def _join_writer_items(values: Sequence[str], *, fallback: str = "なし") -> st
 def _format_writer_plan_for_prompt(
     plan: Optional[Mapping[str, Any]],
     *,
-    fallback: str = "なし",
+    fallback: str = "none",
 ) -> str:
     if not isinstance(plan, Mapping):
         return fallback
@@ -13171,20 +13049,20 @@ def _format_writer_plan_for_prompt(
     core = _sanitize_human_text(plan.get("core_function"))
     closing = _sanitize_human_text(plan.get("closing_function"))
     if opening:
-        parts.append(f"導入={opening}")
+        parts.append(f"Opening={opening}")
     if core:
-        parts.append(f"中核={core}")
+        parts.append(f"Core={core}")
     if closing:
-        parts.append(f"締め={closing}")
+        parts.append(f"Closing={closing}")
     try:
         question_count_max = int(plan.get("question_count_max"))
     except Exception:
         question_count_max = -1
     if question_count_max >= 0:
-        parts.append(f"質問上限={question_count_max}")
+        parts.append(f"Question limit={question_count_max}")
     preferred_ending_family = _sanitize_human_text(plan.get("preferred_ending_family"))
     if preferred_ending_family:
-        parts.append(f"優先語尾family={preferred_ending_family}")
+        parts.append(f"Preferred ending family={preferred_ending_family}")
     raw_avoid_recent_ending_families = plan.get("avoid_recent_ending_families")
     avoid_recent_ending_families: List[str] = []
     if isinstance(raw_avoid_recent_ending_families, Sequence) and not isinstance(
@@ -13198,14 +13076,14 @@ def _format_writer_plan_for_prompt(
             if len(avoid_recent_ending_families) >= 3:
                 break
     if avoid_recent_ending_families:
-        parts.append(f"回避語尾family={_join_writer_items(avoid_recent_ending_families)}")
+        parts.append(f"Avoid ending families={_join_writer_items(avoid_recent_ending_families)}")
     return " / ".join(parts) if parts else fallback
 
 
 def _format_layer4_repair_issue_codes_for_prompt(
     issue_codes: Optional[Sequence[Any]],
     *,
-    fallback: str = "なし",
+    fallback: str = "none",
 ) -> str:
     if not isinstance(issue_codes, Sequence) or isinstance(issue_codes, (str, bytes)):
         return fallback
@@ -13292,7 +13170,7 @@ def _merge_layer4_repair_issue_codes(
 def _format_layer4_repair_issue_code_groups_for_prompt(
     issue_groups: Optional[Mapping[str, Sequence[Any]]],
     *,
-    fallback: str = "なし",
+    fallback: str = "none",
 ) -> Dict[str, str]:
     normalized = _normalize_layer4_repair_issue_codes(issue_groups)
     return {
@@ -13324,10 +13202,10 @@ def _render_layer4_issue_repair_guidance(
     if not isinstance(issue_repair_node, Mapping):
         issue_repair_node = {}
 
-    header = _normalize_slot_text(issue_repair_node.get("header")) or "【Layer3違反コード別 修正ガイド】"
+    header = _normalize_slot_text(issue_repair_node.get("header")) or "[Layer3 repair guide by violation code]"
     intro_line = (
         _normalize_slot_text(issue_repair_node.get("intro_line"))
-        or "下記コードに該当する違反を先に修正する。未該当の修正は足さない。"
+        or "Fix the matching issues below first. Do not add repairs for codes that are not present."
     )
     guidance_node = issue_repair_node.get("guidance")
     guidance_map = guidance_node if isinstance(guidance_node, Mapping) else {}
@@ -13364,7 +13242,7 @@ def _render_layer4_issue_repair_guidance(
 def _format_slot_quality_target_examples_for_prompt(
     examples: Sequence[Mapping[str, Any]],
     *,
-    fallback: str = "なし",
+    fallback: str = "none",
 ) -> str:
     lines: List[str] = []
     for example in examples:
@@ -13385,11 +13263,11 @@ def _format_slot_quality_target_examples_for_prompt(
             continue
         target_information = _extract_slot_quality_target_information(example)
         detail = _extract_slot_quality_target_example_detail(example)
-        line = f"{slot_label or '未指定スロット'} [{issue_type}] {probe_style}"
+        line = f"{slot_label or 'unspecified slot'} [{issue_type}] {probe_style}"
         if target_information:
-            line += f" / 欲しい情報: {target_information}"
+            line += f" / Needed information: {target_information}"
         if detail:
-            line += f" / 発話例: {detail}"
+            line += f" / Utterance example: {detail}"
         if line in lines:
             continue
         lines.append(line)
@@ -13403,7 +13281,7 @@ def _format_slot_quality_target_examples_for_prompt(
 def _format_slot_quality_target_example_details_for_prompt(
     examples: Sequence[Mapping[str, Any]],
     *,
-    fallback: str = "なし",
+    fallback: str = "none",
 ) -> str:
     lines: List[str] = []
     for example in examples:
@@ -13418,7 +13296,7 @@ def _format_slot_quality_target_example_details_for_prompt(
             slot_label = _sanitize_human_text(_PHASE_SLOT_LABELS.get(slot_key, slot_key))
         if _find_internal_label_leak(slot_label):
             continue
-        line = f"{slot_label or '未指定スロット'}: {detail}"
+        line = f"{slot_label or 'unspecified slot'}: {detail}"
         if line in lines:
             continue
         lines.append(line)
@@ -13471,7 +13349,7 @@ def _slot_quality_target_examples_from_phase_debug(
 def _format_slot_repair_hints_for_prompt(
     hints: Sequence[Mapping[str, Any]],
     *,
-    fallback: str = "なし",
+    fallback: str = "none",
 ) -> str:
     return _format_slot_quality_target_examples_for_prompt(hints, fallback=fallback)
 
@@ -13479,7 +13357,7 @@ def _format_slot_repair_hints_for_prompt(
 def _format_slot_repair_detail_targets_for_prompt(
     hints: Sequence[Mapping[str, Any]],
     *,
-    fallback: str = "なし",
+    fallback: str = "none",
 ) -> str:
     return _format_slot_quality_target_example_details_for_prompt(hints, fallback=fallback)
 
@@ -13604,16 +13482,16 @@ def _derive_turn_objective_from_slot_quality_target_examples(
 ) -> Dict[str, Any]:
     question_allowed = _default_question_count_max(action) > 0
     default_use_reflection_first = _is_reflect_action(action) or action == MainAction.SUMMARY
-    slot_focus_label = _slot_label_from_target(slot_target) or "このテーマ"
+    slot_focus_label = _slot_label_from_target(slot_target) or "this topic"
     default_goal = (
-        f"{slot_focus_label}について、答えやすい1点を確認する"
+        f"Check one easy-to-answer point about {slot_focus_label}"
         if question_allowed
-        else f"{slot_focus_label}の意味を確認的反射で具体化する"
+        else f"Make the meaning of {slot_focus_label} more concrete through a checking reflection"
     )
     default_success = (
-        f"{slot_focus_label}に関する具体情報が1つ返る"
+        f"One concrete piece of information about {slot_focus_label} comes back"
         if question_allowed
-        else f"{slot_focus_label}についての語りが少し具体化する"
+        else f"The talk about {slot_focus_label} becomes slightly more concrete"
     )
     default_shape = _default_question_shape_for_action(action)
 
@@ -13642,67 +13520,67 @@ def _derive_turn_objective_from_slot_quality_target_examples(
 
     if target_information:
         if question_allowed:
-            repair_goal_text = f"{target_information}を1点だけ確かめる"
-            success_criterion = f"{target_information}について新しい具体情報が1つ返る"
+            repair_goal_text = f"Check one point about {target_information}"
+            success_criterion = f"One new concrete piece of information about {target_information} comes back"
         else:
-            repair_goal_text = f"{target_information}の意味を1点だけ扱う"
-            success_criterion = f"{target_information}についての語りが少し具体化する"
+            repair_goal_text = f"Work with one point about the meaning of {target_information}"
+            success_criterion = f"The talk about {target_information} becomes slightly more concrete"
         if issue_type == "missing_evidence":
             question_shape = "example_probe" if question_allowed else "reflective_check"
         elif issue_type == "low_confidence":
             question_shape = "gentle_clarification" if question_allowed else "reflective_check"
             use_reflection_first = True
-            success_criterion = "合っている/違う、または短い言い直しが返る"
+            success_criterion = "A yes/no correction or short rewording comes back"
         elif issue_type == "wrong_format":
             if slot_key in _SLOT_SCALE_KEYS:
-                repair_goal_text = f"{target_information}を0〜10など必要な形式で確かめる"
-                success_criterion = "数値（0〜10）が返る"
+                repair_goal_text = f"Check {target_information} in the required format such as 0-10"
+                success_criterion = "A number from 0 to 10 comes back"
                 question_shape = "scale_question"
             else:
-                repair_goal_text = f"{target_information}を答えやすい形式で確かめる"
-                success_criterion = f"{target_information}に必要な形式の情報が返る"
+                repair_goal_text = f"Check {target_information} in an easy-to-answer format"
+                success_criterion = f"The information needed for {target_information} comes back in the required format"
                 question_shape = _default_question_shape_for_action(action)
         else:
             question_shape = _default_question_shape_for_action(action)
     else:
         if issue_type == "missing_evidence":
-            repair_goal_text = f"{slot_label}について、最近の1回や具体例を聞いて根拠を補う"
-            success_criterion = f"{slot_label}に関する具体例が1件返る"
+            repair_goal_text = f"Ask for one recent instance or concrete example about {slot_label} to add evidence"
+            success_criterion = f"One concrete example related to {slot_label} comes back"
             question_shape = "example_probe"
         elif issue_type == "low_confidence":
-            repair_goal_text = f"{slot_label}の理解を仮置きで返し、合っているかを短く確かめる"
-            success_criterion = "合っている/違う、または短い言い直しが返る"
+            repair_goal_text = f"Offer a tentative understanding of {slot_label} and briefly check whether it fits"
+            success_criterion = "A yes/no correction or short rewording comes back"
             question_shape = "gentle_clarification"
             use_reflection_first = True
         elif issue_type == "wrong_format":
             if slot_key in _SLOT_SCALE_KEYS:
-                repair_goal_text = f"{slot_label}を0〜10など必要な形式で確認する"
-                success_criterion = "数値（0〜10）が返る"
+                repair_goal_text = f"Check {slot_label} in the required format such as 0-10"
+                success_criterion = "A number from 0 to 10 comes back"
                 question_shape = "scale_question"
             else:
-                repair_goal_text = f"{slot_label}を答えやすい形式で聞き直す"
-                success_criterion = f"{slot_label}に必要な形式の情報が返る"
+                repair_goal_text = f"Ask again about {slot_label} in an easy-to-answer format"
+                success_criterion = f"The information needed for {slot_label} comes back in the required format"
                 question_shape = _default_question_shape_for_action(action)
         else:
             if slot_key == "problem_scene":
-                repair_goal_text = "直近の具体的な1場面を聞く"
-                success_criterion = "最近の1場面（いつ/どこ/何が起きたか）が返る"
+                repair_goal_text = "Ask about one recent concrete scene"
+                success_criterion = "One recent scene comes back, including when, where, and what happened"
             elif slot_key == "execution_context":
-                repair_goal_text = "実行する場面（いつ/どこで）を具体化する"
-                success_criterion = "実行の時間帯か場所が1つ明示される"
+                repair_goal_text = "Make the implementation context concrete, including when or where it happens"
+                success_criterion = "One time window or location for carrying it out is made explicit"
             elif phase == Phase.PURPOSE_CONFIRMATION:
                 if slot_key == "today_focus_topic":
-                    repair_goal_text = "今日この場で扱う中身を1つに絞る"
-                    success_criterion = "今日扱う中身が1つに定まる"
+                    repair_goal_text = "Narrow today's focus to one thing to work on here"
+                    success_criterion = "One topic for today becomes clear"
                 elif slot_key == "process_need":
-                    repair_goal_text = "話しやすさや進め方の希望を短く確かめる"
-                    success_criterion = "話し方や進め方の希望、または進行上の選好が一言で分かる"
+                    repair_goal_text = "Briefly check what speaking style or process preference would help"
+                    success_criterion = "A short preference about pace, style, or process becomes clear"
                 elif slot_key == "presenting_problem_raw":
-                    repair_goal_text = "最初に話した困りごとを本人の言葉で確認する"
-                    success_criterion = "初期主訴が一文で確認できる"
+                    repair_goal_text = "Confirm the original concern in the client's own words"
+                    success_criterion = "The initial presenting concern can be stated in one sentence"
                 else:
-                    repair_goal_text = "今日この場で扱う中身を1つに絞る"
-                    success_criterion = "今日扱う中身が1つに定まる"
+                    repair_goal_text = "Narrow today's focus to one thing to work on here"
+                    success_criterion = "One topic for today becomes clear"
             question_shape = _default_question_shape_for_action(action)
 
     if not question_allowed:
@@ -13745,7 +13623,7 @@ def _derive_utterance_target(
     clarify_preference_mode: str = "default",
     focus_choice_options: Sequence[str] = (),
 ) -> str:
-    topic = _sanitize_human_text(primary_focus_topic) or "今のテーマ"
+    topic = _sanitize_human_text(primary_focus_topic) or "the current topic"
     slot_label = _slot_label_from_target(slot_target) or _sanitize_human_text(missing_info_candidate)
     target_information = _extract_slot_quality_target_information(selected_slot_quality_target_example)
     operation_goal = _normalize_ct_operation_goal(ct_operation_goal, default="Strengthen")
@@ -13753,7 +13631,7 @@ def _derive_utterance_target(
     change_talk_focus = ""
     if change_talk_items:
         if len(change_talk_items) >= 2 and operation_goal in {"Deepen", "Shift"}:
-            change_talk_focus = _sanitize_human_text(f"{change_talk_items[0]}と{change_talk_items[1]}")
+            change_talk_focus = _sanitize_human_text(f"{change_talk_items[0]} and {change_talk_items[1]}")
         else:
             change_talk_focus = _sanitize_human_text(change_talk_items[0])
 
@@ -13761,41 +13639,41 @@ def _derive_utterance_target(
         if not change_talk_focus:
             return ""
         if operation_goal == "Elicit":
-            return _sanitize_human_text(f"{change_talk_focus}の糸口になる場面を1つ確かめる")
+            return _sanitize_human_text(f"Check one scene that opens a path toward {change_talk_focus}")
         if operation_goal == "Shift":
-            return _sanitize_human_text(f"{change_talk_focus}へ寄るきっかけを1つ確かめる")
-        return _sanitize_human_text(f"{change_talk_focus}につながる場面や手がかりを1つ確かめる")
+            return _sanitize_human_text(f"Check one trigger that nudges things toward {change_talk_focus}")
+        return _sanitize_human_text(f"Check one scene or cue that connects to {change_talk_focus}")
 
     def _experience_reflect_from_focus() -> str:
         if not change_talk_focus:
             return ""
         if operation_goal == "Shift":
-            return _sanitize_human_text(f"{change_talk_focus}へ寄っていく瞬間を1つ映す")
-        return _sanitize_human_text(f"{change_talk_focus}が見えた瞬間や手ごたえを1つ映す")
+            return _sanitize_human_text(f"Reflect one moment when things start leaning toward {change_talk_focus}")
+        return _sanitize_human_text(f"Reflect one moment or felt sense where {change_talk_focus} showed up")
 
     if target_information:
         if question_required:
-            return _sanitize_human_text(f"{target_information}を1つ確かめる")
-        return _sanitize_human_text(f"{target_information}を1つ映す")
+            return _sanitize_human_text(f"Check one point about {target_information}")
+        return _sanitize_human_text(f"Reflect one point about {target_information}")
     if (
         action == MainAction.CLARIFY_PREFERENCE
         and clarify_preference_mode == "focus_choice"
         and len([item for item in focus_choice_options if _sanitize_human_text(item)]) >= 2
     ):
-        return "いま見えている入口のうち、どこから入るかを1つ確かめる"
+        return "Check which available entry point feels easiest to start from"
     if question_required:
         focus_probe = _experience_probe_from_focus()
         if focus_probe:
             return focus_probe
         anchor = slot_label or topic
-        return _sanitize_human_text(f"{anchor}を1つ確かめる")
+        return _sanitize_human_text(f"Check one point about {anchor}")
     goal = _sanitize_human_text(repair_goal_text)
     focus_reflect = _experience_reflect_from_focus()
     if focus_reflect:
         return focus_reflect
     if goal:
-        return _sanitize_human_text(f"{goal}が見えたところを1つ映す")
-    return _sanitize_human_text(f"{topic}が見えたところを1つ映す")
+        return _sanitize_human_text(f"Reflect one point where {goal} becomes visible")
+    return _sanitize_human_text(f"Reflect one point where {topic} becomes visible")
 
 
 def _derive_question_reflect_seed(
@@ -13845,62 +13723,62 @@ def _derive_evocation_move(
     slot_label = _slot_label_from_target(slot_target) or _sanitize_human_text(missing_info_candidate)
     target_information = _extract_slot_quality_target_information(selected_slot_quality_target_example)
     change_talk_items = _parse_change_talk_items(change_talk_hint, max_items=2)
-    focus_label = _sanitize_human_text(change_talk_items[0]) if change_talk_items else (target_information or slot_label or focus_topic or "変化側")
+    focus_label = _sanitize_human_text(change_talk_items[0]) if change_talk_items else (target_information or slot_label or focus_topic or "the change side")
 
     move = ""
     if action == MainAction.REFLECT_DOUBLE or reflection_style == ReflectionStyle.DOUBLE_SIDED:
         move = (
-            f"両面反映で、{focus_label}にブレーキをかける側を前半で短く受け止め、"
-            f"後半で utterance_target に沿って{focus_label}に向かう側を置いて終える"
+            f"Use a double-sided reflection: briefly acknowledge the side that slows {focus_label} in the first half, "
+            f"then end on the side moving toward {focus_label} in line with utterance_target"
         )
     elif _is_reflect_action(action):
         if action == MainAction.REFLECT_SIMPLE or reflection_style == ReflectionStyle.SIMPLE:
-            move = f"簡潔な反映で、{focus_label}を1点だけ短く映す"
+            move = f"Use a concise reflection that briefly mirrors only one point about {focus_label}"
         else:
             if operation_goal == "Deepen":
-                move = f"複雑反映で、{focus_label}を大事にしたい選び方の意味を半歩だけ映す"
+                move = f"Use a complex reflection to show, by half a step, the meaning of choosing what protects {focus_label}"
             elif operation_goal == "Shift":
-                move = f"複雑反映で、{focus_label}へ寄っていく足場を半歩だけ映す"
+                move = f"Use a complex reflection to show, by half a step, the footing that could move toward {focus_label}"
             else:
-                move = f"複雑反映で、{focus_label}に向かう意味を半歩だけ映す"
+                move = f"Use a complex reflection to show, by half a step, the meaning of moving toward {focus_label}"
     elif action == MainAction.QUESTION:
         if affirm_mode == AffirmationMode.NONE:
             move = (
-                f"簡単反射で、change_talk_inferer から選んだ{focus_label}を1点だけ受け止めてから、"
-                "utterance_target に関する質問を1つだけ聞く"
+                f"Start with a simple reflection that acknowledges one point about {focus_label} selected from change_talk_inferer, "
+                "then ask exactly one question about utterance_target"
             )
         else:
-            move = f"短い是認を1文置いてから、{focus_label}に関する utterance_target の質問を1つだけ聞く"
+            move = f"Place one short affirmation first, then ask exactly one utterance_target question about {focus_label}"
     elif action == MainAction.SCALING_QUESTION:
-        move = f"尺度質問で、{slot_label or focus_label}を数値だけで確かめる"
+        move = f"Use a scaling question to check {slot_label or focus_label} with only a number"
     elif action == MainAction.SUMMARY:
-        move = f"要約で、{focus_label}を束ねつつ迷いや背景は短く添える"
+        move = f"Use a summary that gathers {focus_label} while briefly keeping the ambivalence or background in view"
     elif action == MainAction.CLARIFY_PREFERENCE:
         if (
             clarify_preference_mode == "focus_choice"
             and len([item for item in focus_choice_options if _sanitize_human_text(item)]) >= 2
         ):
-            focus_choice_label = _join_writer_items(list(focus_choice_options), fallback="いま見えている入口")
-            move = f"迷いを短く映してから、{focus_choice_label}の中で今扱いやすい入口を1問で確かめる"
+            focus_choice_label = _join_writer_items(list(focus_choice_options), fallback="the visible entry points")
+            move = f"Briefly reflect the ambivalence, then ask one question about which of {focus_choice_label} feels easiest to work with now"
         else:
-            move = "迷いを短く映してから、今助けになる進め方を二択で確かめる"
+            move = "Briefly reflect the ambivalence, then check with one binary question which process preference would help right now"
     elif action == MainAction.ASK_PERMISSION_TO_SHARE_INFO:
         if affirm_mode == AffirmationMode.NONE:
             move = (
-                f"簡単反射で、change_talk_inferer から選んだ{focus_label}を1点だけ受け止めてから、"
-                "情報共有の可否を1問で確かめる"
+                f"Start with a simple reflection that acknowledges one point about {focus_label} selected from change_talk_inferer, "
+                "then ask one question about whether information sharing is okay"
             )
         else:
-            move = f"短い是認を1文置いてから、{focus_label}に沿って情報共有の可否を1問で確かめる"
+            move = f"Place one short affirmation first, then ask one question about whether information sharing fits {focus_label}"
     elif action == MainAction.PROVIDE_INFO:
-        move = "中立的な情報を短く共有し、反応を1問で確かめる"
+        move = "Share brief neutral information, then ask one question about the client's reaction"
     else:
-        move = f"{focus_label}を主題に、このターンで扱う働きを1つに絞る"
+        move = f"Keep the turn centered on {focus_label} and narrow it to one conversational function"
 
     if affirm_mode == AffirmationMode.SIMPLE:
-        move = f"{move}。短い是認を自然に添える"
+        move = f"{move}. Add a short affirmation naturally."
     elif affirm_mode == AffirmationMode.COMPLEX:
-        move = f"{move}。観察根拠のある是認を自然に添える"
+        move = f"{move}. Add an affirmation grounded in observed evidence naturally."
     return _sanitize_human_text(move)
 
 
@@ -13960,33 +13838,33 @@ def _build_minimum_draft_response_for_action(
     focus_topic: str,
     focus_choice_context: Optional[Mapping[str, Any]] = None,
 ) -> str:
-    topic = _sanitize_human_text(focus_topic) or "今のお話"
+    topic = _sanitize_human_text(focus_topic) or "what you are describing right now"
     clarify_preference_mode, focus_choice_options = _resolve_clarify_preference_mode(
         action=action,
         focus_choice_context=focus_choice_context,
     )
     if action == MainAction.SCALING_QUESTION:
-        return "ここまでのお話を踏まえると、今の自信は0から10でいうとどのくらいでしょうか？"
+        return "Given what we have talked through so far, where would you place your confidence right now on a 0 to 10 scale?"
     if action == MainAction.QUESTION:
-        return f"{topic}について、もう少し具体的に教えていただけますか？"
+        return f"Could you say a little more concretely about {topic}?"
     if action == MainAction.CLARIFY_PREFERENCE:
         if clarify_preference_mode == "focus_choice" and len(focus_choice_options) >= 2:
             option_text = "、".join(focus_choice_options[:3])
-            return f"いくつか大事な入口が見えています。{option_text}の中で、今いちばん近いのはどのほうでしょうか？"
-        return "今は提案の情報を受けることと、気持ちの整理を続けることのどちらが助けになりそうでしょうか？"
+            return f"I can see a few important entry points here. Which of {option_text} feels closest right now?"
+        return "Would it help more right now to hear a possible option, or to keep sorting through the feeling first?"
     if action == MainAction.ASK_PERMISSION_TO_SHARE_INFO:
-        return "参考になる方法を一つ共有してもよろしいでしょうか？"
+        return "Would it be okay if I shared one option that might be useful?"
     if action == MainAction.PROVIDE_INFO:
-        return "一つの方法として、取り組みを小さく分ける進め方があります。これを聞いて、どう感じますか？"
+        return "One option is to break the effort into smaller pieces. How does that land with you?"
     if action == MainAction.SUMMARY:
-        return "ここまでのお話では、進みたい気持ちと迷いの両方があり、整理しながら一歩ずつ進めたい意図が見えてきました。"
-    return f"{topic}について、少しずつ整理していきたいのですね。"
+        return "So far, it sounds like both the wish to move forward and the hesitation are present, and that you want to work through this step by step in a way that feels right."
+    return f"It sounds like you want to sort through {topic} little by little."
 
 
 def _canonicalize_clause_ending(text: str) -> str:
     """
-    文末の終止表現を比較用に正規化する。
-    句読点・閉じ括弧類を落とした末尾を使う。
+    Normalize clause endings for comparison.
+    Use the final segment after stripping punctuation and closing brackets.
     """
     normalized = _normalize_slot_text(text)
     if not normalized:
@@ -13995,7 +13873,7 @@ def _canonicalize_clause_ending(text: str) -> str:
     tail = re.sub(r"[」』】）》〉\)\]]+$", "", tail)
     if not tail:
         return ""
-    for marker in ("のですね", "なんですね", "ですね", "ということ", "という感じ"):
+    for marker in ("it sounds like", "it seems", "that means", "that suggests", "that kind of feeling"):
         if tail.endswith(marker):
             return marker
     return tail[-6:] if len(tail) > 6 else tail
@@ -14009,13 +13887,13 @@ def _has_repetitive_reflect_ending(
     lookback_assistant_turns: int = 4,
 ) -> bool:
     """
-    直近履歴で同じ反射語尾が続いているかを判定する。
-    現時点では「のですね」の連打を主対象にする。
+    Check whether the same reflection ending is being repeated in recent history.
+    For now, focus mainly on repeated "it sounds like" endings.
     """
     if not (_is_reflect_action(action) or action == MainAction.SUMMARY):
         return False
     current_ending = _canonicalize_clause_ending(_last_output_clause(draft_response_text))
-    if current_ending != "のですね":
+    if current_ending != "it sounds like":
         return False
 
     matched = 0
@@ -14051,7 +13929,7 @@ def _detect_reflect_ending_family(text: str) -> str:
         if any(pat.search(tail) for pat in patterns):
             return family
     if _is_reflection_ellipsis_ending(tail):
-        return "省略終止系"
+        return "elliptical_ending"
     return ""
 
 
@@ -14189,54 +14067,54 @@ def _default_response_brief(
     focus_terms = _extract_change_talk_focus_terms(change_talk_hint, max_terms=2)
     focus_topic = (
         _normalize_slot_text(selected_primary.normalized_text) if selected_primary is not None else ""
-    ) or (focus_terms[0] if focus_terms else ("直近の困りごと" if recent_user else "現在のテーマ"))
+    ) or (focus_terms[0] if focus_terms else ("recent difficulty" if recent_user else "current theme"))
     macro_bridge_anchor = _build_macro_bridge_anchor(
         state=state,
         primary_focus_topic=focus_topic,
     )
     focus_meaning = (
-        "直近発話に含まれる変化の糸口"
+        "an opening toward change in the latest utterance"
         if selected_primary is not None
         else (
             focus_terms[1]
             if len(focus_terms) > 1
             else (
-                "変化に向かう意図と迷いの両方が見られる"
+                "both movement toward change and hesitation are visible"
                 if change_talk_hint
-                else "直近の語りに沿って受け止めを深める"
+                else "deepen the reflection in line with the latest talk"
             )
         )
     )
     writer_plan = {
-        "opening_function": "受け止め",
+        "opening_function": "reflection",
         "core_function": action.value,
-        "closing_function": "質問なし" if _default_question_count_max(action) == 0 else "質問1つ",
+        "closing_function": "no question" if _default_question_count_max(action) == 0 else "one question",
         "question_count_max": _default_question_count_max(action),
         "preferred_ending_family": "",
         "avoid_recent_ending_families": [],
     }
     if _is_closing_first_turn(state):
-        writer_plan["opening_function"] = "短い反射"
-        writer_plan["core_function"] = "終了確認"
-        writer_plan["closing_function"] = "終了可否の質問1つ"
+        writer_plan["opening_function"] = "shortReflection"
+        writer_plan["core_function"] = "end check"
+        writer_plan["closing_function"] = "one question checking whether to end"
         writer_plan["question_count_max"] = 1
     elif _is_review_reflection_first_turn(state):
-        writer_plan["opening_function"] = "複雑反射"
-        writer_plan["core_function"] = "セッション要約"
-        writer_plan["closing_function"] = "振り返り質問1つ"
+        writer_plan["opening_function"] = "complexReflection"
+        writer_plan["core_function"] = "sessionSummary"
+        writer_plan["closing_function"] = "one review question"
         writer_plan["question_count_max"] = 1
     elif action == MainAction.QUESTION:
         writer_plan["opening_function"] = (
-            "短い是認" if add_affirm != AffirmationMode.NONE else "簡単反射"
+            "shortAffirmation" if add_affirm != AffirmationMode.NONE else "simpleReflection"
         )
-        writer_plan["core_function"] = "質問"
-        writer_plan["closing_function"] = "utterance_target に関する質問1つ"
+        writer_plan["core_function"] = "question"
+        writer_plan["closing_function"] = "one question about utterance_target"
     elif action == MainAction.ASK_PERMISSION_TO_SHARE_INFO:
         writer_plan["opening_function"] = (
-            "短い是認" if add_affirm != AffirmationMode.NONE else "簡単反射"
+            "shortAffirmation" if add_affirm != AffirmationMode.NONE else "simpleReflection"
         )
-        writer_plan["core_function"] = "情報共有の許可確認"
-        writer_plan["closing_function"] = "情報共有の可否を確かめる質問1つ"
+        writer_plan["core_function"] = "permissionCheckForInformationSharing"
+        writer_plan["closing_function"] = "one question checking whether information sharing is okay"
     slot_target_text = _slot_label_from_target(slot_target)
     normalized_slot_quality_target_examples = [
         {
@@ -14260,15 +14138,15 @@ def _default_response_brief(
         phase=state.phase,
     )
     language_constraints = {
-        "style": "丁寧語",
+        "style": "polite",
         "plain_language": True,
         "max_commas_per_sentence": 2,
         "target_sentence_length": "",
     }
     dialogue_digest: List[str] = []
     if recent_user:
-        dialogue_digest.append(f"直近のクライアント発話: {recent_user}")
-    dialogue_digest.append(f"現在フェーズは {state.phase.value}。")
+        dialogue_digest.append(f"Latest client utterance: {recent_user}")
+    dialogue_digest.append(f"Current phase: {state.phase.value}.")
 
     selected_for_anchor: List[ChangeTalkCandidate] = []
     if selected_primary is not None:
@@ -14282,11 +14160,11 @@ def _default_response_brief(
     )
     ct_operation_goal = _default_ct_operation_goal_for_action(action)
     slot_goal = str(turn_objective.get("repair_goal_text") or "")
-    phase_goal_this_turn = f"{state.phase.value}の目的に沿って1歩進める"
+    phase_goal_this_turn = f"Take one step in line with the purpose of {state.phase.value}"
     if _is_closing_first_turn(state):
-        phase_goal_this_turn = "これで今日のセッションを終えてよいかを確認し、終結合意を取る"
+        phase_goal_this_turn = "Check whether it is okay to end today's session here and reach agreement on closing"
     elif _is_review_reflection_first_turn(state):
-        phase_goal_this_turn = "今日の話で一番残っていることや次に意識したいことを言葉にする"
+        phase_goal_this_turn = "Put into words what stands out most from today and what the client wants to keep in mind next"
     question_shape = str(turn_objective.get("question_shape") or "none")
     use_reflection_first = bool(turn_objective.get("use_reflection_first", False))
     question_required = _default_question_count_max(action) > 0
@@ -14346,7 +14224,7 @@ def _default_response_brief(
         primary_focus={
             "topic": focus_topic,
             "meaning": focus_meaning,
-            "why_now": "このターンで最優先の焦点",
+            "why_now": "highest-priority focus for this turn",
             "evidence_turn_ids": (
                 [selected_primary.evidence_turn] if (selected_primary and selected_primary.evidence_turn) else ([len(history)] if history else [])
             ),
@@ -14373,9 +14251,9 @@ def _default_response_brief(
         writer_plan=writer_plan,
         must_include=must_include[:3],
         must_avoid=[
-            "内部ラベルやJSONキーの露出",
-            "決めつけ・押しつけ表現",
-            "許可なしの提案",
+            "exposing internal labels or JSON keys",
+            "presumptive or pushy phrasing",
+            "offering suggestions without permission",
         ],
         language_constraints=language_constraints,
         brief_confidence=0.45,
@@ -14761,9 +14639,9 @@ def _normalize_response_brief_payload(
         use_reflection_first = bool(raw_use_reflection_first)
     elif isinstance(raw_use_reflection_first, str):
         lowered = _normalize_slot_text(raw_use_reflection_first).lower()
-        if lowered in {"true", "1", "yes", "y", "はい"}:
+        if lowered in {"true", "1", "yes", "y"}:
             use_reflection_first = True
-        elif lowered in {"false", "0", "no", "n", "いいえ"}:
+        elif lowered in {"false", "0", "no", "n"}:
             use_reflection_first = False
         else:
             use_reflection_first = bool(
@@ -14844,23 +14722,23 @@ def _normalize_response_brief_payload(
     if required_qmax == 1 and writer_plan["question_count_max"] < 1:
         writer_plan["question_count_max"] = 1
     if _is_closing_first_turn(state):
-        writer_plan["opening_function"] = "短い反射"
-        writer_plan["core_function"] = "終了確認"
-        writer_plan["closing_function"] = "終了可否の質問1つ"
+        writer_plan["opening_function"] = "shortReflection"
+        writer_plan["core_function"] = "end check"
+        writer_plan["closing_function"] = "one question checking whether to end"
         writer_plan["question_count_max"] = 1
         question_shape = "open_question"
         use_reflection_first = True
-        if not any(marker in phase_goal for marker in ("終", "締め", "終了")):
-            phase_goal = "これで今日のセッションを終えてよいかを確認する"
+        if not any(marker in phase_goal.lower() for marker in ("end", "close", "finish")):
+            phase_goal = "Check whether it is okay to end today's session here"
     elif _is_review_reflection_first_turn(state):
-        writer_plan["opening_function"] = "複雑反射"
-        writer_plan["core_function"] = "セッション要約"
-        writer_plan["closing_function"] = "振り返り質問1つ"
+        writer_plan["opening_function"] = "complexReflection"
+        writer_plan["core_function"] = "sessionSummary"
+        writer_plan["closing_function"] = "one review question"
         writer_plan["question_count_max"] = 1
         question_shape = "open_question"
         use_reflection_first = True
-        if not any(marker in phase_goal for marker in ("気づき", "学び", "振り返り")):
-            phase_goal = "今日の話で一番残っていることや次に意識したいことを言葉にする"
+        if not any(marker in phase_goal.lower() for marker in ("notice", "learn", "review", "reflect")):
+            phase_goal = "Put into words what stands out most from today and what the client wants to keep in mind next"
 
     must_include: List[str] = []
     raw_include = raw.get("must_include")
@@ -15025,7 +14903,7 @@ def build_prompt(
 ) -> List[Dict[str, str]]:
     """
     history: [("user"|"assistant", text), ...]
-    返り値は chat-completions 互換の messages 形式。
+    Returns messages in chat-completions-compatible format.
     """
     effective_change_talk_hint = (change_talk_inference or "").strip()
     focus_hint_from_contract = _build_change_talk_hint_from_candidates(
@@ -15079,7 +14957,7 @@ def build_prompt(
     fixed_system = _assemble_system(fixed_sections)
     knowledge_action_hint = (
         normalized.proposed_action_hint
-        if normalized.proposed_action_hint != "なし"
+        if normalized.proposed_action_hint != "none"
         else action.value
     )
     fixed_with_knowledge = inject_mi_knowledge(
@@ -15093,7 +14971,7 @@ def build_prompt(
     )
     system = (
         f"{system}\n\n"
-        "以上の方針に沿って、今回の確定指示（ハード制約）を守り、MIカウンセラーとして自然な応答を出力してください。"
+        "Follow the guidance above, obey the fixed instructions for this turn (hard constraints), and produce a natural MI-counselor response."
     )
     return _build_messages(system=system, history=history)
 
@@ -15125,16 +15003,16 @@ def build_response_brief_messages(
     )
     slot_quality_target_example_details = _format_slot_quality_target_example_details_for_prompt(
         slot_quality_target_examples,
-        fallback="なし",
+        fallback="none",
     )
     selected_slot_quality_target_example = _select_slot_quality_target_example(slot_quality_target_examples)
     selected_slot_quality_target_example_text = (
         json.dumps(selected_slot_quality_target_example, ensure_ascii=False)
         if selected_slot_quality_target_example
-        else "なし"
+        else "none"
     )
     selected_target_information_seed = (
-        _extract_slot_quality_target_information(selected_slot_quality_target_example) or "なし"
+        _extract_slot_quality_target_information(selected_slot_quality_target_example) or "none"
     )
     clarify_preference_mode, focus_choice_options = _resolve_clarify_preference_mode(
         action=action,
@@ -15155,7 +15033,7 @@ def build_response_brief_messages(
             clarify_preference_mode=clarify_preference_mode,
             focus_choice_options=focus_choice_options,
         )
-        or "なし"
+        or "none"
     )
     target_behavior_focus = _get_confirmed_target_behavior_for_change_talk(state=state)
     selected_focus_candidates = _select_change_talk_candidates_for_action(
@@ -15172,9 +15050,9 @@ def build_response_brief_messages(
             candidates=selected_focus_candidates or focus_candidates,
             current_phase=state.phase,
         )
-        or "なし"
+        or "none"
     )
-    focus_contract_hint_text = _sanitize_human_text(focus_contract_hint) or "なし"
+    focus_contract_hint_text = _sanitize_human_text(focus_contract_hint) or "none"
     selected_focus_lines = _format_focus_candidates_for_prompt(
         selected_focus_candidates,
         max_items=2,
@@ -15184,7 +15062,7 @@ def build_response_brief_messages(
         max_items=4,
     )
     ct_anchor_seed_lines = selected_focus_lines if selected_focus_lines else all_focus_lines[:2]
-    ct_anchor_seed_text = " / ".join(ct_anchor_seed_lines) if ct_anchor_seed_lines else "なし"
+    ct_anchor_seed_text = " / ".join(ct_anchor_seed_lines) if ct_anchor_seed_lines else "none"
     macro_bridge_anchor = _build_macro_bridge_anchor(
         state=state,
         primary_focus_topic=(selected_focus_lines[0] if selected_focus_lines else ""),
@@ -15218,7 +15096,7 @@ def build_response_brief_messages(
         max_turns=max_history_turns,
     )
     schema = (
-        "【出力スキーマ（JSONのみ）】\n"
+        "[Output schema: JSON only]\n"
         "{\n"
         '  "meta":{"phase":"...","main_action":"...","affirm_mode":"...","reflection_style":"...","risk_mode":"..."},\n'
         '  "dialogue_digest":["...","..."],\n'
@@ -15240,141 +15118,111 @@ def build_response_brief_messages(
         '  "draft_response_text":"...",\n'
         '  "must_include":["..."],\n'
         '  "must_avoid":["..."],\n'
-        '  "language_constraints":{"style":"丁寧語","plain_language":true,"max_commas_per_sentence":2},\n'
+        '  "language_constraints":{"style":"polite","plain_language":true,"max_commas_per_sentence":2},\n'
         '  "brief_confidence":0.0,\n'
         '  "note_for_debug":"..."\n'
         "}\n"
-        "- focus は primary_focus の1件のみ。\n"
-        "- `utterance_target` はこのターン本文で実際に扱う1点だけを書く。\n"
-        "- `utterance_target` は『何の話をするか』ではなく、『このターンで扱うクライアント体験命題を1点だけどう立てるか』を書く。\n"
-        "- `utterance_target` は計画ラベルであり、本文そのものではない。質問文・反射文・要約文にしない。\n"
-        "- `utterance_target` には「？」「ですか」「教えて」「合意します」「〜と感じています」を入れない。\n"
-        "- `utterance_target` は書き手メタ（意図/流れ/焦点/支え/意味）ではなく、クライアントが体験として言えそうな1命題に寄せる。\n"
-        "- `utterance_target` は原則として『〜を1つ確かめる』『〜が見えた瞬間を1つ映す』のように、場面・手がかり・手ごたえが残る形で短く書く。\n"
-        "- `question_reflect_seed` は QUESTION / ASK_PERMISSION_TO_SHARE_INFO かつ affirm_mode=NONE のときだけ使う。1文目の simple reflection で返す change talk の1点だけを書く。不要なときは空文字でよい。\n"
-        "- `question_reflect_seed` は質問文にしない。change_talk_seed / ct_anchor_seed から1件だけ選び、できるだけそのままの語感を保つ。\n"
-        "- `evocation_move` には、fixed_main_action の中でこのターンの主たる move を1つだけ書く。main_action の再判定はしない。\n"
-        "- `evocation_move` の例: REFLECT_COMPLEX なら『複雑反映で、変化に向かう選び方の意味を半歩だけ映す』、QUESTION なら『喚起質問で、変化が進みやすくなる理由や条件を1点だけ聞く』。\n"
-        "- `slot_quality_target_examples.detail` は仮想ユーザ発話例であり、`utterance_target` にはそのまま写さず、target_information へ抽象化して使う。\n"
-        "- `slot_quality_target_examples.detail` が質問文・合意文・方向づけメタの場合は、その文型を写さず、そこに含まれる具体語だけを使う。\n"
-        "- `deferred_targets` は出力しない。\n"
-        "- `ct_anchors` は最大2件。内部ラベルではなく人が読める語にする。\n"
-        "- `ct_operation_goal` は Elicit / Strengthen / Deepen / Shift のいずれか1つ。\n"
-        "- `slot_goal` は内部キーではなく会話目的の文で書く（例: 場面を1つ特定する）。\n"
-        "- `missing_info_candidate` は質問系 action で使う対象のみを書く。\n"
-        "- evidence_turn_ids は入力履歴の T番号のみ。\n"
-        "- `must_include` には、selected_target_information_seed や slot_quality_target_examples.detail に含まれる"
-        "時間/場所/数量/道具/手順など、本文で残すべき具体語を優先して入れる。\n"
-        "- `must_include` は抽象語だけで埋めない。具体語を残せるなら、一般化した言い換えに置き換えない。\n"
-        "- `must_include` には、具体語に加えて、優先順位の対比（AよりB）・実行意図・守りたいものなど『変化の芯』が明示されていれば短く入れる。\n"
-        "- 人が読むテキスト値（utterance_target / evocation_move / ct_anchors / slot_goal / repair_goal_text / success_criterion / draft_response_text / must_include / must_avoid / note_for_debug）は日本語で書く。JSONキー・enum・phaseコードはそのままでよい。\n"
-        "- evidence_quotes は原文引用なので改変しなくてよい。\n"
-        "- `must_avoid` に内部ラベル（feature_extractor/phase_slots/change_talk_inference等）を書かない。\n"
-        "- `writer_plan.preferred_ending_family` は任意。語尾の硬直を避けたいときだけ、日本語の説明ラベルで1つ書く（例: 事実に寄せる受け止め / 可逆的な推量 / 余韻を残す受け止め）。不要なら空文字でよい。\n"
-        "- `writer_plan.avoid_recent_ending_families` は任意。直近の assistant 反射と似た語尾familyが続くときだけ、避けたいfamilyを最大2件まで日本語ラベルで書く。不要なら空配列でよい。\n"
-        "- 語尾familyラベルは内部記号にしない。『ように聞こえます系』『ということ系』のような人が読める短い説明にする。\n"
-        "- `draft_response_text` には、このターンで残したい中身を先に入れた完成ドラフト本文を入れる。\n"
-        "- `draft_response_text` は `evocation_move` を必ず実装する。単なる少し強い言い換えで終わらせない。\n"
-        "- `draft_response_text` は Layer4 が削る前提の上限アンカーであり、後段で補足しなくて済むよう必要な情報と具体アンカーを先に十分入れる。\n"
-        "- `draft_response_text` は自然な日本語の完成ドラフトとして書く。固有名詞・一般的な略語を除き、英単語・ローマ字・プレースホルダ・壊れたASCIIトークンを残さない。\n"
-        "- `draft_response_text` では、selected_target_information_seed や slot_quality_target_examples.detail にある"
-        "具体アンカーを、自然さを壊さない範囲で残す。\n"
-        "- たとえば『10分区切り』『合図』『1週間ノート』『朝の静かな時間』のような語を、"
-        "『準備』『やり方』『続けられそうな感触』のような抽象語へ丸めない。\n"
-        "- JSON以外を出力しない。"
+        "- Keep focus to a single primary_focus item.\n"
+        "- `utterance_target` should name only the one experiential proposition actually handled in this turn.\n"
+        "- `utterance_target` is a planning label, not the response text itself. Do not make it a question, reflection, or summary sentence.\n"
+        "- Do not put question marks, requests for explanation, agreement language, or counselor meta-language inside `utterance_target`.\n"
+        "- Keep `utterance_target` close to something the client could experience or say, not writer-side intent such as flow or support.\n"
+        "- Prefer short forms such as 'check one scene where ...' or 'reflect one moment when ... became visible'.\n"
+        "- Use `question_reflect_seed` only for QUESTION / ASK_PERMISSION_TO_SHARE_INFO when affirm_mode=NONE. It should contain only the one change-talk point reflected in sentence 1.\n"
+        "- `question_reflect_seed` must not be a question. Pick one item from change_talk_seed / ct_anchor_seed and keep the wording close to the source.\n"
+        "- `evocation_move` must name only the main rhetorical move within fixed_main_action. Do not re-decide main_action.\n"
+        "- For `slot_quality_target_examples.detail`, treat it as a hypothetical user utterance example and abstract it into target_information rather than copying it directly.\n"
+        "- If `detail` is itself a question, agreement line, or counselor meta-direction, do not copy the sentence pattern; only keep the concrete content.\n"
+        "- Do not output deferred_targets.\n"
+        "- Limit `ct_anchors` to at most 2 human-readable items.\n"
+        "- `slot_goal` should be a conversational goal sentence, not an internal key.\n"
+        "- `missing_info_candidate` should only name the item needed for question-like actions.\n"
+        "- evidence_turn_ids may contain only turn numbers from the input history.\n"
+        "- In `must_include`, prioritize concrete anchors that should remain in the final text, such as time, place, amount, tools, steps, or implementation details.\n"
+        "- Do not fill `must_include` only with abstractions. If a concrete term can stay, do not replace it with a generalized paraphrase.\n"
+        "- If the client shows a priority contrast, implementation intent, or something important to protect, keep that change-core briefly in `must_include` as well.\n"
+        "- Human-readable values (`utterance_target`, `evocation_move`, `ct_anchors`, `slot_goal`, `repair_goal_text`, `success_criterion`, `draft_response_text`, `must_include`, `must_avoid`, `note_for_debug`) should be written in English. JSON keys, enums, and phase codes stay unchanged.\n"
+        "- Keep `evidence_quotes` as source quotations; do not rewrite them.\n"
+        "- Do not write internal labels such as feature_extractor / phase_slots / change_talk_inference inside `must_avoid`.\n"
+        "- `writer_plan.preferred_ending_family` is optional. Use a short human-readable label only when needed to avoid stiff endings.\n"
+        "- `writer_plan.avoid_recent_ending_families` is optional. Use up to 2 human-readable family labels only when recent assistant reflections are ending too similarly.\n"
+        "- `draft_response_text` should be a complete draft response that already contains the content worth preserving.\n"
+        "- `draft_response_text` must implement `evocation_move`; do not stop at a slightly stronger paraphrase.\n"
+        "- Treat `draft_response_text` as the upper anchor that Layer4 may trim, so front-load the necessary meaning and concrete anchors.\n"
+        "- Write `draft_response_text` as natural English. Do not leave broken placeholders or stray ASCII fragments.\n"
+        "- Preserve concrete anchors from selected_target_information_seed or slot_quality_target_examples.detail whenever possible.\n"
+        "- Do not collapse concrete phrases such as '10-minute blocks', 'a cue', 'a one-week notebook', or 'quiet time in the morning' into abstractions like 'preparation' or 'approach'.\n"
+        "- Output exactly one JSON object and nothing else."
     )
     if state.phase == Phase.REVIEW_REFLECTION:
         target_behavior_integration_rule = (
-            "- REVIEW_REFLECTIONでは presenting_problem_raw / problem_scene / core_values / target_behavior を同等に参照し、いずれか1点に偏らない。\n"
+            "- In REVIEW_REFLECTION, refer to presenting_problem_raw / problem_scene / core_values / target_behavior with equal weight rather than over-focusing on just one.\n"
         )
     elif state.phase == Phase.CLOSING:
         target_behavior_integration_rule = (
-            "- CLOSINGでは presenting_problem_raw / problem_scene / core_values / target_behavior を同等に参照しつつ、終了確認の構成を優先する。\n"
+            "- In CLOSING, keep presenting_problem_raw / problem_scene / core_values / target_behavior balanced while prioritizing the end-check structure.\n"
         )
     else:
         target_behavior_integration_rule = (
-            "- target_behavior_anchor がある場合は、全フェーズでその整合性を最優先する。\n"
+            "- If a target_behavior anchor exists, preserve consistency with it across all phases.\n"
         )
     integration_rules = (
-        "【Layer3の基本責務】\n"
-        "- Layer2で固定された phase / main_action / affirm_mode / reflection_style を変えない。\n"
-        "- このターンで扱う焦点は1件、本文で扱う命題は utterance_target の1点だけにする。\n"
-        "- draft_response_text は1ターン1命題を守る。反映 + 説明 + 是認 + 見通しを同時に盛り込まない。\n"
-        "- 主焦点は primary_focus_seed を優先して1件決める。空なら focus_candidates から1件だけ補う。\n"
-        "- change_talk_seed / ct_anchor_seed はチェンジトーク側の焦点候補としてのみ使う。維持トークや進め方希望を本文の主焦点に採用しない。\n"
-        "- change_talk_seed / ct_anchor_seed に『自分のペースで』『焦らず』『様子を見ながら』等が含まれていても、その語をそのまま反射・要約しない。変化目標に接続した部分だけを使う。\n"
-        "- 『自分のペースで』『安全に』『少しずつ』などの進め方語は、その語自体を主役にせず、『何を守るためか』『何が少しやりやすくなるか』へ接続して使う。\n"
-        "- ユーザが『まずはAから』『Aのほうが安全そう』など、選択肢の一方へ暫定的に傾いている場合は、その側を主焦点にする。未選択の側は補助情報としてだけ扱い、本文の主役にしない。\n"
-        "- draft_response_text / utterance_target / evocation_move / must_include などの人間向けテキストには、英単語混入・プレースホルダ・壊れたASCIIトークンを残さない。固有名詞や一般的略語でない限り、日本語へ直す。\n"
-        "- 最新発話や seed に英単語混入や崩れた語（例: night）があっても、その表記をそのまま反射しない。意味が明確なら自然な日本語に正規化し、不明ならその語を使わず周辺の体験・場面・感覚で書く。\n"
-        "- 具体語保持は表記一致ではなく意味保持で行う。混入語やプレースホルダを must_include に採用しない。\n"
-        "- 情報焦点は slot_target_label を優先する。\n"
-        "- slot_quality_target_examples_json と selected_slot_quality_target_example_json は、質問だけでなく反射や要約の焦点にも使ってよい。\n"
-        "- utterance_target は、change_talk_seed / selected_target_information_seed / slot_quality_target_example_detail_seed のうち最も体験に近いアンカーを1つ選んで書く。無理に全部を混ぜない。\n"
-        "- utterance_target は topic 名ではなく、場面・瞬間・手ごたえ・怖さ・支えなどクライアント体験に寄せた1命題にする。writer-side の意図/流れ/焦点というまとめ方は禁止。\n"
-        "- evocation_move は fixed_main_action の中で主たる rhetorical move を1つだけ決める。REFLECT系なら複雑反映/両価性/是認を添えた反映のどこを主にするか、QUESTION系なら喚起質問で理由/条件/守りたいもののどれを聞くかを書く。\n"
-        "- action rule の質問/反射/要約の形式制約は draft_response_text に適用する。utterance_target 自体は質問文にしない。\n"
-        "- utterance_target は change_talk_seed / selected_target_information_seed / slot_quality_target_example_detail_seed から最も体験に近い1点を選び、『〜を1つ確かめる』『〜が見えた瞬間を1つ映す』の形へ整える。selected_slot_quality_target_example_json の detail を長く言い換えてはいけない。\n"
-        "- QUESTION / ASK_PERMISSION_TO_SHARE_INFO かつ add_affirm == NONE のときは、question_reflect_seed を change_talk_seed / ct_anchor_seed から1点だけ選んで書く。質問文にしない。\n"
-        "- evocation_move は evocation_move_seed を基準にしつつ、実際にこのターンで何を立てるかを1行で明示する。main_action と矛盾させない。\n"
-        "- must_include は primary_focus の抽象語だけで埋めない。selected_target_information_seed や slot_quality_target_example_detail_seed に"
-        "時間/場所/数量/道具/手順の具体語がある場合は、その具体語を優先して入れる。\n"
-        "- must_include には、具体アンカーに加えて、本人が示した優先順位の対比・実行意図・守りたいものなど、draft_response_text で消してはいけない変化の芯も入れる。\n"
-        "- draft_response_text は自然な日本語に整えつつも、selected_target_information_seed や"
-        "slot_quality_target_example_detail_seed にある具体アンカーを一般化しない。\n"
-        "- draft_response_text は Layer4 が削る上限アンカーとして書き、短さよりも必要情報の保持を優先して組み立てる。\n"
-        "- draft_response_text は evocation_move を必ず実装し、このターンで何を立てるかが分かるようにする。REFLECT系は『複雑反映』『両価性』『是認を添えた反映』のどれを主にするかをぼかさない。QUESTION系は『喚起質問』の焦点を1点に絞る。\n"
-        "- draft_response_text で強めの仮説を置くのは1つまでにする。解釈 + 是認 + 方向づけを同じ文に重ねない。\n"
-        "- REFLECT_COMPLEX では、明示内容1点 + 半歩先の意味1点までにする。半歩先の意味は可逆表現にし、言い切りや物語化にしない。\n"
-        "- REFLECT_COMPLEX の半歩先の意味は、できるだけ『〜ようにも聞こえる』『〜感じもあるのかもしれない』など可逆表現で置く。ユーザが言っていない価値・強み・理由を言い切らない。\n"
-        "- 直近の assistant 反射と語尾familyが続いて見える場合は、writer_plan に avoid_recent_ending_families を入れ、draft_response_text では同familyの連投を避ける。\n"
-        "- writer_plan.preferred_ending_family を置く場合は、draft_response_text の最後の受け止め方にも反映させる。ただし不自然な造語や説明口調にはしない。\n"
-        "- 両価性が同一ターンで明示されている場合は、迷い側を短く残しつつ、変化側やすでに選ばれかけている側で終える。片側だけを強く押し出しすぎない。\n"
-        "- 同じ変化テーマを直近2ターンですでに反映している場合、3回目は同語反復を避け、価値 / 理由 / できた場面 / 次に見たい手ごたえ のいずれか1点へずらす。\n"
-        "- ただし断定・未来予測・過剰な物語化はしない。『〜かもしれない』『〜感じ』『〜流れ』程度にとどめる。\n"
-        "- REFLECT_SIMPLE / REFLECT_COMPLEX は utterance_target の1点だけを聞き返す。REFLECT_COMPLEX でも足す意味は半歩1点までにする。\n"
-        "- REFLECT_DOUBLE は、前半で utterance_target に関係する維持トーク寄りの側を短く受け、後半で utterance_target 側を置いて変化側で終える。\n"
-        "- QUESTION では情報回収より evoking を優先し、意味 / 理由 / 守りたいもの / 0ではない理由 / 1点上がる条件 のいずれか1点だけを扱う。\n"
-        "- QUESTION の基本構成は固定する。add_affirm != NONE なら『是認1文 + utterance_target に関する質問1文』、add_affirm == NONE なら『question_reflect_seed に沿った simple reflection 1文 + utterance_target に関する質問1文』にする。\n"
-        "- ASK_PERMISSION_TO_SHARE_INFO の基本構成も QUESTION に準じる。add_affirm != NONE なら『是認1文 + 情報共有の可否を確かめる質問1文』、add_affirm == NONE なら『question_reflect_seed に沿った simple reflection 1文 + 情報共有の可否を確かめる質問1文』にする。\n"
-        "- QUESTION / ASK_PERMISSION_TO_SHARE_INFO かつ add_affirm == NONE のときは、1文目の simple reflection を question_reflect_seed に沿って書く。別の焦点へずらさない。\n"
-        "- QUESTION の1文目には説明や見通しを重ねない。\n"
-        "- REFLECT系では、change_talk_seed の変化側を最低1点は可視化し、必要なら短い是認を添えてもよいが、称賛や説得にしない。\n"
-        "- 是認を入れる場合は、抽象評価ではなく、観察された発話・選択・行動に接地した1点だけにする。\n"
-        "- SUMMARY は2〜3文でよいが、change_talk は2束までにまとめ、時系列の全回収や同義反復をしない。\n"
-        "- とくに NEXT_STEP_DECISION / FOCUSING_TARGET_BEHAVIOR では、観察可能な行動 + 場面/時間アンカーのどちらかを残す。\n"
-        "- draft_response_text を『動き』『支える力』『中身』『やり方』などの抽象名詞だけで閉じない。最後は場面・感覚・選択・行動の語で着地させる。\n"
-        "悪い utterance_target 例:\n"
-        "- 自分が何を大事にしているかを焦点にする意図を半歩だけ映す\n"
-        "- 価値観を言葉にして整理したい流れを1点だけ確かめる\n"
-        "良い utterance_target 例:\n"
-        "- 資格学習で『これが大事かも』と感じた瞬間を1つ映す\n"
-        "- 7が8に近づく手ごたえの場面を1つ確かめる\n"
-        "悪い draft_response_text 例:\n"
-        "- 10分区切りと合図を試す話を『どんな準備がいるか』だけに丸める\n"
-        "- 朝の静かな時間にノートを開く場面を『続けられそうな感触』だけに丸める\n"
-        "良い draft_response_text 例:\n"
-        "- 10分区切りや合図といった具体語を残したまま、文だけ自然に整える\n"
-        "- 朝の静かな時間にノートを開く場面を残しつつ、意味づけは1段だけにする\n"
-        "- current_phase_required_slots と current_phase_slots_json を見て、現フェーズの未充足が少し前進するように設計する。\n"
+        "[Layer3 core responsibilities]\n"
+        "- Do not change phase / main_action / affirm_mode / reflection_style once Layer2 has fixed them.\n"
+        "- Keep the turn to one focus and one experiential proposition in utterance_target.\n"
+        "- `draft_response_text` must stay one-turn, one-proposition. Do not stack reflection, explanation, affirmation, and future orientation all at once.\n"
+        "- Prefer primary_focus_seed when choosing the main focus; use only one fallback focus from focus_candidates if needed.\n"
+        "- Use change_talk_seed / ct_anchor_seed only as change-side focus candidates. Do not make sustain talk or process-preference requests the main subject of the response.\n"
+        "- If process-preference language appears, connect it to what it protects or what it makes slightly easier, rather than making the preference itself the star of the reflection.\n"
+        "- If the client is already leaning toward one option, keep that side as the main focus and treat the unchosen side only as supporting context.\n"
+        "- Human-facing text such as draft_response_text / utterance_target / evocation_move / must_include should not contain placeholders or broken ASCII fragments.\n"
+        "- Keep concrete anchors by meaning, not only by literal surface form. Do not place placeholders or corrupted tokens into must_include.\n"
+        "- Prioritize slot_target_label as the missing-information focus when relevant.\n"
+        "- slot_quality_target_examples_json and selected_slot_quality_target_example_json may guide reflections and summaries, not only questions.\n"
+        "- Build utterance_target from the single anchor that is closest to lived experience among change_talk_seed / selected_target_information_seed / slot_quality_target_example_detail_seed.\n"
+        "- utterance_target should describe one client experience proposition, not writer-side intent such as flow or support.\n"
+        "- evocation_move must specify only one main rhetorical move within fixed_main_action.\n"
+        "- Apply question / reflection / summary form constraints to draft_response_text, but keep utterance_target itself non-interrogative.\n"
+        "- When add_affirm == NONE for QUESTION / ASK_PERMISSION_TO_SHARE_INFO, question_reflect_seed should contain exactly one reflected item from change_talk_seed / ct_anchor_seed.\n"
+        "- must_include should prioritize concrete anchors such as time, place, amount, tools, or steps, and should also preserve the core of change if there is a clear priority contrast or implementation intent.\n"
+        "- Keep concrete anchors concrete in draft_response_text; do not abstract them away.\n"
+        "- draft_response_text is the Layer4 upper anchor, so preserve needed content even if that makes it slightly longer.\n"
+        "- draft_response_text must clearly enact evocation_move.\n"
+        "- Limit stronger hypotheses to one at most. Do not pile interpretation, affirmation, and direction-setting into the same sentence.\n"
+        "- In REFLECT_COMPLEX, keep to one explicit point plus at most one half-step implication, phrased reversibly rather than as a fixed conclusion.\n"
+        "- If recent assistant reflections are ending too similarly, populate writer_plan.avoid_recent_ending_families and avoid repeating the same ending family.\n"
+        "- If ambivalence is explicit in the same turn, keep the hesitant side briefly but end on the change side or the side already being chosen.\n"
+        "- If the same change topic has already been reflected in the last two turns, shift the third reflection to one of value, reason, a successful moment, or the next sign of traction.\n"
+        "- Avoid certainty, prediction, and over-storytelling. Prefer reversible language.\n"
+        "- REFLECT_SIMPLE / REFLECT_COMPLEX should return to only one point in utterance_target.\n"
+        "- REFLECT_DOUBLE should briefly hold the sustain-side first and end on the change-side that relates to utterance_target.\n"
+        "- In QUESTION, prioritize evoking over information collection. Work with only one target: meaning, reason, what the client wants to protect, why the score is not zero, or what would raise it by one point.\n"
+        "- Keep the default question structures fixed for QUESTION and ASK_PERMISSION_TO_SHARE_INFO.\n"
+        "- If you add an affirmation, keep it grounded in observed speech, choices, or actions rather than abstract praise.\n"
+        "- SUMMARY may be 2-3 sentences, but bundle change talk into at most two clusters and avoid repetitive recovery of the whole timeline.\n"
+        "- Especially in NEXT_STEP_DECISION / FOCUSING_TARGET_BEHAVIOR, preserve either an observable behavior or a scene/time anchor.\n"
+        "- Do not end draft_response_text on abstract nouns alone; land on a scene, sensation, choice, or action.\n"
+        "- Poor utterance_target example: 'Reflect by half a step the intent to focus on what matters.'\n"
+        "- Better utterance_target example: 'Reflect one moment in the certification study where the thought \"this might matter\" showed up.'\n"
+        "- Poor draft_response_text example: 'Reduce the idea of trying 10-minute blocks and a cue to merely asking what preparation is needed.'\n"
+        "- Better draft_response_text example: 'Keep concrete terms such as 10-minute blocks and a cue, and only smooth the sentence.'\n"
+        "- Design the turn so that current_phase_required_slots / current_phase_slots_json move the current phase slightly forward.\n"
         f"{target_behavior_integration_rule}"
-        "- IMPORTANCE_PROMOTION / CONFIDENCE_PROMOTION / REVIEW_REFLECTION / CLOSING で macro_bridge_anchor がある場合、"
-        "その接続は内部整合として保つ。ただし must_include を抽象的な橋渡し句で埋めず、draft_response_text でも"
-        "『XはYの入口』『Xの意味はY』型の説明を新規追加しない。\n"
-        f"- quality={_SLOT_REPAIR_HINT_TARGET_QUALITY:.2f} 到達の具体変更文がある場合は、repair_goal_text / success_criterion / slot_goal の少なくとも1つに文言を保って反映する。\n"
-        f"- quality>=0.80 は確定/整合アンカーの判定基準、quality={_SLOT_REPAIR_HINT_TARGET_QUALITY:.2f} は修復目標文の到達基準として使い分ける。\n"
-        "- action固有のふるまいは action rule に従う。\n"
-        "- draft_response_text には、そのまま出せる自然な本文を入れる。\n"
-        "- note_for_debug には、判断の核を短く残す。\n"
-        "- JSON 1件以外を出力しない。\n"
+        "- When macro_bridge_anchor is present in IMPORTANCE_PROMOTION / CONFIDENCE_PROMOTION / REVIEW_REFLECTION / CLOSING, preserve that internal connection without filling must_include with abstract bridge phrases or adding new 'X is the entrance to Y' explanations.\n"
+        f"- If there is a concrete wording change that would move quality toward {_SLOT_REPAIR_HINT_TARGET_QUALITY:.2f}, preserve that wording in at least one of repair_goal_text / success_criterion / slot_goal.\n"
+        f"- Use quality>=0.80 as the confirmed-consistent anchor threshold, and quality={_SLOT_REPAIR_HINT_TARGET_QUALITY:.2f} as the repair-goal threshold.\n"
+        "- Follow action-specific behavior from the action rule.\n"
+        "- draft_response_text should be a natural response that could be sent as-is.\n"
+        "- note_for_debug should keep only a short record of the judgment core.\n"
+        "- Output exactly one JSON object.\n"
         "\n"
-        "【共通作業手順】\n"
-        "1. primary_focus を1件決める\n"
-        "2. utterance_target を1件決める\n"
-        "3. evocation_move を1件決める\n"
-        "4. slot_goal / repair_goal_text / success_criterion を1文ずつ決める\n"
-        "5. action rule に従って writer_plan / must_include / draft_response_text を作る\n"
-        "6. brief_confidence をつける"
+        "[Common workflow]\n"
+        "1. Decide one primary_focus.\n"
+        "2. Decide one utterance_target.\n"
+        "3. Decide one evocation_move.\n"
+        "4. Decide slot_goal / repair_goal_text / success_criterion in one sentence each.\n"
+        "5. Build writer_plan / must_include / draft_response_text in line with the action rule.\n"
+        "6. Set brief_confidence."
     )
     shared_inputs = _render_layer3_shared_inputs(
         state=state,
@@ -15398,7 +15246,7 @@ def build_response_brief_messages(
         focus_choice_options=focus_choice_options,
     )
     fixed_system_sections = [
-        "あなたは MI カウンセラーの Layer3（情報統合）です。",
+        "You are Layer3 (information integration) for an MI counselor.",
         _render_safety_rules(risk_note=""),
         integration_rules,
         schema,
@@ -15419,8 +15267,8 @@ def build_response_brief_messages(
         main_action=action.value,
     )
     user = (
-        f"【履歴（T{turn_start}〜T{turn_end}）】\n{dialogue}\n"
-        "上記を統合し、JSON 1件だけ返してください。"
+        f"[History: T{turn_start}-T{turn_end}]\n{dialogue}\n"
+        "Integrate the information above and return exactly one JSON object."
     )
     messages = [
         {"role": "system", "content": system},
@@ -15464,36 +15312,36 @@ def build_writer_messages(
             if last_user_text:
                 break
     if not last_user_text:
-        last_user_text = "なし"
+        last_user_text = "none"
 
     draft_response_text = _sanitize_human_draft_text(brief.draft_response_text)
     draft_available = bool(draft_response_text)
     draft_length_cap_chars = _visible_text_length(draft_response_text) if draft_available else 0
     if not draft_response_text:
-        draft_response_text = "なし"
+        draft_response_text = "none"
     draft_status_text = "available" if draft_available else "missing"
 
     primary_focus = brief.primary_focus if isinstance(brief.primary_focus, Mapping) else {}
-    primary_focus_topic = _sanitize_human_text(primary_focus.get("topic")) or "なし"
-    primary_focus_meaning = _sanitize_human_text(primary_focus.get("meaning")) or "なし"
-    utterance_target_text = _sanitize_human_text(brief.utterance_target) or "なし"
-    question_reflect_seed_text = _sanitize_human_text(brief.question_reflect_seed) or "なし"
+    primary_focus_topic = _sanitize_human_text(primary_focus.get("topic")) or "none"
+    primary_focus_meaning = _sanitize_human_text(primary_focus.get("meaning")) or "none"
+    utterance_target_text = _sanitize_human_text(brief.utterance_target) or "none"
+    question_reflect_seed_text = _sanitize_human_text(brief.question_reflect_seed) or "none"
     evocation_move_text = _sanitize_human_text(brief.evocation_move)
     if _find_internal_label_leak(evocation_move_text):
         evocation_move_text = ""
-    evocation_move_text = evocation_move_text or "なし"
-    phase_goal_text = _sanitize_human_text(brief.phase_goal_this_turn) or "なし"
+    evocation_move_text = evocation_move_text or "none"
+    phase_goal_text = _sanitize_human_text(brief.phase_goal_this_turn) or "none"
     writer_plan_text = _format_writer_plan_for_prompt(brief.writer_plan)
     must_include_text = _join_writer_items(brief.must_include)
     must_avoid_text = _join_writer_items(brief.must_avoid)
     ct_anchors_text = _join_writer_items(brief.ct_anchors)
-    ct_operation_goal_text = _sanitize_human_text(brief.ct_operation_goal) or "なし"
+    ct_operation_goal_text = _sanitize_human_text(brief.ct_operation_goal) or "none"
     slot_quality_target_example_detail_text = _format_slot_quality_target_example_details_for_prompt(
         brief.slot_quality_target_examples
     )
-    slot_goal_text = _sanitize_human_text(brief.slot_goal) or "なし"
-    repair_goal_text = _sanitize_human_text(brief.repair_goal_text) or "なし"
-    success_criterion_text = _sanitize_human_text(brief.success_criterion) or "なし"
+    slot_goal_text = _sanitize_human_text(brief.slot_goal) or "none"
+    repair_goal_text = _sanitize_human_text(brief.repair_goal_text) or "none"
+    success_criterion_text = _sanitize_human_text(brief.success_criterion) or "none"
     layer4_repair_issue_code_texts = _format_layer4_repair_issue_code_groups_for_prompt(
         layer4_repair_issue_codes
     )
@@ -15501,13 +15349,13 @@ def build_writer_messages(
         action=action,
         focus_choice_context=focus_choice_context,
     )
-    focus_choice_options_text = _join_writer_items(focus_choice_options, fallback="なし")
+    focus_choice_options_text = _join_writer_items(focus_choice_options, fallback="none")
     macro_bridge_anchor_text = (
         _build_macro_bridge_anchor(
             state=state,
             primary_focus_topic=primary_focus_topic,
         )
-        or "なし"
+        or "none"
     )
 
     writer_action_guardrails = _render_writer_action_guardrails(
@@ -15537,8 +15385,8 @@ def build_writer_messages(
     layer3_action_rule_section = _get_layer4_writer_prompt_formatted(
         "layer3_action_rule_section_template",
         default=(
-            "【Layer3 action_rules（参照）】\n"
-            "- 下記はLayer3で確定した行動ルール。意味を維持したまま、最終文面に整える。\n"
+            "[Layer3 action rules: reference]\n"
+            "- The rules below were fixed by Layer3. Keep their meaning intact while polishing the final wording.\n"
             "{action_rule}"
         ),
         action_rule=layer3_action_rule_for_writer,
@@ -15547,56 +15395,55 @@ def build_writer_messages(
     minimal_mode_rules = _get_layer4_writer_prompt(
         "minimal_mode_rules",
         default=(
-            "【Layer4 polishing mode】\n"
-            "- 目的は Layer3完成ドラフトを主アンカーとして、固定制約と編集対象ブリーフを守りながら自然な最終応答に磨くこと。\n"
-            "- 最優先は、draft_response_text より短く、会話として自然な最終文にすること。迷ったら、解釈の豊かさを足すより、短さと自然さを優先する。ただし主動作と変化方向は壊さない。\n"
-            "- draft_response_text の意味・主題・構成意図を保持する。別案を新規生成しない。\n"
-            "- draft_response_text は意味アンカーであり、語彙アンカーではない。意味と主動作を保ったまま、語彙は last_user_text の原語またはごく近い日常語へ寄せてよい。\n"
-            "- fixed_main_action は変更しない。ドラフトの主行為を維持する。\n"
-            "- fixed_affirm_mode / fixed_reflection_style に従って是認と文体を調整する。\n"
-            "- writer_plan は変更しない。質問上限は守る。\n"
-            "- Layer3 の編集対象ブリーフで確定した primary_focus / utterance_target / evocation_move / must_include / must_avoid は再判断しない。\n"
-            "- 基本の編集は、言い換え・冗長削減・語順調整・句読点調整・自然な文結合/文分割に限る。\n"
-            "- 1文の追加・削除は、action_rules や writer_plan を満たすために必要な最小限の場合だけ許可する。\n"
-            "- 新規論点追加・新規提案追加・新規質問追加・履歴再解釈・強みラベルの新規付与は禁止。\n"
-            "- add_affirm != NONE のとき、是認そのものを消さない。強すぎる性格ラベルや抽象評価を削る場合も、観察できる発話・選択・行動を短く認める形へ圧縮して残す。\n"
-            "- draft_response_text がある場合、最終文はその非空白文字数を超えず、通常はそれより短くする。\n"
-            "- draft_response_text が欠けている場合だけ、utterance_target / evocation_move / must_include を使って最小限の自然文を1件だけ組み直す。\n"
-            "- 編集の優先順位は、1) 主動作の保持 2) 直前ユーザの明示希望 3) draft_response_text / evocation_move の芯保持 4) 否定されない・急かされない受け取りやすさ 5) 履歴整合 6) 冗長削減。\n"
-            "- 短くするときの保持優先順位は、1) 相手固有の言葉 2) いま選ぼうとしている方向 3) 迷いの両極。3点が残る案を優先する。\n"
-            "- 同じ主動作と変化方向を保てる候補が複数あるなら、より短く、より自然で、より生活語に近い文を選ぶ。\n"
-            "- 指示が衝突した場合の優先順位: 主動作ガードレール/出力前チェック > 是認ルール > 冗長性の抑制。\n"
-            "- writer_plan.preferred_ending_family がある場合は、その終わり方の温度を優先する。ただし不自然な説明口調や造語にはしない。\n"
-            "- writer_plan.avoid_recent_ending_families がある場合は、そのfamilyと同系統の語尾連投を避ける。意味保持が優先で、無理なら意味を守る。\n"
-            "- 主体・視点・所有権は変更禁止。ユーザ側の『あなた』『ご自身』『自分で決める』『あなたの感覚』などの自律性アンカーを、Layer4で『私』『こちら』へ置き換えない。\n"
-            "- ユーザの具体語は最低1つ保持する。must_include や slot_quality_target_examples.detail に具体語があるときは、そのうち少なくとも1つを自然な形で残す。\n"
-            "- must_include が空でも、last_user_text に身体感覚・行動・場面・音・時間帯の具体語がある場合は、そのうち少なくとも1つを本文に残す。\n"
-            "- 「言語化」「整理」「見つめ直す」「意味」「きっかけ」「姿勢」「気づき」「学び」「持ち帰り」などの抽象名詞は、ユーザ自身がその語を使っていない限り、そのまま残さず動詞や感覚・行動・場面の語へ戻す。\n"
-            "- Layer4 は『弱める』だけでなく『生活語へ戻す』役割を持つ。抽象語を残すくらいなら、意味を少し削っても場面・感覚・行動の語を優先する。\n"
-            "- 文末を『やり方』『動き』『流れ』『中身』などの抽象名詞だけで閉じない。最後は場面・感覚・選択・行動の語で着地させる。\n"
-            "- layer4_repair_issue_codes.hard_contract は必須修正、layer4_repair_issue_codes.soft_hint は改善ヒント。コード名は本文に出さない。\n"
-            "- 過剰な意味づけや先回りした物語化がある場合は、直前ユーザ発話により近い反映へ1段戻す（small gentle steps）。\n"
-            "- draft_response_text にユーザ明示より強い解釈がある場合は、まず可逆表現へ弱め、それでも強ければ明示内容に近い記述へ戻す。\n"
-            "- change talk の具体焦点は削らない。ct_anchors / utterance_target / evocation_move が示す具体的な方向や対比は、短くしても残す。\n"
-            "- 過剰さを下げるときも、ct_anchors / utterance_target / evocation_move が示す変化方向は残す。安全な一般論へ戻さない。\n"
-            "- A/Bの選択肢や両価性があり、last_user_text ですでに一方への傾きが示されている場合は、その側を主役に残す。未選択の側を前景化しない。\n"
-            "- SCALING_QUESTION では、尺度の対象を『この練習』『この方法』のように抽象化せず、直前に出た具体行動名で保つ。\n"
-            "- macro_bridge_anchor がある場合も、その文言を本文にそのまま出す必要はない。micro focus と macro theme の接続が切れないことだけ守る。\n"
-            "- ct_anchors / ct_operation_goal / evocation_move / slot_goal / success_criterion は意味の保存用メモであり、その抽象語を本文にそのまま出す必要はない。本文は last_user_text に近い日常語で書く。\n"
-            "- macro_bridge_anchor は整合メモであり、本文でそのまま言い換えない。必要なら具体場面や行動のつながりで残す。\n"
-            "- 直近の counselor 発話と同じ核語を繰り返すより、同じ意味でも別の言い方へずらす。とくに『自分のペース』『安全』『少しずつ』『要点だけ』『不安』の反復に注意する。\n"
-            "- last_user_text に『もう少し話したい』『続けたい』などの明示希望があるときは、draft_response_text にない終了明示や次回送りを新規追加しない。\n"
-            "- REVIEW_REFLECTION / CLOSING では、ユーザが使っていない『気づき』『学び』『持ち帰り』を増やさず、『一番残っていること』『次に意識したいこと』などの日常語を優先する。\n"
-            "- 応援や理解の温度は保つが、褒めすぎ・言い切り・未来保証にはしない。\n"
-            "- 直前ユーザ入力と対話履歴に整合する表現に整え、冗長性を抑える。\n"
-            "- 出力直前に、主体反転・視点反転・具体語の脱落・抽象化しすぎが残っていないか確認し、見つけたら短く自然なまま修正する。\n"
-            "- 返答本文のみを出力し、JSON・見出し・箇条書き・role prefix は出さない。"
+            "[Layer4 polishing mode]\n"
+            "- Treat the completed Layer3 draft as the main anchor and polish it into a natural final response while obeying the fixed constraints and editor brief.\n"
+            "- The top priority is to make the final response shorter than draft_response_text and more natural in dialogue. If you are unsure, favor brevity and naturalness over richer interpretation, but do not break the main action or the direction of change.\n"
+            "- Preserve the meaning, topic, and structural intent of draft_response_text. Do not generate a new alternative.\n"
+            "- draft_response_text is a meaning anchor, not a wording anchor. Keep the meaning and main action while shifting wording closer to the client's everyday language.\n"
+            "- Do not change fixed_main_action.\n"
+            "- Adjust affirmation and style in line with fixed_affirm_mode / fixed_reflection_style.\n"
+            "- Do not change writer_plan. Respect the question limit.\n"
+            "- Do not re-judge primary_focus / utterance_target / evocation_move / must_include / must_avoid once Layer3 has fixed them.\n"
+            "- Limit edits to paraphrasing, redundancy reduction, word-order tuning, punctuation tuning, and natural sentence merging or splitting.\n"
+            "- Add or remove a sentence only when minimally necessary to satisfy action rules or writer_plan.\n"
+            "- Do not add new topics, new suggestions, new questions, history reinterpretations, or new strength labels.\n"
+            "- If add_affirm != NONE, do not remove the affirmation itself. If it is too strong, compress it into a brief acknowledgment grounded in observable speech, choices, or actions.\n"
+            "- If draft_response_text is present, the final text should not exceed its visible length and will usually be shorter.\n"
+            "- Only if draft_response_text is missing may you rebuild one minimal natural response from utterance_target / evocation_move / must_include.\n"
+            "- Edit priorities: 1) preserve the main action 2) respect the client's explicit latest preference 3) preserve the core of draft_response_text / evocation_move 4) keep it easy to receive, without pressure 5) maintain history consistency 6) reduce redundancy.\n"
+            "- When shortening, prioritize: 1) the client's own words 2) the direction the client is trying to choose 3) both poles of ambivalence.\n"
+            "- If several candidates preserve the same main action and change direction, choose the shorter, more natural, more everyday-language version.\n"
+            "- If instructions conflict, prioritize: main-action guardrails / pre-output checks > affirmation rules > redundancy reduction.\n"
+            "- If writer_plan.preferred_ending_family is present, favor that temperature of ending, but do not force unnatural explanatory wording.\n"
+            "- If writer_plan.avoid_recent_ending_families is present, avoid repeating the same ending family when possible without breaking meaning.\n"
+            "- Do not change agency, viewpoint, or ownership. Do not replace client-autonomy anchors such as 'you', 'your sense', or 'you decide' with counselor-centered wording.\n"
+            "- Preserve at least one concrete client term whenever possible.\n"
+            "- Even if must_include is empty, keep at least one concrete word from last_user_text when bodily sensation, action, scene, sound, or time-of-day language is present.\n"
+            "- If possible, convert abstract nouns back into verbs, sensations, actions, or scenes unless the client used the abstraction directly.\n"
+            "- Layer4 is not only about softening; it is also about returning language to lived everyday speech.\n"
+            "- Do not let the final line land on abstract nouns alone. End on a scene, sensation, choice, or action.\n"
+            "- layer4_repair_issue_codes.hard_contract are mandatory repairs; soft_hint are improvement hints. Do not expose code names in the response text.\n"
+            "- If the draft over-interprets or over-stories, step it back one level toward the client's latest wording.\n"
+            "- If the draft makes a stronger interpretation than the client explicitly stated, first weaken it into reversible wording, and if needed return to content closer to the explicit statement.\n"
+            "- Do not erase the concrete focus of change talk.\n"
+            "- Even while softening, preserve the change direction shown by ct_anchors / utterance_target / evocation_move rather than retreating to safe generalities.\n"
+            "- If the client is already leaning to one side in an A/B choice or ambivalence, keep that side foregrounded and avoid promoting the unchosen side.\n"
+            "- In SCALING_QUESTION, keep the scale tied to the concrete behavior that was named most recently rather than abstracting it.\n"
+            "- If macro_bridge_anchor exists, you do not need to echo it literally; just keep the link between micro focus and macro theme intact.\n"
+            "- Treat ct_anchors / ct_operation_goal / evocation_move / slot_goal / success_criterion as meaning-preservation notes, not wording to copy literally.\n"
+            "- If possible, vary repeated counselor kernel words rather than repeating the same phrasing turn after turn.\n"
+            "- If last_user_text explicitly says the client wants to keep talking, do not add new closing language or deferral to next time unless draft_response_text already contains it.\n"
+            "- In REVIEW_REFLECTION / CLOSING, prefer everyday wording over added abstract terms the client did not use.\n"
+            "- Keep warmth and understanding without overpraise, over-certainty, or promises about the future.\n"
+            "- Make the final expression consistent with the latest client input and the dialogue history while trimming redundancy.\n"
+            "- Before output, check for viewpoint reversal, loss of concrete terms, or over-abstraction, and correct those issues while staying short and natural.\n"
+            "- Output only the response body, with no JSON, heading, bullet list, or role prefix."
         ),
     )
     hard_constraints = _get_layer4_writer_prompt_formatted(
         "hard_constraints_template",
         default=(
-            "【固定制約（再判定禁止）】\n"
+            "[Fixed constraints: do not re-decide]\n"
             "- phase: {phase_value} [{phase_name}]\n"
             "- turn_index: {turn_index}\n"
             "- fixed_main_action: {action_value}\n"
@@ -15613,7 +15460,7 @@ def build_writer_messages(
     editor_brief = _get_layer4_writer_prompt_formatted(
         "editor_brief_template",
         default=(
-            "【Layer4 の編集対象ブリーフ】\n"
+            "[Layer4 editor brief]\n"
             "- last_user_text: {last_user_text}\n"
             "- primary_focus.topic: {primary_focus_topic}\n"
             "- primary_focus.meaning: {primary_focus_meaning}\n"
@@ -15638,12 +15485,12 @@ def build_writer_messages(
             "- draft_response_text: {draft_response_text}\n"
             "- layer4_repair_issue_codes.hard_contract: {layer4_repair_issue_codes_hard_contract}\n"
             "- layer4_repair_issue_codes.soft_hint: {layer4_repair_issue_codes_soft_hint}\n"
-            "- hard_contract は必ず解消し、soft_hint は自然さを崩さない範囲で反映する。\n"
-            "- 上記は Layer3 で確定した編集対象ブリーフ。Layer4 は再判断せず、draft_response_text を主アンカーに polishing する。\n"
-            "- 参照可能な文脈は対話履歴全体。直前入力との接続を優先する。\n"
-            "- draft_response_text は意味の主アンカーであり、語彙は last_user_text に近い日常語へ戻してよい。\n"
-            "- ct_anchors / ct_operation_goal / evocation_move / slot_goal / success_criterion は、何を消さずに残すかを示す意味保存用メモとして扱い、その抽象語を本文にそのまま出さない。\n"
-            "- macro_bridge_anchor は接続メモであり、本文でそのまま言い換えない。必要なら具体場面や行動のつながりで残す。"
+            "- hard_contract must be resolved. Apply soft_hint only as far as naturalness permits.\n"
+            "- The items above were fixed by Layer3. Layer4 should not re-decide them and should polish draft_response_text as the main anchor.\n"
+            "- The full dialogue history is available for reference, but prioritize connection to the immediately preceding user input.\n"
+            "- draft_response_text is the main meaning anchor, while wording may move back toward everyday language close to last_user_text.\n"
+            "- Treat ct_anchors / ct_operation_goal / evocation_move / slot_goal / success_criterion as notes about what meaning must survive, not wording to surface directly.\n"
+            "- macro_bridge_anchor is only a connection memo. Do not paraphrase it literally unless keeping the link through a concrete scene or action requires it."
         ),
         last_user_text=last_user_text,
         primary_focus_topic=primary_focus_topic,
@@ -15659,7 +15506,7 @@ def build_writer_messages(
         must_include=must_include_text,
         must_avoid=must_avoid_text,
         draft_status=draft_status_text,
-        draft_length_cap_chars=str(draft_length_cap_chars) if draft_length_cap_chars > 0 else "なし",
+        draft_length_cap_chars=str(draft_length_cap_chars) if draft_length_cap_chars > 0 else "none",
         slot_goal=slot_goal_text,
         repair_goal_text=repair_goal_text,
         success_criterion=success_criterion_text,
@@ -15677,45 +15524,44 @@ def build_writer_messages(
             "【Draft Length Contract】\n"
             "- draft_status: {draft_status}\n"
             "- draft_length_cap_chars: {draft_length_cap_chars}\n"
-            "- draft_response_text がある場合、Layer4 は意味を増やさず削る方向で整え、最終文は draft_response_text より短くする。\n"
-            "- 短さと自然さは最優先。迷ったら、細かな解釈や補足を足すより削る。\n"
-            "- draft_response_text がない場合だけ、utterance_target / evocation_move / must_include を使って最小限の自然文を1件だけ組み直す。"
+            "- If draft_response_text exists, trim rather than add meaning and make the final sentence shorter than draft_response_text.\n"
+            "- Prioritize brevity and naturalness. When in doubt, cut detail instead of adding interpretation.\n"
+            "- Rebuild a single minimal natural sentence from utterance_target / evocation_move / must_include only if draft_response_text is missing."
         ),
         draft_status=draft_status_text,
-        draft_length_cap_chars=str(draft_length_cap_chars) if draft_length_cap_chars > 0 else "なし",
+        draft_length_cap_chars=str(draft_length_cap_chars) if draft_length_cap_chars > 0 else "none",
     )
     edit_task = _get_layer4_writer_prompt(
         "edit_task",
         default=(
-            "【編集タスク】\n"
-            "0. 最優先は、draft_response_text より短く、自然にすること。迷ったら、情報を足すより削る。主動作と change talk の方向は残す。\n"
-            "1. draft_response_text を主アンカーにして、layer4_repair_issue_codes.hard_contract の不整合を優先して解消し、layer4_repair_issue_codes.soft_hint を改善ヒントとして使う。\n"
-            "2. utterance_target / evocation_move / must_include / must_avoid / writer_plan を守りつつ、主動作ガードレールと是認ルールに一致させる（衝突時は主動作を優先）。\n"
-            "3. 基本は polishing に徹し、意味と構成意図を保ったまま言い換え・冗長削減・語順調整・文結合/文分割で自然さを上げる。\n"
-            "3.1. 短くするときも、『相手固有の言葉』『いま選ぼうとしている方向』『迷いの両極』の3点は優先保持する。\n"
-            "3.2. draft_response_text は意味アンカーとして扱い、語彙は last_user_text の原語またはごく近い日常語を優先する。抽象名詞の連続は避ける。\n"
-            "3.3. 抽象語を残すくらいなら、意味を少し削っても場面・感覚・行動の語へ戻す。Layer4 は生活語へ戻す編集を優先する。\n"
-            "3.4. 文末を『やり方』『動き』『流れ』『中身』などの抽象名詞だけで閉じず、最後は場面・感覚・選択・行動の語で着地させる。\n"
-            "3.5. draft_response_text がある場合は、意味を落とさず削る方向だけで仕上げ、最終文の非空白文字数を draft_length_cap_chars 未満にする。draft_response_text がない場合だけ短く再構成する。\n"
-            "3.6. writer_plan.preferred_ending_family がある場合は、その方針に沿う終止に寄せる。writer_plan.avoid_recent_ending_families がある場合は、そのfamilyの反復を避ける。\n"
-            "4. 過剰な意味づけや未来の言い切りは1段下げるが、draft_response_text の喚起の核や change talk の方向は消さない。AよりBの対比、実行意図、守りたいものは危険でない限り別表現でも残す。\n"
-            "4.1. 「言語化」「整理」「見つめ直す」「意味」「きっかけ」「姿勢」「気づき」「学び」「持ち帰り」などの抽象名詞は、ユーザ自身が使っていない限り、まず「言葉にする」「少しつかむ」などの動詞や感覚・行動・場面の語へ言い換える。\n"
-            "4.2. add_affirm != NONE の場合、性格ラベルを弱めるときは是認を削除せず、そのターンで確認できる発話・選択・行動への短い是認に圧縮する。\n"
-            "4.3. draft_response_text にユーザ明示より強い解釈がある場合は、まず可逆表現へ弱め、それでも強ければ明示内容に近い記述へ戻す。\n"
-            "4.5. 主体・視点・所有権は変更しない。『あなた』『ご自身』『自分で決める』『あなたの感覚』などの自律性アンカーを『私』『こちら』へ置き換えない。\n"
-            "5. last_user_text にある明示希望は draft_response_text より優先して整合させる。続けたい意向があるのに終了へ上書きしない。\n"
-            "5.5. ユーザの具体語は最低1つ保持する。must_include や slot_quality_target_examples.detail に具体語がある場合は、そのうち少なくとも1つを本文に残す。\n"
-            "5.6. must_include が空でも、last_user_text に身体感覚・行動・場面・音・時間帯の具体語がある場合は、そのうち少なくとも1つを本文に残す。\n"
-            "5.7. macro_bridge_anchor がある場合は、その接続は保つが、『XはYの入口』『Xの意味はY』型の説明文を draft_response_text にない形で新規追加しない。\n"
-            "5.8. A/Bの選択肢や両価性があり、last_user_text で一方への傾きが示されている場合は、その側を主役に残す。未選択の側を前景化しない。\n"
-            "5.9. SCALING_QUESTION では、尺度の対象を『この練習』『この方法』などへ抽象化せず、直前に出た具体行動名で保つ。\n"
-            "6. 1ターン1機能を崩す余分な説明は削る。1文の追加・削除が必要なら、action_rules や writer_plan を満たすための最小限にとどめる。新規論点・新規提案・新規質問・履歴再解釈・強みラベル追加は行わない。\n"
-            "6.5. change talk の具体焦点は削らない。ct_anchors / utterance_target / evocation_move が示す焦点は、短くしても残す。\n"
-            "6.6. 直近の counselor 発話と同じ核語の反復は避け、同じ意味でも別の言い方へずらす。とくに『自分のペース』『安全』『少しずつ』『要点だけ』『不安』の反復に注意する。\n"
-            "6.7. QUESTION系は、1文目を last_user_text の具体語に接地した短い反射または観察ベースの是認だけにし、2文目は質問だけにする。前置きに説明や見通しを重ねない。\n"
-            "6.8. REVIEW_REFLECTION / CLOSING では、ユーザが使っていない『気づき』『学び』『持ち帰り』を増やさず、『一番残っていること』『次に意識したいこと』などの日常語を優先する。\n"
-            "7. 出力直前に「主体反転」「視点反転」「具体語の脱落」「抽象化しすぎ」が含まれていないか確認し、含まれていたら短く自然な形のまま修正する。\n"
-            "8. 最終応答本文のみを1件出力する。issue code や内部ラベルは本文に出さない。"
+            "【Edit Task】\n"
+            "0. Highest priority: make the response shorter and more natural than draft_response_text. When in doubt, delete detail instead of adding interpretation. Keep the main action and the change direction.\n"
+            "1. Use draft_response_text as the main anchor, fix hard-contract issues first, and use soft hints only as polish guidance.\n"
+            "2. Respect utterance_target, evocation_move, must_include, must_avoid, and writer_plan while staying inside the main-action guardrails and affirmation rules.\n"
+            "3. Polish mainly through paraphrasing, shortening, word-order adjustment, and natural sentence merging/splitting.\n"
+            "3.1. Even when shortening, preserve the client's own wording, the direction they are leaning toward, and both poles of ambivalence whenever possible.\n"
+            "3.2. Prefer everyday language close to last_user_text over abstract noun chains.\n"
+            "3.3. Land the sentence on scene / sensation / choice / action wording rather than abstract meta language.\n"
+            "3.4. If draft_response_text exists, trim without changing the meaning and keep the final non-space length under draft_length_cap_chars.\n"
+            "3.5. Follow writer_plan.preferred_ending_family when present and avoid writer_plan.avoid_recent_ending_families when possible.\n"
+            "4. Lower excessive interpretation or certainty by one step, but do not erase the evocative core or change-talk direction.\n"
+            "4.1. Replace abstract meta language with verbs, sensations, actions, and scenes unless the user explicitly used the abstract wording.\n"
+            "4.2. If add_affirm != NONE, compress affirmation into brief acknowledgment of observable speech, choice, or action rather than deleting it.\n"
+            "4.3. If the draft interprets more strongly than the evidence supports, weaken it first into reversible phrasing.\n"
+            "4.4. Do not change subject, viewpoint, or ownership. Do not turn autonomy anchors into counselor-centered wording.\n"
+            "5. Let explicit wishes in last_user_text override weaker draft tendencies. Do not turn a continue signal into a closing signal.\n"
+            "5.1. Preserve at least one concrete user term whenever possible.\n"
+            "5.2. If macro_bridge_anchor exists, preserve the concrete connection without adding a new explanatory sentence that was absent from the draft.\n"
+            "5.3. Keep the preferred side foregrounded when the user is already leaning toward one side of an A/B contrast.\n"
+            "5.4. In SCALING_QUESTION, keep the concrete behavior name instead of abstracting it.\n"
+            "6. Remove any extra explanation that breaks the one-turn, one-function shape.\n"
+            "6.1. Do not add new topics, new proposals, new questions, history reinterpretation, or new strength labels.\n"
+            "6.2. Do not delete the concrete focus of change talk.\n"
+            "6.3. Avoid repeating the same core wording as the immediately previous counselor utterance.\n"
+            "6.4. In QUESTION actions, keep sentence 1 as a brief reflection or grounded affirmation, and sentence 2 as the question only.\n"
+            "6.5. In REVIEW_REFLECTION / CLOSING, prefer everyday language over meta reflection wording the user did not use.\n"
+            "7. Before output, check for subject flip, viewpoint flip, loss of concrete wording, and over-abstraction, then fix any issue while staying short and natural.\n"
+            "8. Output exactly one response text only. Do not expose issue codes or internal labels."
         ),
     )
     issue_repair_guidance = _render_layer4_issue_repair_guidance(
@@ -15749,7 +15595,7 @@ def build_writer_messages(
         runtime_system_sections.append(issue_repair_guidance)
     runtime_system_sections.extend([edit_task, writer_validation_checks])
     if first_turn_note:
-        runtime_system_sections.append(f"【初回特例】\n- {first_turn_note}")
+        runtime_system_sections.append(f"[First-turn exception]\n- {first_turn_note}")
     system = _assemble_system_with_runtime_tail(
         fixed_sections=fixed_system_sections,
         runtime_sections=runtime_system_sections,
@@ -15851,7 +15697,7 @@ class LLMResponseIntegrator:
                 focus_choice_context=focus_choice_context,
             )
             strict_rejected = bool(strict_json and (strict_json_schema_rejected or issues))
-            # default_response_brief への退避は、Layer3 から object 形式の出力自体が得られなかったときだけ許可する。
+            # Fall back to default_response_brief only when Layer3 failed to return an object-shaped output at all.
             if strict_json and strict_json_schema_rejected:
                 brief = _default_response_brief(
                     state=state,
@@ -15889,9 +15735,9 @@ class LLMResponseIntegrator:
             repair_user = {
                 "role": "user",
                 "content": (
-                    "前回JSONにスキーマ不備があります: "
+                    "The previous JSON had schema issues: "
                     + ", ".join(issues[:5])
-                    + "。同じ入力でJSONのみ再出力してください。"
+                    + ". Re-output JSON only for the same input."
                 ),
             }
             retry_messages = messages + [{"role": "assistant", "content": raw_output}, repair_user]
@@ -15944,10 +15790,10 @@ class LLMResponseIntegrator:
 
 
 # ----------------------------
-# Output validation（最低限）
+# Output validation (minimal)
 # ----------------------------
 def _contains_affirmation(text: str) -> bool:
-    """簡易に是認らしさを検出する（典型フレーズの部分一致）。"""
+    """Lightweight check for affirmation-like wording using partial matches to typical phrases."""
     for pat in _AFFIRM_PATTERNS:
         if re.search(pat, text):
             return True
@@ -15956,7 +15802,7 @@ def _contains_affirmation(text: str) -> bool:
 
 def _contains_complex_affirmation(text: str) -> bool:
     """
-    複雑是認は、是認らしさ＋価値/強み言及の両方を満たすものとして扱う。
+    Treat complex affirmations as lines that contain both affirmation-like phrasing and explicit value/strength language.
     """
     if not _contains_affirmation(text):
         return False
@@ -15968,24 +15814,24 @@ def _contains_question_form(text: str) -> bool:
 
 
 _CHANGE_TALK_FOCUS_STOPWORDS = {
-    "変化",
-    "意図",
-    "理由",
-    "気持ち",
-    "関心",
-    "前向きさ",
-    "迷い",
-    "維持トーク",
-    "実行",
-    "具体化",
-    "芽",
-    "言外",
+    "change",
+    "intention",
+    "reason",
+    "feeling",
+    "interest",
+    "forward movement",
+    "ambivalence",
+    "sustain talk",
+    "implementation",
+    "concretization",
+    "sign",
+    "implied",
 }
 
 
 def _extract_change_talk_focus_terms(change_talk_inference: str, *, max_terms: int = 6) -> List[str]:
     raw = str(change_talk_inference or "").strip()
-    if not raw or raw == "なし":
+    if not raw or raw == "none":
         return []
 
     parsed_items = _parse_change_talk_items(raw, max_items=max(max_terms * 2, 8), for_focus_terms=True)
@@ -16037,10 +15883,10 @@ def _contains_change_talk_focus_reference(text: str, change_talk_inference: str)
     if not body:
         return False
 
-    # 反射文が変化語を含むなら、最低限の焦点化はできているとみなす。
+    # If the reflection itself already contains clear change language, treat that as the minimum acceptable focus.
     if any(marker in body for marker in _CHANGE_TALK_MARKERS):
         return True
-    if re.search(r"(?:変えたい|やめたい|したい|たい|試したい|続けたい|できそう|取り組みたい)", body):
+    if re.search(r"(?:wanttochange|wanttostop|wantto|want|wanttotry|wanttocontinue|seemsdoable|wanttoworkon)", body):
         return True
 
     focus_terms = _extract_change_talk_focus_terms(change_talk_inference)
@@ -16059,7 +15905,7 @@ def _extract_change_talk_enrichment_categories(text: str) -> set[str]:
     )
     if has_scene_context:
         categories.add("scene")
-    if _has_any_pattern(normalized, _SLOT_CONTEXT_TIME_PATTERNS) or re.search(r"(\d+\s*(回|分|時間|日|週))", normalized):
+    if _has_any_pattern(normalized, _SLOT_CONTEXT_TIME_PATTERNS) or re.search(r"(\d+\s*(times?|minutes?|hours?|days?|weeks?))", normalized):
         categories.add("frequency")
     if any(marker in normalized for marker in _SUMMARY_VALUE_MARKERS) or any(
         marker in normalized for marker in _CT_STRENGTH_VALUE_REASON_MARKERS
@@ -16177,7 +16023,7 @@ def _contains_overinterpretation_risk(text: str) -> bool:
     story_hits = sum(1 for pat in _OVERINTERPRETATION_STORY_PATTERNS if pat.search(normalized))
     if inference_hit and story_hits >= 1:
         return True
-    if story_hits >= 2 and any(marker in normalized for marker in ("これから", "土台", "強み", "育て", "入口")):
+    if story_hits >= 2 and any(marker in normalized for marker in ("from here", "foundation", "strength", "grow", "entry point")):
         return True
     return False
 
@@ -16215,17 +16061,17 @@ def _build_final_closing_response(
     add_affirm: AffirmationMode,
 ) -> str:
     if action == MainAction.REFLECT_SIMPLE:
-        reflect_line = "今日は、ご自身のペースで進み方を確かめたい思いがはっきりしていました。"
+        reflect_line = "Today, your wish to check the pace that feels right for you came through clearly."
     else:
         reflect_line = (
-            "今日は、進みたい気持ちと迷いの両方を抱えながらも、"
-            "納得できる形を丁寧に探ろうとしている様子が伝わってきました。"
+            "Today, even while holding both the wish to move forward and the hesitation, "
+            "you seemed to be carefully searching for a way that feels workable to you."
         )
 
     if add_affirm == AffirmationMode.SIMPLE:
-        affirm_line = "ここまで丁寧に気持ちを言葉にしてきた姿勢が伝わってきました。"
+        affirm_line = "Your care in putting these feelings into words has come through."
     elif add_affirm == AffirmationMode.COMPLEX:
-        affirm_line = "揺れのある気持ちを正直に見つめて言葉にした姿勢に、誠実さと粘り強さを感じました。"
+        affirm_line = "There is real honesty and persistence in the way you have faced and named these mixed feelings."
     else:
         affirm_line = ""
 
@@ -16266,10 +16112,9 @@ def _find_suspicious_ascii_tokens_in_japanese_text(text: str) -> List[str]:
 
 def _looks_natural_counselor_japanese(text: str, *, action: Optional[MainAction] = None) -> bool:
     """
-    カウンセラー応答として最低限自然な日本語かを軽量に判定する。
-    厳密な文法判定ではなく、明らかに不自然な出力（JSON断片・口語スラング等）を弾く。
-    反射アクションと SUMMARY のときのみ、「〜ということ。」「〜が〜。」「〜したい。」
-    のような省略終止を許可する。
+    Lightweight check for whether the response looks minimally natural as counselor language.
+    This is not a full grammar check; it mainly blocks obviously unnatural output such as JSON fragments or chat slang.
+    For reflection actions and SUMMARY only, allow elliptical endings that still read as natural reflective clauses.
     """
     t = (text or "").strip()
     if not t:
@@ -16294,7 +16139,7 @@ def _looks_natural_counselor_japanese(text: str, *, action: Optional[MainAction]
     if _RE_CASUAL_ENDING.search(tail):
         return False
 
-    polite_markers = ("です", "ます", "でしょう", "ですね", "ません", "ください", "でしょうか", "ですか", "ますか")
+    polite_markers = ("thank you", "it sounds", "it seems", "could", "would", "may", "might", "can", "does")
     if (
         action is not None
         and (_is_reflect_action(action) or action == MainAction.SUMMARY)
@@ -16327,7 +16172,7 @@ def collect_soft_validation_warnings(
 
     if _is_reflect_action(action) and action in {MainAction.REFLECT, MainAction.REFLECT_SIMPLE, MainAction.REFLECT_COMPLEX}:
         focus_hint = (change_talk_inference or "").strip()
-        if focus_hint and focus_hint != "なし":
+        if focus_hint and focus_hint != "none":
             if not _contains_change_talk_focus_reference(t, focus_hint):
                 warnings.append("reflect_missing_change_talk_focus")
             else:
@@ -16358,7 +16203,7 @@ def collect_soft_validation_warnings(
         if not any(marker in summary_text for marker in _SUMMARY_AMBIVALENCE_MARKERS):
             warnings.append("summary_missing_ambivalence_layer")
         focus_hint = (change_talk_inference or "").strip()
-        if focus_hint and focus_hint != "なし":
+        if focus_hint and focus_hint != "none":
             if not _contains_change_talk_focus_reference(summary_text, focus_hint):
                 warnings.append("summary_missing_change_talk_focus")
             elif not _has_change_talk_strengthening(summary_text, focus_hint):
@@ -16639,7 +16484,7 @@ def validate_output(
         qcount = t.count("？") + t.count("?")
         if qcount >= 2:
             return False, "clarify_preference_too_many_questions"
-        if not any(marker in t for marker in ("どちら", "どっち", "どのほう", "どちらが")):
+        if not any(marker in t.lower() for marker in ("which", "would help more", "which side", "which feels closer")):
             return False, "clarify_preference_missing_choice"
     if action == MainAction.SCALING_QUESTION:
         if not _contains_question_form(t):
@@ -16744,7 +16589,7 @@ def validate_output(
             grounding_hint = _sanitize_human_text(brief.question_reflect_seed)
         if not grounding_hint:
             grounding_hint = _sanitize_human_text(change_talk_inference)
-        if grounding_hint and grounding_hint != "なし":
+        if grounding_hint and grounding_hint != "none":
             if not _contains_change_talk_focus_reference(preface_clause, grounding_hint):
                 return False, "question_preface_not_grounded_in_change_talk"
     if affirm_mode == AffirmationMode.NONE and _contains_affirmation(t):
@@ -16765,34 +16610,34 @@ def _render_writer_action_guardrails(
         and isinstance(state, DialogueState)
         and state.phase == Phase.CLOSING
     ):
-        style_line = "- 反射スタイル(complex): utterance_target の1命題だけを扱う。"
+        style_line = "- ReflectionStyle(complex): work with only one proposition from utterance_target."
         if reflection_style == ReflectionStyle.SIMPLE:
-            style_line = "- 反射スタイル(simple): 明示内容を1点だけ短く言い換える。"
+            style_line = "- ReflectionStyle(simple): briefly restate only one explicit point."
         return _get_layer4_writer_prompt_formatted(
             "action_guardrails",
             "closing_final_turn",
             default=(
-                "【主動作ガードレール（CLOSING最終ターン: 終了明示）】\n"
-                "- 1文目は短い反射、2文目は終了明示にする。\n"
-                "- 質問は置かない。\n"
-                "- 終了明示には「今日/今回/セッション」と「終える/終わり/終了」の両方を含める。\n"
-                "- 提案・助言・選択要求にしない。\n"
+                "[Main-action guardrails: CLOSING final turn / explicit ending]\n"
+                "- Sentence 1 is a short reflection and sentence 2 explicitly closes the session.\n"
+                "- Do not ask a question.\n"
+                "- The closing line must include both a session anchor such as today / this turn / session and an ending verb such as end / finish / close.\n"
+                "- Do not turn it into advice, suggestion, or a forced choice.\n"
                 "{style_line}"
             ),
             style_line=style_line,
         )
     if _is_reflect_action(action) and isinstance(state, DialogueState) and _is_closing_first_turn(state):
-        style_line = "- 反射スタイル(complex): utterance_target の1命題だけを扱う。"
+        style_line = "- ReflectionStyle(complex): work with only one proposition from utterance_target."
         if reflection_style == ReflectionStyle.SIMPLE:
-            style_line = "- 反射スタイル(simple): 明示内容を1点だけ短く言い換える。"
+            style_line = "- ReflectionStyle(simple): briefly restate only one explicit point."
         return _get_layer4_writer_prompt_formatted(
             "action_guardrails",
             "closing_reflect_template",
             default=(
-                "【主動作ガードレール（CLOSING初回: REFLECT＋終了確認質問）】\n"
-                "- 1文目は短い反射、2文目は終了可否の確認質問にする。\n"
-                "- 質問は最後の1つのみで、今日のセッションをここで終えるかを尋ねる。\n"
-                "- 提案・助言・選択要求にしない。\n"
+                "[Main-action guardrails: CLOSING first turn / REFLECT + end-check question]\n"
+                "- Sentence 1 is a short reflection and sentence 2 is a question checking whether to end.\n"
+                "- The only question must be the final one, asking whether it is okay to end today's session here.\n"
+                "- Do not turn it into advice, suggestion, or a forced choice.\n"
                 "{style_line}"
             ),
             style_line=style_line,
@@ -16801,23 +16646,23 @@ def _render_writer_action_guardrails(
     if _is_reflect_action(action):
         style_line = ""
         if reflection_style == ReflectionStyle.SIMPLE:
-            style_line = "- 反射スタイル(simple): utterance_target の1点だけを短く言い換える。"
+            style_line = "- Reflection style (simple): briefly restate only one point from utterance_target."
         elif reflection_style == ReflectionStyle.DOUBLE_SIDED:
-            style_line = "- 反射スタイル(double): 前半で維持側、後半で utterance_target 側を置き、変化側で終える。"
+            style_line = "- Reflection style (double): place the sustain side first, then the utterance_target side, and end on the change side."
         else:
-            style_line = "- 反射スタイル(complex): utterance_target の1命題だけを扱う。"
+            style_line = "- Reflection style (complex): work with only one proposition from utterance_target."
         return _get_layer4_writer_prompt_formatted(
             "action_guardrails",
             "reflect_template",
             default=(
-                "【主動作ガードレール（REFLECT系）】\n"
-                "- 目的は聞き返し/言い換えであり、質問・提案・選択要求にしない。\n"
-                "- 反射は原則1文、長くても2文までにする。\n"
-                "- 単なる言い換えで終わらせず、言外の意味（価値・迷い・意図のいずれか1点）を短く補う。\n"
-                "- 直前ターンと同じ導入句・語尾の反復を避ける。\n"
-                "- 文末に疑問符（？/ ?）を付けない。\n"
-                "- 「〜しましょう」「〜してみましょう」「〜が良い」など助言表現を使わない。\n"
-                "- 「どちら」「どっち」など選択を迫る聞き方を入れない。\n"
+                "[Main-action guardrails: REFLECT]\n"
+                "- The job is reflection / reframing, not questioning, advising, or forcing a choice.\n"
+                "- Keep reflection to one sentence, at most two.\n"
+                "- Add one small implied meaning (value, ambivalence, or intention) rather than ending as a pure paraphrase.\n"
+                "- Avoid repeating the same opener or ending as the immediately previous turn.\n"
+                "- Do not end with a question mark.\n"
+                "- Avoid advisory language such as 'let's', 'you should', or other prescriptive phrasing.\n"
+                "- Do not pressure the client into a choice.\n"
                 "{style_line}"
             ),
             style_line=style_line,
@@ -16831,12 +16676,12 @@ def _render_writer_action_guardrails(
                     "action_guardrails",
                     "question_followup_plus_one_template",
                     default=(
-                        "【主動作ガードレール（QUESTION: スケーリング後フォローアップ）】\n"
-                        "- 直前の回答を1文で短く受け止めてから質問する。\n"
-                        "- 質問は1つだけにする。\n"
-                        "- 「何があると{score_text}点から1点上がるか」を尋ねる。\n"
-                        "- 理由質問はこのターンで重ねない。\n"
-                        "- 提案・指示を混ぜない。"
+                        "[Main-action guardrails: QUESTION / scaling follow-up]\n"
+                        "- Briefly acknowledge the previous answer in one sentence before the question.\n"
+                        "- Ask exactly one question.\n"
+                        "- Ask what would move the score from {score_text} up by one point.\n"
+                        "- Do not stack a reason question in the same turn.\n"
+                        "- Do not mix in advice or instruction."
                     ),
                     score_text=score_text,
                 )
@@ -16845,12 +16690,12 @@ def _render_writer_action_guardrails(
                     "action_guardrails",
                     "question_followup_reason_template",
                     default=(
-                        "【主動作ガードレール（QUESTION: スケーリング後フォローアップ）】\n"
-                        "- 直前の回答を1文で短く受け止めてから質問する。\n"
-                        "- 質問は1つだけにする。\n"
-                        "- 「0点でなく{score_text}点なのはなぜか」を尋ねる。\n"
-                        "- 1点アップ質問はこのターンで重ねない。\n"
-                        "- 提案・指示を混ぜない。"
+                        "[Main-action guardrails: QUESTION / scaling follow-up]\n"
+                        "- Briefly acknowledge the previous answer in one sentence before the question.\n"
+                        "- Ask exactly one question.\n"
+                        "- Ask why it is {score_text} rather than 0.\n"
+                        "- Do not stack the plus-one question in the same turn.\n"
+                        "- Do not mix in advice or instruction."
                     ),
                     score_text=score_text,
                 )
@@ -16858,22 +16703,22 @@ def _render_writer_action_guardrails(
                 "action_guardrails",
                 "question_followup_default",
                 default=(
-                    "【主動作ガードレール（QUESTION: スケーリング後フォローアップ）】\n"
-                    "- 直前の回答を1文で短く受け止めてから質問する。\n"
-                    "- 質問は1つだけにする。\n"
-                    "- 「何があると1点上がるか」を尋ねる。\n"
-                    "- 提案・指示を混ぜない。"
+                    "[Main-action guardrails: QUESTION / scaling follow-up]\n"
+                    "- Briefly acknowledge the previous answer in one sentence before the question.\n"
+                    "- Ask exactly one question.\n"
+                    "- Ask what would raise it by one point.\n"
+                    "- Do not mix in advice or instruction."
                 ),
             )
         return _get_layer4_writer_prompt(
             "action_guardrails",
             "question_default",
             default=(
-                "【主動作ガードレール（QUESTION）】\n"
-                "- QUESTION の基本構成は固定する。\n"
-                "- fixed_affirm_mode != NONE なら、1文目は是認、2文目は utterance_target に関する質問だけにする。\n"
-                "- fixed_affirm_mode == NONE なら、1文目は question_reflect_seed に沿った simple reflection、2文目は utterance_target に関する質問だけにする。\n"
-                "- 質問は最後の1つのみで、提案・指示を混ぜない。"
+                "[Main-action guardrails: QUESTION]\n"
+                "- Keep the default question structure fixed.\n"
+                "- If fixed_affirm_mode != NONE, sentence 1 is affirmation and sentence 2 is the question about utterance_target.\n"
+                "- If fixed_affirm_mode == NONE, sentence 1 is a simple reflection grounded in question_reflect_seed and sentence 2 is the question about utterance_target.\n"
+                "- Only the final sentence may be a question, and it must not include advice or instruction."
             ),
         )
     if action == MainAction.SCALING_QUESTION:
@@ -16881,11 +16726,11 @@ def _render_writer_action_guardrails(
             "action_guardrails",
             "scaling_question",
             default=(
-                "【主動作ガードレール（SCALING_QUESTION）】\n"
-                "- 0〜10の尺度を明示して、1文1質問でたずねる。\n"
-                "- 数値だけを尋ねる（理由質問や1点アップ質問は同じ質問内で行わない）。\n"
-                "- 尺度の対象を『この練習』『この方法』などへ抽象化しない。\n"
-                "- 提案・指示を混ぜない。"
+                "[Main-action guardrails: SCALING_QUESTION]\n"
+                "- Explicitly ask on a 0-10 scale in one sentence and one question.\n"
+                "- Ask only for the number; do not add reason or plus-one probes in the same question.\n"
+                "- Keep the scale anchored to the concrete behavior rather than abstracting it.\n"
+                "- Do not mix in advice or instruction."
             ),
         )
     if action == MainAction.SUMMARY:
@@ -16893,9 +16738,9 @@ def _render_writer_action_guardrails(
             "action_guardrails",
             "summary",
             default=(
-                "【主動作ガードレール（SUMMARY）】\n"
-                "- SUMMARYの構成・文数・締め方は Layer3 action_rules を優先し、Layer4で独自追加しない。\n"
-                "- main_action の目的を崩さない。"
+                "[Main-action guardrails: SUMMARY]\n"
+                "- Follow the Layer3 action_rules for summary structure, sentence count, and ending. Do not add Layer4-only structure.\n"
+                "- Do not drift away from the purpose of main_action."
             ),
         )
     if action == MainAction.CLARIFY_PREFERENCE:
@@ -16903,13 +16748,13 @@ def _render_writer_action_guardrails(
             "action_guardrails",
             "clarify_preference",
             default=(
-                "【主動作ガードレール（CLARIFY_PREFERENCE）】\n"
-                "- 1文目は短い反射、2文目は二択を確認する質問にする。\n"
-                "- すでに一方への傾きがある場合は、その側を1文目で映し、2文目でも先に置く。\n"
-                "- 二択の各ラベルは短く要約し、どちらも一読で選べる長さにする。\n"
-                "- 「〜のと…のとでは」の反復を避け、AかBかの形で簡潔に聞く。\n"
-                "- 許可取りの再質問はしない。\n"
-                "- 具体策の提案はここでは行わない。"
+                "[Main-action guardrails: CLARIFY_PREFERENCE]\n"
+                "- Sentence 1 is a brief reflection; sentence 2 is a binary-choice question.\n"
+                "- If the client is already leaning to one side, reflect that side first and present it first in the choice.\n"
+                "- Keep each option label short and easy to read.\n"
+                "- Ask in a clean A-or-B form rather than repeating long paired phrases.\n"
+                "- Do not re-ask permission.\n"
+                "- Do not add concrete suggestions here."
             ),
         )
         clarify_preference_mode, focus_choice_options = _resolve_clarify_preference_mode(
@@ -16921,12 +16766,12 @@ def _render_writer_action_guardrails(
                 "action_guardrails",
                 "clarify_preference_focus_choice",
                 default=(
-                    "- 今回は話題の入口を選ぶ質問にする。\n"
-                    "- 選択肢は {focus_choice_options} のように短く並べ、どの話題から入るかが分かる形にする。"
+                    "- In this case, ask the client to choose the entry topic.\n"
+                    "- Present the options briefly, like {focus_choice_options}, so it is obvious which topic each option refers to."
                 ),
                 focus_choice_options=_join_writer_items(
                     focus_choice_options,
-                    fallback="なし",
+                    fallback="none",
                 ),
             )
             if focus_choice_append:
@@ -16937,12 +16782,12 @@ def _render_writer_action_guardrails(
             "action_guardrails",
             "ask_permission",
             default=(
-                "【主動作ガードレール（ASK_PERMISSION_TO_SHARE_INFO）】\n"
-                "- ASK_PERMISSION_TO_SHARE_INFO の構成・文数・質問配置は Layer3 action_rules を優先し、Layer4で独自追加しない。\n"
-                "- add_affirm != NONE なら、1文目は是認、2文目は情報共有の可否だけを確認する質問にする。\n"
-                "- add_affirm == NONE なら、1文目は question_reflect_seed に沿った simple reflection、2文目は情報共有の可否だけを確認する質問にする。\n"
-                "- 具体的な提案内容はまだ書かない。\n"
-                "- 質問は最後の1つのみで、押しつけ表現（進めますね等）を使わない。"
+                "[Main-action guardrails: ASK_PERMISSION_TO_SHARE_INFO]\n"
+                "- Follow Layer3 action_rules for structure, sentence count, and question placement. Do not add Layer4-only structure.\n"
+                "- If add_affirm != NONE, sentence 1 is affirmation and sentence 2 asks only whether sharing information is okay.\n"
+                "- If add_affirm == NONE, sentence 1 is a simple reflection grounded in question_reflect_seed and sentence 2 asks only whether sharing information is okay.\n"
+                "- Do not include the concrete advice content yet.\n"
+                "- Only the final sentence may be a question, and do not use pushy wording."
             ),
         )
     if action == MainAction.PROVIDE_INFO:
@@ -16950,24 +16795,24 @@ def _render_writer_action_guardrails(
             "action_guardrails",
             "provide_info",
             default=(
-                "【主動作ガードレール（PROVIDE_INFO）】\n"
-                "- 中立的に短い情報を共有し、選択肢提示または「一つの方法として」を入れる。\n"
-                "- 最後に反応を尋ねる質問を1つ置く。\n"
-                "- 押しつけ表現を使わない。"
+                "[Main-action guardrails: PROVIDE_INFO]\n"
+                "- Share short, neutral information and include either explicit options or phrasing such as 'as one option'.\n"
+                "- End with one question that asks for the client's reaction.\n"
+                "- Avoid pushy wording."
             ),
         )
     return _get_layer4_writer_prompt(
         "action_guardrails",
         "unknown",
         default=(
-            "【主動作ガードレール】\n"
-            "- 今回の主動作に一致する形式で、返答本文のみを出力する。"
+            "[Main-action guardrails]\n"
+            "- Output only the response text in a form that matches the current main action."
         ),
     )
 
 
 # ----------------------------
-# Orchestrator（最小実装）
+# Orchestrator (minimal implementation)
 # ----------------------------
 @dataclass
 class MIRhythmBot:
@@ -16989,14 +16834,14 @@ class MIRhythmBot:
     risk_detector: Optional[RiskDetector] = field(default_factory=RuleBasedRiskDetector)
     output_evaluator: Optional[OutputEvaluator] = None
 
-    # MI準拠スコアが低いときに自動で再生成する閾値（Noneならロギングのみ）
+    # Threshold for automatic regeneration when the MI-adherence score is low (None means log only)
     evaluation_rewrite_threshold: Optional[float] = None
     writer_history_max_turns: int = 120
     layer4_temperature: float = 0.2
     layer4_enabled: bool = True
 
     def __post_init__(self) -> None:
-        # 既定は LLM FeatureExtractor。失敗時は内部で rule 抽出にフォールバックする。
+        # Default to the LLM FeatureExtractor. If it fails, fall back internally to rule-based extraction.
         if self.feature_extractor is None:
             self.feature_extractor = LLMFeatureExtractor(llm=self.llm, temperature=0.0)
         if self.phase_slot_filler_current is None and self.phase_slot_filler is not None:
@@ -17012,10 +16857,10 @@ class MIRhythmBot:
                 self.phase_slot_filler,
                 scope_mode=_SLOT_FILL_SCOPE_NON_CURRENT_ONLY,
             )
-        # add_affirm 判定は、既定で LLM の3モードスコア推定を使う。
+        # By default, add_affirm decisions use the LLM's three-mode score estimate.
         if self.affirmation_decider is None:
             self.affirmation_decider = LLMAffirmationDecider(llm=self.llm, temperature=0.0)
-        # Slot reviewer も既定は LLM。実行時エラー時のみ rule reviewer にフォールバックする。
+        # Slot review also defaults to the LLM and falls back to the rule reviewer only on runtime error.
         if self.slot_reviewer is None:
             self.slot_reviewer = LLMSlotReviewer(llm=self.llm, temperature=0.0)
         if self.slot_reviewer_non_current is None:
@@ -17023,25 +16868,25 @@ class MIRhythmBot:
 
     def reset(self) -> None:
         """
-        セッションを切り替えるとき用のリセット。
-        - DialogueState を初期化
-        - 発話履歴をクリア
+        Reset state for switching to a new session.
+        - Reinitialize DialogueState
+        - Clear the utterance history
         """
         self.state = DialogueState()
         self.history.clear()
 
     def step(self, user_text: str) -> Tuple[str, Decision]:
-        # 1) 履歴更新（user）
+        # 1) Update history (user)
         self.history.append(("user", user_text))
         layer3_json_mode = _normalize_json_mode(getattr(self.cfg, "layer3_json_mode", "loose"))
 
-        # 1.2) 初回入力の簡易判定（挨拶/相談の有無）
+        # 1.2) Lightweight first-turn detection (greeting-only vs greeting-plus-topic)
         first_turn_hint: Optional[FirstTurnHint] = None
         first_turn_hint_debug: Optional[Dict[str, bool]] = None
         if self.state.turn_index == 0:
             first_turn_hint, first_turn_hint_debug = detect_first_turn_hint(user_text)
 
-        # 1.5) 安全確認（高リスクならフェーズを強制遷移）
+        # 1.5) Safety check (force a phase override if risk is high)
         risk_assessment: Optional[RiskAssessment] = None
         if self.risk_detector is not None:
             try:
@@ -17057,13 +16902,13 @@ class MIRhythmBot:
             self.state.risk_level = risk_assessment.level
             self.state.last_risk_reason = risk_assessment.reason
             if risk_assessment.level == RiskLevel.HIGH:
-                # 緊急時は情報共有モードを解除して安全案内を優先
+                # In emergencies, disable information-sharing mode and prioritize safety guidance.
                 self.state.info_mode = InfoMode.NONE
 
         crisis_override = bool(risk_assessment and risk_assessment.level == RiskLevel.HIGH)
 
-        # 2) 3層パイプライン
-        # Layer1: features推定 + スロット埋め（並列）
+        # 2) Three-layer pipeline
+        # Layer1: estimate features + fill slots (in parallel)
         feature_debug: Dict[str, Any] = {}
         phase_debug: Dict[str, Any] = {"method": "heuristic"}
         ranker_debug: Optional[Dict[str, Any]] = None
@@ -17114,7 +16959,7 @@ class MIRhythmBot:
                 "parallel_with_action_ranker": False,
             }
         else:
-            # Layer1: 特徴量推定 + スロット埋め
+            # Layer1: feature estimation + slot filling
             layer1_json_mode = _normalize_json_mode(getattr(self.cfg, "layer1_json_mode", "loose"))
             layer2_json_mode = _normalize_json_mode(getattr(self.cfg, "layer2_json_mode", "loose"))
             feature_result: Optional[Tuple[PlannerFeatures, Dict[str, Any]]] = None
@@ -17392,7 +17237,7 @@ class MIRhythmBot:
             focus_choice_context = _focus_choice_context_from_layer1_bundle(layer1_bundle)
             layer1_slot_fill_debug["focus_choice_hint"] = focus_choice_context
 
-            # 以降の判定で使う状態更新（Layer1の特徴量に基づく）
+            # Update state used by later decisions, based on Layer1 features.
             cleaned_user = re.sub(r"\s+", "", user_text)
             if (not features.is_short_reply and len(cleaned_user) >= 6) or (
                 features.change_talk >= 0.5 and len(cleaned_user) >= 3
@@ -17414,7 +17259,7 @@ class MIRhythmBot:
             provisional_allowed_actions = _normalize_ranker_action_space(
                 provisional_action_mask.get("allowed_actions")  # type: ignore[arg-type]
             )
-            # ranker入力でも action mask が作った優先順を維持する。
+            # Preserve the action-mask priority order even in the ranker input.
             provisional_allowed_actions_for_ranker = list(provisional_allowed_actions)
             provisional_allowed_actions_for_ranker = _prioritize_ask_permission_for_ranker(
                 actions=provisional_allowed_actions_for_ranker,
@@ -17446,7 +17291,7 @@ class MIRhythmBot:
                     ranker_skip_reason = skip_step
                     break
 
-            # Layer2: current/non-current slot review + main_action決定 + 是認判定 + チェンジトーク推論（並列）
+            # Layer2: current/non-current slot review + main_action choice + affirmation decision + change-talk inference (parallel)
             phase_before_layer2 = self.state.phase
             has_current_slot_reviewer = self.slot_reviewer is not None
             has_non_current_slot_reviewer = self.slot_reviewer_non_current is not None
@@ -17927,7 +17772,7 @@ class MIRhythmBot:
                 }
                 phase_debug["predicted_phase"] = self.state.phase.value
                 phase_debug["phase_transition_code"] = "stay_by_scale_followup_override"
-                phase_debug["phase_transition_note"] = "フェーズ継続（スケーリング後フォローアップを先に完了）"
+                phase_debug["phase_transition_note"] = "Stay in the current phase until the post-scaling follow-up is completed."
                 enforce_info = phase_debug.get("enforce")
                 if isinstance(enforce_info, dict):
                     enforce_info["decision"] = "stay_by_scale_followup_override"
@@ -17949,7 +17794,7 @@ class MIRhythmBot:
                 }
                 phase_debug["predicted_phase"] = self.state.phase.value
                 phase_debug["phase_transition_code"] = "stay_by_waiting_permission"
-                phase_debug["phase_transition_note"] = "フェーズ継続（情報共有の許可確認が未完了）"
+                phase_debug["phase_transition_note"] = "Stay in the current phase because permission for information sharing is not resolved yet."
                 enforce_info = phase_debug.get("enforce")
                 if isinstance(enforce_info, dict):
                     enforce_info["decision"] = "stay_by_waiting_permission"
@@ -17969,7 +17814,7 @@ class MIRhythmBot:
                 }
                 phase_debug["predicted_phase"] = self.state.phase.value
                 phase_debug["phase_transition_code"] = "stay_by_info_request"
-                phase_debug["phase_transition_note"] = "フェーズ継続（情報提供ニーズを先に扱う）"
+                phase_debug["phase_transition_note"] = "Stay in the current phase so the request for information can be handled first."
                 enforce_info = phase_debug.get("enforce")
                 if isinstance(enforce_info, dict):
                     enforce_info["decision"] = "stay_by_info_request"
@@ -18145,7 +17990,7 @@ class MIRhythmBot:
             enforce_info["current"] = phase_before_guardrail.value
             enforce_info["predicted"] = Phase.GREETING.value
             phase_debug["phase_transition_code"] = "forced_first_turn_greeting"
-            phase_debug["phase_transition_note"] = "フェーズ継続（初回はあいさつフェーズを優先）"
+            phase_debug["phase_transition_note"] = "Stay in the current phase because the first turn should prioritize the greeting phase."
             self.state.phase = Phase.GREETING
             self.state.phase_turns = 0
 
@@ -18166,7 +18011,7 @@ class MIRhythmBot:
             enforce_info["current"] = phase_before_guardrail.value
             enforce_info["predicted"] = Phase.PURPOSE_CONFIRMATION.value
             phase_debug["phase_transition_code"] = "forced_post_greeting_purpose_confirmation"
-            phase_debug["phase_transition_note"] = "新フェーズ開始: 目的確認（あいさつ直後ガード）"
+            phase_debug["phase_transition_note"] = "New phase started: purpose confirmation after the greeting guardrail."
             self.state.phase = Phase.PURPOSE_CONFIRMATION
             self.state.phase_turns = 0
 
@@ -18420,9 +18265,9 @@ class MIRhythmBot:
                 self.state.info_mode = InfoMode.NONE
                 debug["info_mode_reset_by_phase_gate"] = True
 
-        # 5) 是認の付加（危機時は抑制）
+        # 5) Add affirmation (suppressed in crisis mode)
         if not crisis_override and affirm_mode is None:
-            # 並列判定結果が欠落した場合のみ最終フォールバック
+            # Final fallback only when the parallel decision result is missing.
             try:
                 if self.affirmation_decider is not None:
                     affirm_mode, affirm_mode_decider_debug = self.affirmation_decider.decide(
@@ -18479,7 +18324,7 @@ class MIRhythmBot:
             else:
                 add_affirm = AffirmationMode.COMPLEX
                 affirm_debug["forced_mode"] = "review_phase_feedback_turn"
-        # 6) 次状態（このターンの想定更新）
+        # 6) Next state (projected updates for this turn)
         reflection_style: Optional[ReflectionStyle] = None
         reflection_style_debug: Optional[Dict[str, Any]] = None
         if _is_reflect_action(action):
@@ -18669,8 +18514,8 @@ class MIRhythmBot:
                 closing_max_turns = 3
             force_close_by_max_turns = phase_turns >= closing_max_turns
 
-            # CLOSING 完了判定では、関係シグナル（高抵抗/高discord）では終了を止めない。
-            # ただし観測値はデバッグ用途で保持する。
+            # In CLOSING completion checks, do not block ending only because of relationship signals such as high resistance or discord.
+            # Keep those observations for debugging only.
             resistance_value = _clamp01(features.resistance, 0.0)
             discord_value = _clamp01(features.discord, 0.0)
             resistance_threshold = _clamp01(self.cfg.phase_hold_resistance_threshold, 0.6)
@@ -18742,8 +18587,8 @@ class MIRhythmBot:
                     "reason": "closing_final_turn_uses_layer2_affirm_decision",
                 }
 
-            # 最終クロージングでも Layer3/Layer4 は通す。
-            # ただし終結ターンの主動作は反射（simple/complex）のみに寄せる。
+            # Even final closing turns still pass through Layer3 / Layer4.
+            # However, constrain the main action on the termination turn to reflection (simple/complex) only.
             action = closing_reflect_action
             add_affirm = final_add_affirm
             reflection_style = _reflection_style_from_action(action)
@@ -18910,7 +18755,7 @@ class MIRhythmBot:
                 non_current_slot_review_debug["waited_after_generation"] = True
                 _refresh_non_current_phase_debug()
 
-        # 7) 生成（Layer3:統合 -> Layer4:執筆）
+        # 7) Generation (Layer3 integration -> Layer4 writing)
         try:
             configured_writer_history_turns = max(1, int(self.writer_history_max_turns))
         except Exception:
@@ -19262,7 +19107,7 @@ class MIRhythmBot:
         }
         layer4_writer_debug = decision.debug.get("layer4_writer")
         if isinstance(layer4_writer_debug, Mapping):
-            # NOTE: dictで保持している前提のため、Mapping判定後に明示キャストして更新する。
+            # NOTE: This assumes a dict-like object is being stored, so update it explicitly after the Mapping check.
             try:
                 layer4_writer_debug["effective_layer4_repair_issue_codes"] = _copy_layer4_repair_issue_codes(  # type: ignore[index]
                     effective_layer4_repair_issue_codes
@@ -19289,7 +19134,7 @@ class MIRhythmBot:
 
         if closing_phase_complete and not validation_ok:
             initial_failure_reason = validation_reason
-            # 最終クロージングでは再生成しない。初回出力を保持したまま log-only で監視する。
+            # Do not regenerate on the final closing turn. Keep the first output and monitor in log-only mode.
             validation_attempts.append(
                 {
                     "stage": "closing_final_log_only",
@@ -19347,7 +19192,7 @@ class MIRhythmBot:
             brief=response_brief,
         )
 
-        # 8) MI準拠セルフチェック（ログのみ）
+        # 8) MI-adherence self-check (log only)
         evaluation: Optional[OutputEvaluation] = None
         if self.output_evaluator is not None:
             try:
@@ -19378,11 +19223,11 @@ class MIRhythmBot:
             )
             non_current_slot_review_future = None
 
-        # 9) 履歴更新（assistant）＋state更新
+        # 9) Update history (assistant) and refresh state
         self.history.append(("assistant", assistant_text))
         prev_phase = self.state.phase
         self.state = next_state
-        # フェーズが変わっていたら phase_turns をリセット（実際の遷移は enforce_phase_progression 側で制御）
+        # Reset phase_turns when the phase changes; actual transition control lives in enforce_phase_progression.
         if self.state.phase != prev_phase:
             self.state.phase_turns = 0
         self.state.last_user_text = user_text
@@ -19416,29 +19261,29 @@ class MIRhythmBot:
 
 
 # ----------------------------
-# Demo用のダミーLLM（必ず差し替えてください）
+# Demo dummy LLM (replace before production use)
 # ----------------------------
 @dataclass
 class DummyLLM:
     def generate(self, messages: List[Dict[str, str]], *, temperature: float = 0.2) -> str:
         sys = messages[0]["content"]
-        if "今回の主動作: REFLECT" in sys:
-            return "なるほど、いまのお話だと、最近の状況について整理しながら考えておられるのですね。"
-        if "今回の主動作: QUESTION" in sys:
-            return "今の状況で、いちばん変えてみたいことは何でしょうか？"
-        if "今回の主動作: SUMMARY" in sys:
-            return "ここまでのお話では、現状の困りごとがありつつも、変えたい気持ちも少し出てきているようです。合っていますか？"
-        if "今回の主動作: CLARIFY_PREFERENCE" in sys:
-            return "今はまだ情報を受けるには早い感じがあるのですね。情報の提案と気持ちの整理、今はどちらが助けになりそうですか？"
-        if "今回の主動作: ASK_PERMISSION_TO_SHARE_INFO" in sys:
-            return "いくつか選択肢の情報を共有してもよろしいでしょうか？"
-        if "今回の主動作: PROVIDE_INFO" in sys:
-            return "例えば、(1) 記録をつける、(2) 目標を小さくする、(3) 周りに協力を頼む、のようなやり方があります。どれが一番やれそうですか？"
-        return "承知しました。"
+        if "Current main action: REFLECT" in sys:
+            return "It sounds like you have been trying to sort through what has been happening lately."
+        if "Current main action: QUESTION" in sys:
+            return "In the current situation, what feels most important to change first?"
+        if "Current main action: SUMMARY" in sys:
+            return "So far, it sounds like things feel difficult right now, and at the same time some wish for change is starting to show up. Does that fit?"
+        if "Current main action: CLARIFY_PREFERENCE" in sys:
+            return "It sounds like information may feel a bit early right now. At this moment, would it help more to sort through your feelings or to hear a few options?"
+        if "Current main action: ASK_PERMISSION_TO_SHARE_INFO" in sys:
+            return "Would it be okay if I shared a few options?"
+        if "Current main action: PROVIDE_INFO" in sys:
+            return "For example, options might include keeping a brief record, making the goal smaller, or asking someone around you for support. Which of those feels most doable?"
+        return "I understand."
 
 
 def _run_demo() -> None:
-    # DummyLLM を常に使用する API不要の最小デモ（READMEの記載に合わせる）
+    # Minimal no-API demo that always uses DummyLLM.
     llm = DummyLLM()
 
     bot = MIRhythmBot(
@@ -19446,13 +19291,13 @@ def _run_demo() -> None:
         cfg=PlannerConfig(stochastic=False, seed=1),
     )
     inputs = [
-        "最近、夜更かしが増えてしまって困っています。",
-        "うーん、でも仕事が忙しくて…",
-        "そうですね。",
-        "できれば早く寝たいです。",
-        "どうしたらいいですか？",
-        "はい、教えてください。",
-        "なるほど。",
+        "Lately I have been staying up too late more often, and that is becoming a problem.",
+        "Hmm, but work has been really busy...",
+        "Yeah, that's true.",
+        "If possible I want to get to sleep earlier.",
+        "What do you think I could do?",
+        "Yes, please tell me.",
+        "I see.",
     ]
     for u in inputs:
         a, d = bot.step(u)
