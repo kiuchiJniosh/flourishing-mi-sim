@@ -13,9 +13,9 @@ from .paths import resolve_config_path, resolve_env_path
 DEFAULT_ENV_PATH = resolve_env_path()
 DEFAULT_MODEL_CONFIG_PATH = resolve_config_path("model_settings.yaml")
 
-# mode ごとの組み込みデフォルト
+# Built-in defaults per mode
 DEFAULT_MODEL_CONFIG: Dict[str, Dict[str, Any]] = {
-    # ---- カウンセラー（共通） ----
+    # ---- Counselor (shared) ----
     "counselor_llm": {
         "api": "responses",
         "model": "gpt-5-nano",
@@ -170,7 +170,7 @@ DEFAULT_MODEL_CONFIG: Dict[str, Dict[str, Any]] = {
         "temperature": 0.1,
         "max_history_turns": 120,
     },
-    # ---- クライアント（共通） ----
+    # ---- Client (shared) ----
     "client_profile_llm": {
         "api": "responses",
         "model": "gpt-5-nano",
@@ -198,7 +198,7 @@ DEFAULT_MODEL_CONFIG: Dict[str, Dict[str, Any]] = {
         "temperature_policy": "auto",
         "system_handling": "as_input",
     },
-    # ---- 安全判定・応答評価（任意で有効化） ----
+    # ---- Safety checks and response evaluation (optional) ----
     "counselor_risk_detector": {
         "api": "responses",
         "model": "gpt-5-nano",
@@ -273,12 +273,12 @@ _MODEL_CFG_LEAF_HINT_KEYS = {
 
 def load_openai_api_key(env_path: Optional[Path] = None) -> str:
     """
-    .env（OPENAI_API_KEY）または環境変数から API キーを取得する共通ユーティリティ。
+    Load the API key from `.env` (`OPENAI_API_KEY`) or from the environment.
     """
     load_dotenv(dotenv_path=env_path or resolve_env_path())
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        raise RuntimeError(".env または環境変数に OPENAI_API_KEY が設定されていません。")
+        raise RuntimeError("OPENAI_API_KEY is not set in `.env` or the environment.")
     return api_key
 
 
@@ -298,7 +298,7 @@ def _get_nested_mapping(data: Mapping[str, Any], path: Sequence[str]) -> Optiona
 
 
 def _load_model_settings(path: Optional[Path] = None) -> Dict[str, Dict[str, Any]]:
-    """YAML からモデル設定を読み込み、mode->設定辞書へ正規化する（無ければ空 dict）。"""
+    """Load model settings from YAML and normalize them into a mode -> config mapping."""
     resolved_path = path or resolve_config_path("model_settings.yaml")
     if not resolved_path.exists():
         return {}
@@ -309,14 +309,14 @@ def _load_model_settings(path: Optional[Path] = None) -> Dict[str, Dict[str, Any
 
     normalized: Dict[str, Dict[str, Any]] = {}
 
-    # 旧形式: top-level の mode キーをそのまま許容
+    # Legacy format: accept top-level mode keys as-is
     for mode, cfg in data.items():
         if not isinstance(mode, str):
             continue
         if isinstance(cfg, Mapping) and _is_model_cfg_leaf(cfg):
             normalized[mode] = dict(cfg)
 
-    # 新形式: layer 構造を mode キーへ解決
+    # New format: resolve the layer structure into mode keys
     for mode, nested_path in _MODEL_CONFIG_NESTED_PATHS.items():
         if mode in normalized:
             continue
@@ -343,10 +343,10 @@ def get_model_config(
     fallback_modes: Optional[Sequence[str]] = None,
 ) -> Dict[str, Any]:
     """
-    モードごとのモデル設定を一元管理する。
-    優先順位: YAML > 組み込みデフォルト
-    fallback_modes が指定されていて mode が YAML に存在しない場合、
-    最初に見つかった代替モードの設定を採用する。
+    Centralize model configuration by mode.
+    Priority: YAML > built-in defaults.
+    If `fallback_modes` is provided and `mode` is missing from YAML,
+    use the first fallback mode that resolves to a non-empty config.
     """
     cfg_from_yaml = _load_model_settings(config_path)
     base = _merge_default_and_yaml(mode, cfg_from_yaml)
@@ -358,14 +358,14 @@ def get_model_config(
                 base = candidate
                 break
 
-    # role 引数は後方互換のため残す（現状は設定解決には使わない）
+    # Keep `role` for backward compatibility; it is not used in config resolution yet.
     _ = role
     return base
 
 
 def build_llm_from_config(model_cfg: Dict[str, Any], api_key: str) -> Any:
     """
-    model_settings.yaml で定義した辞書から LLMClient を構築する共通ヘルパー。
+    Build an LLM client from the dictionary defined in `model_settings.yaml`.
     """
     from .openai_llm import OpenAIChatCompletionsLLM, OpenAIResponsesLLM
 

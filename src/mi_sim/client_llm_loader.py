@@ -9,7 +9,7 @@ def build_client_llms(
     api_key: str,
 ) -> Dict[str, Any]:
     """
-    クライアント用の profile/state/reply LLM と設定をまとめて構築する（統一キー）。
+    Build the client profile/state/reply LLMs and their configs using consistent keys.
     """
     client_cfg = get_model_config("client_profile_llm", role="client")
     state_cfg = get_model_config("client_state_llm", role="client")

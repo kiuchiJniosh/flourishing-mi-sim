@@ -1,6 +1,6 @@
 # mi_sim config
 
-`mi_sim` package が self-play 実行時に参照する同梱設定を配置します。
+This directory contains the packaged configuration that the `mi_sim` package reads during self-play runs.
 
 - `model_settings.yaml`
 - `phase_slot_quality_rubrics.yaml`

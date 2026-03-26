@@ -53,7 +53,7 @@ def _build_planner_config_from_env() -> PlannerConfig:
 
 
 def _build_optional_phase_slot_filler(api_key: str, cfg: Dict[str, Any]) -> Optional[LLMPhaseSlotFiller]:
-    """enabled が真のときだけ LLMPhaseSlotFiller を生成する。"""
+    """Create an LLMPhaseSlotFiller only when `enabled` is truthy."""
     if not cfg:
         return None
     if cfg.get("enabled") is False:
@@ -65,7 +65,7 @@ def _build_optional_phase_slot_filler(api_key: str, cfg: Dict[str, Any]) -> Opti
 
 
 def _build_optional_action_ranker(api_key: str, cfg: Dict[str, Any]) -> Optional[LLMActionRanker]:
-    """enabled が真のときだけ LLMActionRanker を生成する。"""
+    """Create an LLMActionRanker only when `enabled` is truthy."""
     if not cfg:
         return None
     if cfg.get("enabled") is False:
@@ -75,7 +75,7 @@ def _build_optional_action_ranker(api_key: str, cfg: Dict[str, Any]) -> Optional
 
 
 def _build_optional_slot_reviewer(api_key: str, cfg: Dict[str, Any]) -> Optional[LLMSlotReviewer]:
-    """enabled が真のときだけ LLMSlotReviewer を生成する。"""
+    """Create an LLMSlotReviewer only when `enabled` is truthy."""
     if not cfg:
         return None
     if cfg.get("enabled") is False:
@@ -96,7 +96,7 @@ def _build_optional_non_current_slot_reviewer(
     api_key: str,
     cfg: Dict[str, Any],
 ) -> Optional[LLMNonCurrentSlotReviewer]:
-    """enabled が真のときだけ LLMNonCurrentSlotReviewer を生成する。"""
+    """Create an LLMNonCurrentSlotReviewer only when `enabled` is truthy."""
     if not cfg:
         return None
     if cfg.get("enabled") is False:
@@ -114,7 +114,7 @@ def _build_optional_non_current_slot_reviewer(
 
 
 def _build_optional_change_talk_inferer(api_key: str, cfg: Dict[str, Any]) -> Optional[LLMChangeTalkInferer]:
-    """enabled が真のときだけ LLMChangeTalkInferer を生成する。"""
+    """Create an LLMChangeTalkInferer only when `enabled` is truthy."""
     if not cfg:
         return None
     if cfg.get("enabled") is False:
@@ -129,7 +129,7 @@ def _build_optional_affirmation_decider(
     api_key: str,
     cfg: Dict[str, Any],
 ) -> Optional[LLMAffirmationDecider]:
-    """enabled が真のときだけ LLMAffirmationDecider を生成する。"""
+    """Create an LLMAffirmationDecider only when `enabled` is truthy."""
     if not cfg:
         return None
     if cfg.get("enabled") is False:
@@ -142,8 +142,8 @@ def _build_optional_affirmation_decider(
 
 def _build_feature_extractor(api_key: str, cfg: Dict[str, Any]) -> LLMFeatureExtractor | RuleBasedFeatureExtractor:
     """
-    Layer1 の特徴量推定器。
-    enabled=false のときは RuleBasedFeatureExtractor にフォールバックする。
+    Layer 1 feature extractor.
+    Falls back to RuleBasedFeatureExtractor when `enabled` is false.
     """
     if not cfg or cfg.get("enabled") is False:
         return RuleBasedFeatureExtractor()
@@ -154,7 +154,7 @@ def _build_feature_extractor(api_key: str, cfg: Dict[str, Any]) -> LLMFeatureExt
 
 
 def _build_optional_risk_detector(api_key: str, cfg: Dict[str, Any]) -> Optional[LLMRiskDetector]:
-    """enabled が真のときだけ LLMRiskDetector を生成する。"""
+    """Create an LLMRiskDetector only when `enabled` is truthy."""
     if not cfg:
         return None
     if cfg.get("enabled") is False:
@@ -166,7 +166,7 @@ def _build_optional_risk_detector(api_key: str, cfg: Dict[str, Any]) -> Optional
 
 
 def _build_optional_mi_evaluator(api_key: str, cfg: Dict[str, Any]) -> Optional[LLMMIEvaluator]:
-    """enabled が真のときだけ LLMMIEvaluator を生成する。"""
+    """Create an LLMMIEvaluator only when `enabled` is truthy."""
     if not cfg:
         return None
     if cfg.get("enabled") is False:
@@ -178,7 +178,7 @@ def _build_optional_mi_evaluator(api_key: str, cfg: Dict[str, Any]) -> Optional[
 
 
 def _build_optional_response_integrator(api_key: str, cfg: Dict[str, Any]) -> Optional[LLMResponseIntegrator]:
-    """enabled が真のときだけ LLMResponseIntegrator を生成する。"""
+    """Create an LLMResponseIntegrator only when `enabled` is truthy."""
     if not cfg:
         return None
     if cfg.get("enabled") is False:
@@ -196,7 +196,7 @@ def _build_optional_response_integrator(api_key: str, cfg: Dict[str, Any]) -> Op
 
 
 def _extract_rewrite_threshold(cfg: Dict[str, Any]) -> Optional[float]:
-    """rewrite_threshold を float で取り出す（無効なら None）。"""
+    """Return `rewrite_threshold` as a float, or `None` if unavailable."""
     threshold = cfg.get("rewrite_threshold")
     if threshold is None:
         return None
@@ -211,7 +211,7 @@ def build_counselor_stack(
     api_key: str,
 ) -> Dict[str, Any]:
     """
-    カウンセラーボットと周辺の分類器/評価器をまとめて構築する共通ビルダー。
+    Build the counselor bot and its surrounding classifiers/evaluators in one place.
     """
     counselor_writer_cfg = get_model_config(
         "counselor_response_writer",

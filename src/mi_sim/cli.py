@@ -136,7 +136,7 @@ def run_self_play(
     except Exception:
         pass
 
-    print("自己対話シミュレーションを開始します...")
+    print("Starting self-play simulation...")
     env.simulate(
         first_client_utterance=client_bundle.first_utterance,
         max_turns=max_turns,
@@ -146,11 +146,11 @@ def run_self_play(
     )
 
     if print_full_log:
-        print("シミュレーション完了。ログを出力します。")
+        print("Simulation complete. Printing the log.")
         print("\n==== SIMULATION LOG ====")
         _print_simulation_log(env.log)
     else:
-        print("シミュレーション完了。成果物を保存します。")
+        print("Simulation complete. Saving artifacts.")
 
     return finalize_session(
         env,
@@ -185,12 +185,12 @@ def run_self_play_batch(
     cases = build_batch_case_plan(batch_dir, client_codes)
     pending_cases = [case for case in cases if not case.is_complete]
 
-    print("自己対話シミュレーションの15ケース一括実行を開始します。")
-    print(f"出力先: {batch_dir}")
-    print(f"対象={len(cases)} / 既完了={len(cases) - len(pending_cases)} / 今回実行={len(pending_cases)}")
+    print("Starting the 15-case self-play batch run.")
+    print(f"Output directory: {batch_dir}")
+    print(f"Total={len(cases)} / already complete={len(cases) - len(pending_cases)} / this run={len(pending_cases)}")
 
     if not pending_cases:
-        print("CSV と client_eval.json が揃っているため、再実行はありません。")
+        print("CSV and client_eval.json are already present, so nothing needs to be rerun.")
         return
 
     batch_dir.mkdir(parents=True, exist_ok=True)
@@ -219,7 +219,7 @@ def run_self_play_batch(
             f"csv={artifacts.get('csv', '')} json={artifacts.get('client_eval', '')}"
         )
 
-    print("15ケース一括実行が完了しました。")
+    print("The 15-case batch run is complete.")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -229,39 +229,43 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    self_play = sub.add_parser("self-play", help="LLM 同士の自己対話シミュレーション")
-    self_play.add_argument("--max-turns", type=int, default=5, help="カウンセラー→クライアントのターン数")
+    self_play = sub.add_parser("self-play", help="Self-play simulation between two LLMs")
+    self_play.add_argument("--max-turns", type=int, default=5, help="Number of counselor-to-client turns")
     self_play.add_argument(
         "--max-turns-completion",
         choices=["hard_stop", "phase_to_closing"],
         default="phase_to_closing",
-        help="max-turns 到達後の終了方式",
+        help="How to end after reaching max-turns",
     )
     self_play.add_argument(
         "--max-total-turns",
         type=int,
         default=None,
-        help="phase_to_closing 時の安全上限（未指定なら max-turns + 7）",
+        help="Safety cap for phase_to_closing (defaults to max-turns + 7 if omitted)",
     )
     self_play.add_argument(
         "--client-style",
         choices=["auto", "cooperative", "ambivalent", "resistant"],
         default=None,
-        help="クライアントの対話スタイル",
+        help="Client interaction style",
     )
-    self_play.add_argument("--client-code", default=None, help="単発実行する CLIENT_CODE。'all' で15ケース一括実行。")
-    self_play.add_argument("--all-cases", action="store_true", help="15ケース一括実行")
-    self_play.add_argument("--logs-dir", default=None, help="ログ出力先ディレクトリ")
-    self_play.add_argument("--artifact-id", default=None, help="成果物ファイル名に付与する識別子")
+    self_play.add_argument(
+        "--client-code",
+        default=None,
+        help="CLIENT_CODE for a single run. Use 'all' for the 15-case batch.",
+    )
+    self_play.add_argument("--all-cases", action="store_true", help="Run the 15-case batch")
+    self_play.add_argument("--logs-dir", default=None, help="Directory for log output")
+    self_play.add_argument("--artifact-id", default=None, help="Identifier appended to artifact filenames")
     self_play.add_argument(
         "--first-client-utterance",
         default=DEFAULT_FIRST_CLIENT_UTTERANCE,
-        help="初回クライアント発話のデフォルト値",
+        help="Default initial client utterance",
     )
     self_play.add_argument(
         "--no-print-full-log",
         action="store_true",
-        help="単発実行時に対話ログ全文を表示しない",
+        help="Do not print the full dialogue log for single runs",
     )
     return parser
 

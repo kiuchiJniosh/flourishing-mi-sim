@@ -12,7 +12,7 @@ LEGACY_APP_DIR = PROJECT_ROOT / "app"
 LEGACY_APP_CONFIG_DIR = LEGACY_APP_DIR / "config"
 LEGACY_CONFIG_DIR = PROJECT_ROOT / "config"
 
-# 既存コード互換の別名。段階的移行が終わるまで残す。
+# Backward-compatible aliases. Keep them until the staged migration is complete.
 APP_DIR = PACKAGE_DIR
 APP_CONFIG_DIR = PACKAGE_CONFIG_DIR
 
@@ -27,7 +27,8 @@ def _first_existing(paths: Iterable[Path]) -> Optional[Path]:
 
 def resolve_env_path() -> Path:
     """
-    開発中はルート `.env`、従来の `app/.env`、package ローカル `.env` の順で探索する。
+    During development, search for `.env` in the project root, then legacy `app/.env`,
+    then the package-local `.env`.
     """
     return _first_existing(
         (
@@ -40,7 +41,8 @@ def resolve_env_path() -> Path:
 
 def resolve_config_path(filename: str) -> Path:
     """
-    package 同梱 config を最優先し、移行期間だけ既存 app/config と root config を fallback する。
+    Prefer the package-bundled config, with legacy `app/config` and root `config`
+    as migration-time fallbacks.
     """
     return _first_existing(
         (
@@ -53,7 +55,8 @@ def resolve_config_path(filename: str) -> Path:
 
 def resolve_project_path(path: str | Path) -> Path:
     """
-    相対パスは package 内、リポジトリルート、旧 app 配下、カレントディレクトリの順で解決する。
+    Resolve relative paths in this order: package, repository root, legacy `app/`,
+    and finally the current working directory.
     """
     candidate = Path(path).expanduser()
     if candidate.is_absolute():

@@ -12,37 +12,52 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MI_KNOWLEDGE_PATH = resolve_config_path("mi_knowledge.md")
 
-_SECTION_COMMON = "共通の知識"
-_SECTION_PHASE = "各フェーズに関わる知識"
-_SECTION_REFLECT = "REFLECT_SIMPLE / REFLECT_COMPLEX / REFLECT_DOUBLE（聞き返し）"
-_SECTION_AFFIRM = "AFFIRM（是認）"
-_SECTION_QUESTION = "QUESTION（質問）"
-_SECTION_SUMMARY = "SUMMARY（要約）"
-_SECTION_INFO = "ASK_PERMISSION_TO_SHARE_INFO / PROVIDE_INFO（情報提供）"
-_COMMON_SUBSECTION_CHANGE_TALK = "チェンジトークを理解する"
+_SECTION_COMMON = "Common Knowledge"
+_SECTION_PHASE = "Phase-Related Knowledge"
+_SECTION_REFLECT = "REFLECT_SIMPLE / REFLECT_COMPLEX / REFLECT_DOUBLE (reflection)"
+_SECTION_AFFIRM = "AFFIRM (affirmation)"
+_SECTION_QUESTION = "QUESTION (questioning)"
+_SECTION_SUMMARY = "SUMMARY (summary)"
+_SECTION_INFO = "ASK_PERMISSION_TO_SHARE_INFO / PROVIDE_INFO (information sharing)"
+_COMMON_SUBSECTION_CHANGE_TALK = "Understanding Change Talk"
+
+_SECTION_ALIASES: Dict[str, Tuple[str, ...]] = {
+    _SECTION_COMMON: ("\u5171\u901a\u306e\u77e5\u8b58",),
+    _SECTION_PHASE: ("\u5404\u30d5\u30a7\u30fc\u30ba\u306b\u95a2\u308f\u308b\u77e5\u8b58",),
+    _SECTION_REFLECT: ("REFLECT_SIMPLE / REFLECT_COMPLEX / REFLECT_DOUBLE\uff08\u805e\u304d\u8fd4\u3057\uff09",),
+    _SECTION_AFFIRM: ("AFFIRM\uff08\u662f\u8a8d\uff09",),
+    _SECTION_QUESTION: ("QUESTION\uff08\u8cea\u554f\uff09",),
+    _SECTION_SUMMARY: ("SUMMARY\uff08\u8981\u7d04\uff09",),
+    _SECTION_INFO: ("ASK_PERMISSION_TO_SHARE_INFO / PROVIDE_INFO\uff08\u60c5\u5831\u63d0\u4f9b\uff09",),
+}
+
+_COMMON_SUBSECTION_ALIASES: Dict[str, Tuple[str, ...]] = {
+    _COMMON_SUBSECTION_CHANGE_TALK: ("\u30c1\u30a7\u30f3\u30b8\u30c8\u30fc\u30af\u3092\u7406\u89e3\u3059\u308b",),
+}
 
 _AGENT_BASE_SECTIONS: Dict[str, Tuple[str, ...]] = {
-    # フェーズスロット埋め: フェーズ知識のみ（プロンプト軽量化）
+    # Phase slot filling: phase knowledge only (lighter prompts)
     "phase_slot_filler": (_SECTION_PHASE,),
     "slot_filler": (_SECTION_PHASE,),
-    # ランカー: 共通のみ
+    # Ranker: common knowledge only
     "action_ranker": (_SECTION_COMMON,),
-    # チェンジトーク推論: 共通のみ
+    # Change-talk inference: common knowledge only
     "change_talk_inferer": (_SECTION_COMMON,),
-    # 是認判定: 共通 + 是認（将来のLLM判定エージェント名も吸収）
+    # Affirmation judgment: common knowledge + affirmation
+    # (also absorbs future LLM judge agent names)
     "affirmation_decider": (_SECTION_COMMON, _SECTION_AFFIRM),
     "affirmation_classifier": (_SECTION_COMMON, _SECTION_AFFIRM),
     "affirm_mode_decider": (_SECTION_COMMON, _SECTION_AFFIRM),
-    # オーケストレータ（= response generator）: 共通 + フェーズ + 是認 + 主動作
+    # Orchestrator (= response generator): common + phase + affirmation + main action
     "response_generator": (_SECTION_COMMON, _SECTION_PHASE, _SECTION_AFFIRM),
     "orchestrator": (_SECTION_COMMON, _SECTION_PHASE, _SECTION_AFFIRM),
-    # 分離後の応答系（Layer3/Layer4）も同等の知識スコープを使う
+    # The separated response path (Layer 3 / Layer 4) uses the same knowledge scope
     "response_integrator": (_SECTION_COMMON, _SECTION_PHASE, _SECTION_AFFIRM),
     "response_writer": (_SECTION_COMMON, _SECTION_PHASE, _SECTION_AFFIRM),
-    # 既存の補助エージェントは共通知識のみ
+    # Existing auxiliary agents use common knowledge only
     "risk_detector": (_SECTION_COMMON,),
     "mi_evaluator": (_SECTION_COMMON,),
-    # 人手カウンセラーのアクション分類は、共通 + 行動系知識
+    # Human counselor action classification uses common + action knowledge
     "human_counselor_action_classifier": (
         _SECTION_COMMON,
         _SECTION_REFLECT,
@@ -54,7 +69,7 @@ _AGENT_BASE_SECTIONS: Dict[str, Tuple[str, ...]] = {
 }
 
 _AGENT_COMMON_SUBSECTIONS: Dict[str, Tuple[str, ...]] = {
-    # チェンジトーク推論は、共通知識の中でもチェンジトーク理解部分だけを参照する
+    # Change-talk inference only references the change-talk subsection within common knowledge
     "change_talk_inferer": (_COMMON_SUBSECTION_CHANGE_TALK,),
 }
 
@@ -98,10 +113,10 @@ def _knowledge_cache_key(path: Path) -> Tuple[str, int, int]:
 
 def _split_top_level_sections(markdown: str) -> Tuple[str, List[Tuple[str, str]]]:
     """
-    Markdown をトップレベル（##）単位で分割する。
-    返り値:
-      - prefix: 最初の ## 以前（タイトルなど）
-      - sections: [(見出し名, ブロック全文), ...]
+    Split Markdown into top-level (`##`) sections.
+    Returns:
+      - prefix: text before the first `##` (such as a title)
+      - sections: [(heading, full block text), ...]
     """
     lines = markdown.splitlines()
     prefix_lines: List[str] = []
@@ -162,6 +177,18 @@ def _section_names_for_agent(*, agent_name: str, main_action: str | None) -> Tup
     return base
 
 
+def _expand_aliases(names: Tuple[str, ...], *, alias_map: Dict[str, Tuple[str, ...]]) -> set[str]:
+    expanded: set[str] = set()
+    for name in names:
+        if not name:
+            continue
+        expanded.add(name)
+        for alias in alias_map.get(name, tuple()):
+            if alias:
+                expanded.add(alias)
+    return expanded
+
+
 def _select_knowledge_for_agent(
     *,
     knowledge: str,
@@ -173,13 +200,14 @@ def _select_knowledge_for_agent(
         return knowledge
 
     section_names = set(_section_names_for_agent(agent_name=agent_name, main_action=main_action))
-    selected_blocks: List[str] = [block for heading, block in sections if heading in section_names]
+    allowed_headings = _expand_aliases(tuple(section_names), alias_map=_SECTION_ALIASES)
+    selected_blocks: List[str] = [block for heading, block in sections if heading in allowed_headings]
     if not selected_blocks:
-        # 見出し名変更などで一致しない場合は、従来どおり全文を渡して安全側に倒す
+        # If headings change and nothing matches, fall back to the full text for safety.
         return knowledge
 
     def _filter_common_subsections(block: str, *, allowed_subsections: Tuple[str, ...]) -> str:
-        allowed = {name.strip() for name in allowed_subsections if str(name).strip()}
+        allowed = _expand_aliases(allowed_subsections, alias_map=_COMMON_SUBSECTION_ALIASES)
         if not allowed:
             return block
 
@@ -208,7 +236,7 @@ def _select_knowledge_for_agent(
             collected.append("\n".join(current_lines).strip())
 
         if not collected:
-            # 該当小見出しが存在しない場合は元ブロックを返し、安全側に倒す
+            # If no matching subsection exists, return the original block for safety.
             return block
 
         return "\n\n".join([top_heading] + collected).strip()
@@ -216,16 +244,17 @@ def _select_knowledge_for_agent(
     agent_key = (agent_name or "").strip().lower()
     common_subsections = _AGENT_COMMON_SUBSECTIONS.get(agent_key, tuple())
     if common_subsections:
+        common_headings = _expand_aliases((_SECTION_COMMON,), alias_map=_SECTION_ALIASES)
         filtered_blocks: List[str] = []
         for heading, block in sections:
-            if heading == _SECTION_COMMON:
+            if heading in common_headings:
                 filtered_blocks.append(
                     _filter_common_subsections(
                         block,
                         allowed_subsections=common_subsections,
                     )
                 )
-            elif heading in section_names:
+            elif heading in allowed_headings:
                 filtered_blocks.append(block)
         selected_blocks = filtered_blocks
 
@@ -244,11 +273,11 @@ def inject_mi_knowledge(
     main_action: str | None = None,
 ) -> str:
     """
-    システムプロンプトへ、Markdownから読み込んだMI知識を追記する。
-    - `MI_KNOWLEDGE_MD_PATH` を設定すると読み込み先を変更できる。
-    - 既定は `config/mi_knowledge.md`。
-    - agent_name / main_action に応じて、関連セクションのみを抽出して渡す。
-    - ファイルが無い/空なら元の `system_prompt` をそのまま返す。
+    Append MI knowledge loaded from Markdown to the system prompt.
+    - Set `MI_KNOWLEDGE_MD_PATH` to change the source file.
+    - The default is `config/mi_knowledge.md`.
+    - Depending on `agent_name` / `main_action`, only the relevant sections are passed through.
+    - If the file is missing or empty, the original `system_prompt` is returned unchanged.
     """
 
     resolved = _resolve_knowledge_path(path)
@@ -265,9 +294,9 @@ def inject_mi_knowledge(
 
     return (
         f"{system_prompt}\n\n"
-        "【追加参照知識（Markdown）】\n"
-        f"- 対象: {agent_name}\n"
-        "- 以下の知識を参照して判断してください。会話文脈・安全性・既存の出力制約を優先し、"
-        "矛盾する内容はそのまま採用しないでください。\n"
+        "[Additional Reference Knowledge (Markdown)]\n"
+        f"- Target: {agent_name}\n"
+        "- Use the knowledge below as a reference when making decisions. Prioritize the conversation context, "
+        "safety, and existing output constraints, and do not adopt contradictory content as-is.\n"
         f"{knowledge}"
     )

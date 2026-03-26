@@ -1,153 +1,154 @@
 schema_version: 1
 description: >
-  Layer2 Slot Reviewer 向けのフェーズ別スロット品質評価基準。
-  各スロットで minimum / maximum の判定条件と具体例を定義する。
-  IMPORTANCE_PROMOTION 以降は、FOCUSING_TARGET_BEHAVIOR.target_behavior（確定済みならその内容）との整合を重視する。
+  Phase-specific slot quality rubric for the Layer2 Slot Reviewer.
+  Defines minimum and maximum criteria, plus concrete examples, for each slot.
+  From IMPORTANCE_PROMOTION onward, alignment with FOCUSING_TARGET_BEHAVIOR.target_behavior
+  is prioritized when that target has already been determined.
 
 GREETING:
   greeting_exchange:
-    min_condition: "挨拶の往復が示されるが、相手文脈への接続がない。"
-    min_example: "挨拶を交わして会話を始める。"
-    max_condition: "挨拶に加えて、相手の開始文脈（緊張/話しやすさ）へ自然に接続できる。"
-    max_example: "話しにくさもありつつ始められた、という導入を確認する。"
+    min_condition: "A greeting exchange is present, but it does not connect to the other person's context."
+    min_example: "Exchange greetings and begin the conversation."
+    max_condition: "In addition to greeting, it naturally connects to the other person's opening context, such as tension or ease of speaking."
+    max_example: "Confirming that the conversation began even though it felt a little hard to speak."
   rapport_cue:
-    min_condition: "安心・労いの意図があるが抽象的。"
-    min_example: "安心できる雰囲気を作る。"
-    max_condition: "具体的な言い回しで安心感の根拠を示し、関係形成に寄与する。"
-    max_example: "ここでは急いで結論を出さず、今の気持ちをそのまま言葉にして大丈夫だと確認する。"
+    min_condition: "There is an intention to reassure or acknowledge effort, but it is abstract."
+    min_example: "Create a sense of safety."
+    max_condition: "It conveys the basis for safety through concrete wording and contributes to relationship building."
+    max_example: "Confirm that there is no need to rush to conclusions here and that it is fine to put the current feelings into words as they are."
 
 PURPOSE_CONFIRMATION:
   presenting_problem_raw:
-    min_condition: "困りごとの断片はあるが、初回主訴として後続フェーズで参照できる形になっていない。"
-    min_example: "何となくしんどい。"
-    max_condition: "初期主訴が本人語彙に近い一文で保持され、焦点化の参照点として使える（この条件で quality_score 0.8 以上の目安）。"
-    max_example: "何のために生きているのか分からず、家と職場の往復で楽しさが薄れている。"
+    min_condition: "There are fragments of concern, but they are not held in a form that can be referenced later as the initial presenting problem."
+    min_example: "I feel kind of rough."
+    max_condition: "The initial presenting problem is preserved in a sentence close to the client's own words and can serve as a reference point for focusing."
+    max_example: "I do not know what I am living for, and the back-and-forth between home and work feels less enjoyable."
   today_focus_topic:
-    min_condition: "今日扱う中身の方向はあるが、主訴との接続が弱く焦点が広い、進め方希望と混ざっている、または面接者が出した方向に本人が乗って話しているだけで受け入れ確認が弱い。『どちらから扱うか』の選択だけに留まる場合もここに含む。"
-    min_example: "少し整理したい。"
-    max_condition: "今日扱う中身が1つに絞られ、初期主訴と接続した焦点として共有できる。加えて、本人が自発的にその話題を扱いたいと述べるか、直前要約への明示承諾で受け入れが確認できる。話すペース・進め方・安心条件・提案の要否は process_need に含めない（この条件で quality_score 0.8 以上の目安）。"
-    max_example: "今日は、会議直後に部下へ任せる判断基準を整理したい。"
+    min_condition: "There is some direction for what to discuss today, but it is weakly connected to the presenting problem, too broad, mixed with preferences about how to proceed, or simply follows the counselor's suggestion without confirming acceptance. This also includes cases where only the choice of which topic to start with is made."
+    min_example: "I want to organize things a little."
+    max_condition: "The topic for today is narrowed to one item, shared as a focus connected to the initial presenting problem. In addition, the client either states a desire to address that topic or shows acceptance through explicit agreement with a preceding summary. Pace, process, comfort conditions, and whether advice is desired should not be folded into process_need. This is the rough standard for a quality_score of 0.8 or higher."
+    max_example: "Today I want to sort out the decision 기준 for what to delegate to my team after the meeting."
   process_need:
-    min_condition: "話し方や進め方の希望が未確認、または『特にない』程度に留まる。"
-    min_example: "進め方は特にないです。"
-    max_condition: "話しやすさの希望、または進行上の選好が一言で分かる。ペース・安心条件・確認の長さ・先に具体策/整理のどちらから入るか等の『進め方』が示され、今日扱う中身そのものは today_focus_topic に分けて保持する。直前要約への明示同意で確認できる場合は、短い承諾から復元した進め方希望でも quality_score 0.8 以上の目安とする。"
-    max_example: "同じ確認は短めにして、まず具体的な対処から話したい。"
+    min_condition: "The client's preference for how to proceed has not been confirmed, or is limited to something like 'nothing in particular.'"
+    min_example: "I do not really have a preference for how to proceed."
+    max_condition: "The client's preference for speaking easily or for the process is clear in a single phrase. Pace, comfort conditions, length of confirmation, and whether to start with concrete steps or with organization are all expressed as 'how to proceed,' while the actual topic for today is kept separately in today_focus_topic. If confirmed through explicit agreement with the previous summary, even a short response can count as a process preference worthy of a quality_score of 0.8 or higher."
+    max_example: "Keep the checking brief, and start with concrete coping first."
 
 CURRENT_STATUS_CHECK:
   current_situation:
-    min_condition: "現状の記述はあるが時期・頻度・文脈が不足。"
-    min_example: "最近つらい。"
-    max_condition: "いつ・どこで・どの程度起きるかが具体化される。"
-    max_example: "平日より休日夜に『何のためか分からない』感覚が週2-3回強く出る。"
+    min_condition: "The current state is described, but timing, frequency, or context are missing."
+    min_example: "I have been feeling rough lately."
+    max_condition: "It becomes concrete where, when, and how often it happens."
+    max_example: "On weekend nights more than weekdays, the feeling of not knowing what this is for comes up strongly two or three times a week."
   problem_scene:
-    min_condition: "問題場面が一般論で、単一場面を特定できない。"
-    min_example: "忙しいときにしんどい。"
-    max_condition: "再現可能な1場面が特定される。"
-    max_example: "日曜21時、翌週準備を始める直前に手が止まり、30分動けなくなる。"
+    min_condition: "The problem scene is discussed in general terms, so a single reproducible scene cannot be identified."
+    min_example: "I feel rough when I am busy."
+    max_condition: "One reproducible scene is identified."
+    max_example: "At 9 p.m. on Sunday, just before starting next week’s preparation, my hands stop moving and I cannot do anything for 30 minutes."
   emotion_state:
-    min_condition: "感情名のみで強度や混合が不明。"
-    min_example: "不安。"
-    max_condition: "主要感情と強度・揺れ方が記述される。"
-    max_example: "戸惑い7/10と空虚感6/10が同時に出て、自己否定が強まる。"
+    min_condition: "Only emotion labels are given, with no intensity or mixture."
+    min_example: "Anxiety."
+    max_condition: "The main emotions, intensity, and way they shift are described."
+    max_example: "Confusion 7/10 and emptiness 6/10 come up at the same time, and self-criticism gets stronger."
   background_context:
-    min_condition: "背景要因が抽象的で、現状との関連が弱い。"
-    min_example: "仕事が大変。"
-    max_condition: "背景要因と現在の困りごとの因果的つながりが示される。"
-    max_example: "評価指標の変更で達成感が下がり、休日に意味感の低下が起きやすくなっている。"
+    min_condition: "The background factor is abstract and weakly related to the current difficulty."
+    min_example: "Work is hard."
+    max_condition: "A causal connection is shown between the background factor and the current difficulty."
+    max_example: "A change in evaluation criteria reduced the sense of accomplishment, and the loss of meaning tends to show up on weekends."
 
 FOCUSING_TARGET_BEHAVIOR:
   target_behavior:
-    min_condition: "価値や意味の探索テーマに留まる、観察可能な行動として粗い、または面接者の先行提案に本人が乗っているだけで『これを標的にする』受け入れ確認が弱い。focus_agreement との対応も不明。"
-    min_example: "長期目標の見え方を明確化する。"
-    max_condition: "今日扱う標的が1つに絞られ、次のいずれかで表現される: ①目に見える行動 ②再現可能な場面での対処 ③状態改善のための近位行動。加えて、本人が自分の言葉で述べるか、直前要約への明示承諾で受け入れが確認でき、focus_agreement が同じ内容または近い言い換えを指している。"
-    max_example: "次のミーティング後、部下が2〜3分説明できるときは、私が先にまとめず一度説明を聞く。"
+    min_condition: "The content stays at the level of exploring values or meaning, is too rough to count as observable behavior, or is merely the counselor's prior suggestion that the client goes along with. Acceptance of 'this is the target' is weak, and the relation to focus_agreement is unclear."
+    min_example: "Clarify the shape of my long-term goal."
+    max_condition: "The target for today is narrowed to one item and expressed in one of the following ways: 1) an observable behavior, 2) coping in a reproducible scene, or 3) a proximal behavior that improves the current state. In addition, the client either says it in their own words or shows acceptance through explicit agreement with a prior summary, and focus_agreement points to the same content or a near paraphrase."
+    max_example: "After the next meeting, when my team member can explain something in two or three minutes, I will listen once without summarizing it for them first."
   change_direction:
-    min_condition: "方向性はあるが、維持/増減の軸が曖昧。"
-    min_example: "良くしたい。"
-    max_condition: "何を減らし何を増やしたいかの方向が大まかに見えている。"
-    max_example: "考え込みを減らし、回復につながる行動を増やしたい。"
+    min_condition: "There is a direction, but the axis of maintaining versus increasing/decreasing is unclear."
+    min_example: "I want to make things better."
+    max_condition: "The direction of what should be reduced and what should be increased is roughly visible."
+    max_example: "I want to reduce overthinking and increase actions that help recovery."
   focus_agreement:
-    min_condition: "方向性の一致や話題選好は見えるが、『今日は何を扱うか』への明示確認がない。『どちらから扱うか』の選択や、内容の薄い同意表現だけでは不十分。target_behavior があるのにその内容への言及がない場合もここに含む。"
-    min_example: "その方向でいく。"
-    max_condition: "今日この場で何を扱うかが短く要約され、本人の yes・自発的再表明・直前要約への明示承諾で確認されている。target_behavior が未確定なら today_focus_topic または change_direction を含み、target_behavior があるならその行動または近い言い換えを明示的に含む。必要に応じて途中で再確認できる。"
-    max_example: "今日は、次のミーティング後に部下へ任せる判断基準を整理する方向で進める、で合っています。はい。"
+    min_condition: "Agreement on direction or topic preference is visible, but there is no explicit confirmation of what should be discussed today. Merely choosing which topic to start with, or giving a thin expression of agreement, is not enough. This also includes cases where target_behavior exists but is not mentioned."
+    min_example: "Let us go with that direction."
+    max_condition: "What will be handled today is summarized briefly and confirmed through the client's yes, spontaneous restatement, or explicit agreement with the previous summary. If target_behavior is not yet fixed, the summary includes today_focus_topic or change_direction. If target_behavior exists, it explicitly includes that behavior or a near paraphrase. It can be re-confirmed during the session if needed."
+    max_example: "Today we will move forward with sorting out the decision criteria for what to delegate to my team after the next meeting, is that right? Yes."
 
 IMPORTANCE_PROMOTION:
   importance_reasons:
-    min_condition: "重要と言うが理由が一般的で、FOCUSING_TARGET_BEHAVIOR.target_behaviorとの接続が弱い。"
-    min_example: "大事だから。"
-    max_condition: "本人固有の理由が複数提示され、FOCUSING_TARGET_BEHAVIOR.target_behavior（確定済みならその内容）を扱う重要性に直接つながる。"
-    max_example: "朝のだるさを減らすと仕事の集中と自己効力感が戻るため重要。"
+    min_condition: "The client says it matters, but the reason is generic and weakly connected to FOCUSING_TARGET_BEHAVIOR.target_behavior."
+    min_example: "Because it is important."
+    max_condition: "Multiple client-specific reasons are given, and they connect directly to why addressing FOCUSING_TARGET_BEHAVIOR.target_behavior matters."
+    max_example: "Reducing morning sluggishness would improve work focus and restore a sense of efficacy, so it matters."
   core_values:
-    min_condition: "価値語が単発で、FOCUSING_TARGET_BEHAVIOR.target_behaviorとの接続が弱い。"
-    min_example: "健康。"
-    max_condition: "価値とFOCUSING_TARGET_BEHAVIOR.target_behaviorの接続が明確。"
-    max_example: "家族との時間を大切にしたい価値があり、夜の消耗を減らしたい。"
+    min_condition: "A value word appears on its own, with weak connection to FOCUSING_TARGET_BEHAVIOR.target_behavior."
+    min_example: "Health."
+    max_condition: "The connection between the value and FOCUSING_TARGET_BEHAVIOR.target_behavior is clear."
+    max_example: "I value time with my family, so I want to reduce evening exhaustion."
   importance_scale:
-    min_condition: "数値がない、または理由説明がなく、FOCUSING_TARGET_BEHAVIOR.target_behaviorとの関連が不明。"
-    min_example: "高いと思う。"
-    max_condition: "0-10数値と理由がセットで提示され、理由がFOCUSING_TARGET_BEHAVIOR.target_behaviorの重要性に結びつく。"
-    max_example: "重要度は8/10。続けないと休日の回復が難しいと感じるため。"
+    min_condition: "There is no number, or there is no explanation for the number, so the relation to FOCUSING_TARGET_BEHAVIOR.target_behavior is unclear."
+    min_example: "I think it is high."
+    max_condition: "A 0-10 rating and the reason are given together, and the reason ties back to the importance of FOCUSING_TARGET_BEHAVIOR.target_behavior."
+    max_example: "Importance is 8/10 because if I do not keep this going, it will be hard to recover on weekends."
 
 CONFIDENCE_PROMOTION:
   barrier_coping_strategy:
-    min_condition: "障壁への対処が抽象的で、FOCUSING_TARGET_BEHAVIOR.target_behavior実行時に次に何をするか不明。"
-    min_example: "気合いで何とかする。"
-    max_condition: "FOCUSING_TARGET_BEHAVIOR.target_behavior実行時の主要障壁に対する対処方法が具体場面つきで定義される。"
-    max_example: "22時以降にSNSを開きたくなったら、まず3分タイマーをかけて机から離れる。"
+    min_condition: "The response to barriers is abstract, and it is not clear what to do next when carrying out FOCUSING_TARGET_BEHAVIOR.target_behavior."
+    min_example: "I will just manage somehow."
+    max_condition: "A concrete coping method for the main barrier during FOCUSING_TARGET_BEHAVIOR.target_behavior is defined with a specific scene."
+    max_example: "If I want to open social media after 10 p.m., I will first set a three-minute timer and step away from the desk."
   supports_strengths:
-    min_condition: "強みの言及はあるが、FOCUSING_TARGET_BEHAVIOR.target_behaviorへの再利用方法が不明。"
-    min_example: "真面目。"
-    max_condition: "既存資源と、FOCUSING_TARGET_BEHAVIOR.target_behavior実行への再利用方法が明示される。"
-    max_example: "記録習慣があるので、既存のメモアプリで3分記録に転用できる。"
+    min_condition: "Strengths are mentioned, but it is unclear how they will be reused for FOCUSING_TARGET_BEHAVIOR.target_behavior."
+    min_example: "I am conscientious."
+    max_condition: "An existing resource and how it can be reused for carrying out FOCUSING_TARGET_BEHAVIOR.target_behavior are made explicit."
+    max_example: "Because I already have a note-taking habit, I can repurpose my current memo app for a three-minute log."
   past_success_experience:
-    min_condition: "過去の成功体験が一般論で、FOCUSING_TARGET_BEHAVIOR.target_behaviorへの再現・転用条件が不明。"
-    min_example: "前にうまくいったことはある。"
-    max_condition: "過去にうまくいった具体場面と、そのとき機能した要素が明示され、FOCUSING_TARGET_BEHAVIOR.target_behaviorへ転用可能に整理される。"
-    max_example: "昨年は就寝前にスマホを別室に置いた週だけ、平日5日中4日は0時前に寝られた。"
+    min_condition: "Past success is stated in general terms, but the conditions for reproducing or transferring it to FOCUSING_TARGET_BEHAVIOR.target_behavior are unclear."
+    min_example: "Something worked before."
+    max_condition: "A concrete past success and the factors that made it work are identified, and they are organized so they can be transferred to FOCUSING_TARGET_BEHAVIOR.target_behavior."
+    max_example: "Last year, on the weeks when I left my phone in another room before bed, I managed to fall asleep before midnight on four of five weekdays."
   confidence_scale:
-    min_condition: "数値がない、または根拠がなく、FOCUSING_TARGET_BEHAVIOR.target_behavior実行への自信として読めない。"
-    min_example: "少し自信がある。"
-    max_condition: "0-10数値と上下要因が言語化され、FOCUSING_TARGET_BEHAVIOR.target_behavior実行の見込みに結びつく。"
-    max_example: "自信は6/10。開始時間を固定できれば7に上がる見込み。"
+    min_condition: "There is no number, or no basis for the number, so it cannot be read as confidence in carrying out FOCUSING_TARGET_BEHAVIOR.target_behavior."
+    min_example: "I am somewhat confident."
+    max_condition: "A 0-10 rating and the factors that raise or lower it are verbalized, and they explain the likelihood of carrying out FOCUSING_TARGET_BEHAVIOR.target_behavior."
+    max_example: "My confidence is 6/10. If I can lock in a start time, it should go up to 7."
 
 NEXT_STEP_DECISION:
   next_step_action:
-    min_condition: "次の一歩が抽象的で着手行動になっておらず、FOCUSING_TARGET_BEHAVIOR.target_behaviorと結びつかない。"
-    min_example: "頑張る。"
-    max_condition: "最初の行動が具体で即実行可能で、FOCUSING_TARGET_BEHAVIOR.target_behaviorに直結する。"
-    max_example: "今週は休日夜に気分が落ちたら3分タイマーで感情メモを書く。"
+    min_condition: "The next step is abstract and not a concrete action, so it does not connect to FOCUSING_TARGET_BEHAVIOR.target_behavior."
+    min_example: "I will try harder."
+    max_condition: "The first action is concrete, immediately doable, and directly linked to FOCUSING_TARGET_BEHAVIOR.target_behavior."
+    max_example: "This week, if my mood drops on a weekend night, I will use a three-minute timer and write down the feeling."
   execution_context:
-    min_condition: "いつ/どこが曖昧で、FOCUSING_TARGET_BEHAVIOR.target_behaviorを実行する場面が特定できない。"
-    min_example: "時間があるとき。"
-    max_condition: "時間・場所・トリガー条件が明確で、FOCUSING_TARGET_BEHAVIOR.target_behavior実行場面に一致する。"
-    max_example: "日曜21時に机で、気分低下を感じたら開始する。"
+    min_condition: "When and where are vague, so the scene for carrying out FOCUSING_TARGET_BEHAVIOR.target_behavior cannot be identified."
+    min_example: "Whenever I have time."
+    max_condition: "The time, place, and trigger conditions are clear and match the scene for carrying out FOCUSING_TARGET_BEHAVIOR.target_behavior."
+    max_example: "Start on Sunday at 9 p.m. at my desk when I notice my mood dropping."
   commitment_level:
-    min_condition: "実行意思は示されるが、数値または非数値（定性）表現の意味が曖昧で、上げ下げ要因や実行条件が不足し、FOCUSING_TARGET_BEHAVIOR.target_behaviorへのコミットとして再現しにくい。"
-    min_example: "mediumくらい。"
-    max_condition: "非数値表現でも可。0-10数値または定性ラベル（low/medium/high, 低/中/高）に加えて、上げ下げ要因や実行条件が示され、FOCUSING_TARGET_BEHAVIOR.target_behavior実行確度の説明になっている（数値の高低自体は評価対象ではない）。"
-    max_example: "実行確度は3/10。前日リマインドがあれば5/10まで上げられそう。"
+    min_condition: "The intention to act is present, but the meaning of the numeric or non-numeric expression is vague. The factors that raise or lower it and the execution conditions are missing, so it is hard to read as a commitment to FOCUSING_TARGET_BEHAVIOR.target_behavior."
+    min_example: "Something like medium."
+    max_condition: "Non-numeric expressions are allowed. In addition to a 0-10 score or a qualitative label such as low/medium/high or low/normal/high, the factors that raise or lower it and the conditions for acting are given, and the explanation clearly describes the likelihood of carrying out FOCUSING_TARGET_BEHAVIOR.target_behavior. The absolute value itself is not being judged."
+    max_example: "Execution likelihood is 3/10. A reminder the day before could raise it to 5/10."
 
 REVIEW_REFLECTION:
   session_learning:
-    min_condition: "学びが一般論で本人文脈が薄く、FOCUSING_TARGET_BEHAVIOR.target_behaviorとの関係が曖昧。"
-    min_example: "無理しないことが大事。"
-    max_condition: "今回対話で得た本人固有の気づきが明確で、FOCUSING_TARGET_BEHAVIOR.target_behaviorの理解/実行にどう効くかが示される。"
-    max_example: "意味感低下は怠けではなく、休日夜の認知負荷で強まると分かった。"
+    min_condition: "The learning is generic and weakly tied to the client's context, so the relation to FOCUSING_TARGET_BEHAVIOR.target_behavior is unclear."
+    min_example: "It is important not to overdo it."
+    max_condition: "The client's own insight from the session is clear, and it shows how that insight helps with understanding or carrying out FOCUSING_TARGET_BEHAVIOR.target_behavior."
+    max_example: "I realized that the loss of meaning is not laziness, but something that gets stronger under cognitive load on weekend nights."
   key_takeaway:
-    min_condition: "要点が多すぎる、または曖昧で、FOCUSING_TARGET_BEHAVIOR.target_behaviorへの収束がない。"
-    min_example: "色々分かった。"
-    max_condition: "1-2点の核が短く再現可能に整理され、FOCUSING_TARGET_BEHAVIOR.target_behaviorへ再接続できる。"
-    max_example: "『初動を小さくする』『できた証拠を残す』の2点が核。"
+    min_condition: "The points are too many or too vague, and there is no convergence toward FOCUSING_TARGET_BEHAVIOR.target_behavior."
+    min_example: "I learned a lot of things."
+    max_condition: "One or two core points are compactly and reproducibly organized, and they can be linked back to FOCUSING_TARGET_BEHAVIOR.target_behavior."
+    max_example: "The two core points are 'make the first step smaller' and 'leave evidence of what worked.'"
   carry_forward_intent:
-    min_condition: "今後意図が抽象的で行動に落ちず、FOCUSING_TARGET_BEHAVIOR.target_behaviorに関する継続方針が不明。"
-    min_example: "続けたい。"
-    max_condition: "次回までの持ち越し意図が行動と結びつき、FOCUSING_TARGET_BEHAVIOR.target_behaviorに関する検証計画として機能する。"
-    max_example: "次回までに3回試し、やれた条件と難しかった条件を記録して持参する。"
+    min_condition: "The future intention is abstract and does not become action, so there is no clear continuation plan for FOCUSING_TARGET_BEHAVIOR.target_behavior."
+    min_example: "I want to keep going."
+    max_condition: "The intention to carry something forward is linked to action and functions as a verification plan for FOCUSING_TARGET_BEHAVIOR.target_behavior."
+    max_example: "I will try it three times before next time and bring notes about when it worked and when it was hard."
 
 CLOSING:
   closing_end_signal:
-    min_condition: "別れの挨拶も終了への合意を示唆する表現も不明確で、区切り合意に使えない。"
-    min_example: "まあこんな感じです。"
-    max_condition: "別れの挨拶がある、または終了への合意を示唆する表現があり、終結合意の根拠になる。"
-    max_example: "今日はここまでで、次回までにその一歩をどんな場面でどう試せそうか、もう少し具体的に考えてみたいです。"
+    min_condition: "Neither a farewell nor an expression that suggests agreement to end is clear, so it cannot serve as a closing signal."
+    min_example: "Well, that is about it."
+    max_condition: "There is a farewell, or a phrase that suggests agreement to end, and it can serve as evidence of a closing agreement."
+    max_example: "Let us stop here for today, and before next time I want to think a little more concretely about where and how I can try that next step."

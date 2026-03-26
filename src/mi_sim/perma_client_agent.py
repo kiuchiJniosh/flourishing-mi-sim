@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 """
-クライアント側エージェント（シミュレーション用）
+Client-side agent for simulation.
 
-- conversation_environment.py から切り出したい場合のための独立モジュールです。
-- 人間カウンセラー × LLMクライアント（ラベル付け用）
-- LLMカウンセラー × LLMクライアント（自己対話シミュレーション）
-
-の両方で共通に使えます。
+- Standalone module for cases where we want to split it out from conversation_environment.py.
+- Shared by human counselor x LLM client setups for labeling.
+- Shared by LLM counselor x LLM client self-play simulations.
 """
 
 from dataclasses import dataclass, field
@@ -21,21 +19,21 @@ import re
 from .paths import APP_DIR, PROJECT_ROOT, resolve_config_path, resolve_project_path
 from .mi_counselor_agent import LLMClient
 
-# 既定のクライアント設定（CLI からも参照される）
+# Default client settings (also referenced by the CLI)
 DEFAULT_CLIENT_CODE: str = "LANG_MGR"
-DEFAULT_FIRST_CLIENT_UTTERANCE: str = "最近、生活リズムが崩れてしまって、気持ちも落ち込んでいます。"
+DEFAULT_FIRST_CLIENT_UTTERANCE: str = "Recently, my daily routine has fallen apart, and I have been feeling down."
 REPLY_SENTENCE_MIN: int = 1
 REPLY_SENTENCE_MAX: int = 4
 
 
 class ClientAgent(Protocol):
     """
-    クライアント側エージェントのインタフェース。
+    Interface for a client-side agent.
 
     respond:
-      - counselor_text: 直近のカウンセラー発話（今回の入力）
-      - history: ConversationTurn っぽいオブジェクトのリスト（speaker/text 属性があればOK）
-      - return: 次のクライアント発話（str）
+      - counselor_text: the most recent counselor utterance (current input)
+      - history: a list of ConversationTurn-like objects (speaker/text attributes are enough)
+      - return: the next client utterance (str)
     """
 
     def respond(self, counselor_text: str, history: List[Any]) -> str:
@@ -43,29 +41,29 @@ class ClientAgent(Protocol):
 
 
 # ==============================
-# クライアント内部状態
+# Client internal state
 # ==============================
 
 @dataclass
 class ClientInternalState:
     """
-    クライアントの「内部ログ」として持つ6つの指標（すべて 0〜10 の連続値）。
+    Six metrics kept as the client's internal log (all continuous values from 0 to 10).
 
-    - pos_affect: ポジティブ感情の強さ
-    - neg_affect: ネガティブ感情の強さ
-    - importance_change: 変化・目標達成の重要度の認識
-    - confidence_change: 変化・目標達成の自信度の認識
-    - like_counselor: カウンセラーへの好感
-    - tension_counselor: カウンセラーへの不和感・緊張
+    - pos_affect: strength of positive affect
+    - neg_affect: strength of negative affect
+    - importance_change: perceived importance of change / goal attainment
+    - confidence_change: perceived confidence in change / goal attainment
+    - like_counselor: affinity toward the counselor
+    - tension_counselor: dissonance / tension toward the counselor
 
-    特性（trait_*）は各スコアの「出にくさ／出やすさ」を表す係数です。
-    -1: 出にくい（低めで安定しやすい）
-     0: 標準
-    +1: 出やすい（高めで安定しやすい）
+    trait_* values indicate how easy it is for each score to surface.
+    -1: hard to surface (tends to stay lower)
+     0: neutral
+    +1: easy to surface (tends to stay higher)
     """
 
     # ------------------------------
-    # 状態（0〜10）
+    # State (0-10)
     # ------------------------------
     pos_affect: float = 5.0
     neg_affect: float = 5.0
@@ -75,10 +73,10 @@ class ClientInternalState:
     tension_counselor: float = 0.0
 
     # ------------------------------
-    # 特性：各スコアの「出やすさ」
-    # -1 = 出にくい
-    #  0 = 標準
-    # +1 = 出やすい
+    # Traits: how easily each score surfaces
+    # -1 = hard to surface
+    #  0 = neutral
+    # +1 = easy to surface
     # ------------------------------
     trait_expression_pos: float = 0.0
     trait_expression_neg: float = 0.0
@@ -119,11 +117,11 @@ class ClientInternalState:
     @classmethod
     def from_dict(cls, data: Dict[str, Any], base: Optional["ClientInternalState"] = None) -> "ClientInternalState":
         """
-        JSON などから復元するためのヘルパー。
-        想定外のキーや値は無視しつつ、既定値をベースに上書きします。
+        Helper for restoring from JSON and similar sources.
+        Unknown keys and values are ignored, and defaults are used as the base.
         """
         base_state = base if isinstance(base, cls) else cls()
-        # まずベース値で初期化（状態＋特性）
+        # Initialize with the base values first (state + traits).
         base_kwargs = {k: getattr(base_state, k) for k in cls.STATE_KEYS + cls.TRAIT_KEYS}
         base = cls(**base_kwargs)  # type: ignore[arg-type]
         if not isinstance(data, dict):
@@ -136,18 +134,18 @@ class ClientInternalState:
             try:
                 setattr(base, key, float(v))
             except (TypeError, ValueError):
-                # 数値に変換できないときは無視
+                # Ignore values that cannot be converted to numbers.
                 continue
 
         return base
 
     # ------------------------------
-    # 出やすさ（trait_expression_*）の取得
+    # Retrieve expression tendency (trait_expression_*)
     # ------------------------------
     def get_expression(self, state_key: str) -> float:
         """
-        各スコアに対応する「出やすさ」を返す。
-        -1.0 〜 +1.0 の範囲にクリップして扱う。
+        Return the expression tendency for each score.
+        Values are clipped to the range -1.0 to +1.0.
         """
         mapping = {
             "pos_affect": "trait_expression_pos",
@@ -166,7 +164,7 @@ class ClientInternalState:
         except (TypeError, ValueError):
             val = 0.0
 
-        # -1〜+1 にクリップ
+        # Clip to -1.0 to +1.0.
         if val < -1.0:
             val = -1.0
         elif val > 1.0:
@@ -175,33 +173,33 @@ class ClientInternalState:
 
     def adjust_by_expression(self, state_key: str, before: float, target: float) -> float:
         """
-        LLM が提案した target を、そのスコアの「出やすさ」に応じて歪める。
+        Distort an LLM-suggested target according to the score's expression tendency.
 
-        - expr = -1（出にくい）
-            上昇（target > before）   → 小さく（0.5倍）なりやすい
-            下降（target < before）   → 大きく（1.5倍）なりやすい
+        - expr = -1 (hard to surface)
+            upward change (target > before) tends to shrink (0.5x)
+            downward change (target < before) tends to grow (1.5x)
 
-        - expr = +1（出やすい）
-            上昇                       → 大きく（1.5倍）なりやすい
-            下降                       → 小さく（0.5倍）なりやすい
+        - expr = +1 (easy to surface)
+            upward change tends to grow (1.5x)
+            downward change tends to shrink (0.5x)
 
-        expr = 0（標準）のときはそのまま。
+        expr = 0 (neutral) leaves the target unchanged.
         """
         expr = self.get_expression(state_key)
         delta = target - before
 
-        # 変化がない、または標準ならそのまま
+        # Leave unchanged when there is no delta or the tendency is neutral.
         if delta == 0.0 or expr == 0.0:
             return target
 
-        # 出やすさの強さ（0〜1）。0.5 くらいだと「そこそこ効く」感じ
+        # Tendency strength (0-1). Around 0.5 gives a moderate effect.
         alpha = 0.5
 
         if delta > 0:
-            # 上方向の変化：expr > 0 で増幅、expr < 0 で抑制
+            # Upward change: expr > 0 amplifies, expr < 0 suppresses.
             mult = 1.0 + alpha * expr
         else:
-            # 下方向の変化：expr > 0 で抑制、expr < 0 で増幅
+            # Downward change: expr > 0 suppresses, expr < 0 amplifies.
             mult = 1.0 - alpha * expr
 
         return before + delta * mult
@@ -210,34 +208,34 @@ class ClientInternalState:
 @dataclass
 class SimpleClientLLM(ClientAgent):
     """
-    LLMを使ったシンプルなクライアントエージェント。
+    Simple client agent powered by an LLM.
 
-    - 「悩みを持つクライアント」として自然に返答する役
-    - 実験・シミュレーション用途
+    - Responds naturally as a client with concerns
+    - Intended for experiments and simulations
     """
-    llm: LLMClient  # reply 用 LLM
-    llm_state: Optional[LLMClient] = None  # state 推定用 LLM（two_stageで使用）
+    llm: LLMClient  # LLM for replies
+    llm_state: Optional[LLMClient] = None  # LLM for state estimation (used in two_stage)
     style: Literal["cooperative", "ambivalent", "resistant"] = "cooperative"
     persona: Optional[str] = None
     scenario: Optional[str] = None
     temperature: float = 0.4
     seed: Optional[int] = None
-    # 状態変化の1ターン上限（Noneなら制限なし）
-    # 改善: デフォルトで上限を設定して急変・飽和を抑制
+    # Per-turn ceiling for state changes (None means no limit).
+    # Improvement: set a default ceiling to reduce abrupt jumps and saturation.
     max_state_step: Optional[float] = 0.8
     max_history_turns: int = 20
 
-    # ★ 変化量の全体スケーリング係数（1.0より大きいと変化が大きくなる）
-    # 改善: 二重増幅を避け、自然な変化量にするため 1.0 を既定
+    # Overall scaling factor for change magnitude (values > 1.0 increase change).
+    # Improvement: default to 1.0 to avoid double amplification and keep changes natural.
     delta_scale: float = 1.0
-    # 発話後（自分で話した直後）の再評価は、受け取り時より小さめに動かす
+    # Post-utterance reassessment (right after speaking) should move less than after listening.
     post_reply_delta_scale: float = 0.6
     post_reply_max_state_step: Optional[float] = 0.5
 
-    # ★ 指標ごとの『変わりやすさ』（1.0=基準、0.0=変化しない）
-    #   - pos/neg: 変わりやすい
-    #   - importance/confidence/tension: 変わりにくい
-    #   - like: 中程度
+    # Ease-of-change per metric (1.0 = baseline, 0.0 = no change).
+    #   - pos/neg: easier to change
+    #   - importance/confidence/tension: harder to change
+    #   - like: medium
     sensitivity_pos: float = 1.0
     sensitivity_neg: float = 1.0
     sensitivity_importance: float = 0.8
@@ -245,14 +243,14 @@ class SimpleClientLLM(ClientAgent):
     sensitivity_like: float = 1.0
     sensitivity_tension: float = 0.8
 
-    # ★ 内部状態を丸めて保持する桁数（小数第2位まで）
+    # Number of decimal places used to store internal state (up to 2 decimal places).
     state_decimal_places: int = 2
 
-    # ★ like/tension が動かないときの保険（変化がないときだけ小さく補正）
+    # Safety net for when like/tension do not move (small adjustment only when unchanged).
     relationship_heuristic: bool = True
     relationship_heuristic_only_if_unchanged: bool = True
 
-    # ★ クライアントの内部状態（ターンごとに更新）
+    # Client internal state (updated each turn)
     internal_state: ClientInternalState = field(default_factory=ClientInternalState)
     prompt_profile: Optional[Dict[str, Any]] = None
     _last_debug_info: Dict[str, Any] = field(default_factory=dict, init=False, repr=False)
@@ -266,7 +264,7 @@ class SimpleClientLLM(ClientAgent):
         if self.scenario is not None:
             self.scenario = str(self.scenario)
 
-        # スタイル別の初期状態ベースラインを反映（cooperative/ambivalent/resistant）
+        # Apply the style-specific initial state baseline (cooperative / ambivalent / resistant).
         try:
             baseline = self._get_style_state_baseline(self.style)
             for k, v in baseline.items():
@@ -274,7 +272,7 @@ class SimpleClientLLM(ClientAgent):
         except Exception:
             pass
 
-        # importance/confidence の初期値を環境変数で上書き可能に（緩い既定: 3 と 2）
+        # Allow the initial importance/confidence values to be overridden via environment variables (soft defaults: 3 and 2).
         try:
             imp0 = os.getenv("CLIENT_IMPORTANCE_BASELINE")
             conf0 = os.getenv("CLIENT_CONFIDENCE_BASELINE")
@@ -283,28 +281,28 @@ class SimpleClientLLM(ClientAgent):
             if conf0 is not None:
                 self.internal_state.confidence_change = self._clip_0_10(float(conf0))
         except Exception:
-            # 読み取りに失敗しても既定値（3, 2）のまま
+            # Keep the defaults (3, 2) even if reading fails.
             pass
 
     def reset(self) -> None:
         """
-        セッションリセット時に呼ばれることを想定。
-        内部状態も初期値に戻します（スタイル別ベースラインを反映し、特性は維持）。
+        Intended to be called when resetting a session.
+        Restores the internal state to its initial values while keeping traits and applying the style baseline.
         """
-        # 既存の特性は維持
+        # Keep the existing traits.
         traits = self.internal_state.to_traits_dict()
-        # スタイル別ベースライン
+        # Style-specific baseline.
         baseline = self._get_style_state_baseline(self.style)
         st = ClientInternalState()
         for k, v in baseline.items():
             setattr(st, k, float(v))
-        # 特性を戻す
+        # Restore traits.
         for k, v in traits.items():
             try:
                 setattr(st, k, float(v))
             except Exception:
                 pass
-        # .env による初期 importance/confidence の上書き（存在時のみ）
+        # Override initial importance/confidence via .env values, if present.
         try:
             imp0 = os.getenv("CLIENT_IMPORTANCE_BASELINE")
             conf0 = os.getenv("CLIENT_CONFIDENCE_BASELINE")
@@ -318,18 +316,18 @@ class SimpleClientLLM(ClientAgent):
 
     def get_internal_state(self) -> Dict[str, float]:
         """
-        ConversationEnvironment からログ用に呼ぶためのアクセサ。
+        Accessor used by ConversationEnvironment for logging.
         """
         return self.internal_state.to_dict()
 
     def get_last_debug_info(self) -> Dict[str, Any]:
         """
-        直近の LLM 応答に関するデバッグ情報を返す。
-        - raw: 生レスポンス
-        - reply: 実際に使った返答
-        - old_state / new_state: 変化前後の状態（特性含む）
-        - internal_state_reason: スコア変化の理由（LLMが返した場合）
-        - meta: 付加的な自己ラベル等
+        Return debug information for the most recent LLM response.
+        - raw: raw response
+        - reply: the reply actually used
+        - old_state / new_state: state before and after the update (including traits)
+        - internal_state_reason: explanation for the state change, if the LLM provided one
+        - meta: additional self-labels and similar metadata
         """
         return dict(self._last_debug_info)
 
@@ -369,29 +367,29 @@ class SimpleClientLLM(ClientAgent):
         hidden = cls._string_list(prompt_profile.get("hidden_formulation"))
 
         if facts:
-            lines.append("【初期に出しやすい具体事実】")
+            lines.append("[Concrete facts easy to surface early]")
             for item in facts[:3]:
                 text = str(item.get("text") or "").strip()
                 if text:
                     lines.append(f"- {text}")
 
         if scenes:
-            lines.append("【困りやすい具体場面】")
+            lines.append("[Concrete scenes that often cause difficulty]")
             for item in scenes[:3]:
                 scene = str(item.get("scene") or "").strip()
                 if scene:
                     lines.append(f"- {scene}")
 
         if isinstance(wording_bank, Mapping):
-            lines.append("【本人が使いがちな言い方】")
+            lines.append("[Typical wording used by the person]")
             for key in ("complaint_openers", "self_view_phrases", "hedges"):
                 values = cls._string_list(wording_bank.get(key))
                 for text in values[:2]:
                     lines.append(f"- {text}")
 
         if hidden:
-            lines.append("【裏設定】")
-            lines.append("- これは背景理解用。本文で専門語や分析語は出さない")
+            lines.append("[Background notes]")
+            lines.append("- For background understanding only. Do not use technical or analytical language in the body.")
             for text in hidden[:3]:
                 lines.append(f"- {text}")
 
@@ -443,30 +441,30 @@ class SimpleClientLLM(ClientAgent):
             for item in facts[:2]:
                 text = str(item.get("text") or "").strip()
                 if text:
-                    lines.append(f"- 生活事実候補: {text}")
+                    lines.append(f"- Candidate life fact: {text}")
             for item in scenes[:2]:
                 scene = str(item.get("scene") or "").strip()
                 if scene:
-                    lines.append(f"- 場面候補: {scene}")
+                    lines.append(f"- Candidate scene: {scene}")
                     likely_words = cls._string_list(item.get("likely_words"))
                     if likely_words:
-                        lines.append(f"- 言い方の例: {' / '.join(likely_words[:2])}")
+                        lines.append(f"- Example wording: {' / '.join(likely_words[:2])}")
             return "\n".join(lines).strip()
 
         for item in facts:
             item_id = str(item.get("id") or "").strip()
             text = str(item.get("text") or "").strip()
             if item_id in target_ids and text:
-                lines.append(f"- 生活事実候補: {text}")
+                lines.append(f"- Candidate life fact: {text}")
 
         for item in scenes:
             item_id = str(item.get("id") or "").strip()
             scene = str(item.get("scene") or "").strip()
             if item_id in target_ids and scene:
-                lines.append(f"- 場面候補: {scene}")
+                lines.append(f"- Candidate scene: {scene}")
                 likely_words = cls._string_list(item.get("likely_words"))
                 if likely_words:
-                    lines.append(f"- 言い方の例: {' / '.join(likely_words[:2])}")
+                    lines.append(f"- Example wording: {' / '.join(likely_words[:2])}")
 
         return "\n".join(lines[:8]).strip()
 
@@ -474,29 +472,29 @@ class SimpleClientLLM(ClientAgent):
     def _build_persona(style: str, scenario: Optional[str] = None) -> str:
         presets = {
             "cooperative": (
-                "あなたは、生活や行動のことで少し困りごとを抱えているクライアントです。\n"
-                "自分の気持ちや状況を、できる範囲で正直に、丁寧な口調で話してください。\n"
-                "カウンセラーと対立するのではなく、自分の本音や迷いを表現してよい場です。\n"
+                "You are a client who is dealing with some difficulties in daily life or behavior.\n"
+                "Speak honestly about your feelings and situation, as much as you can, in a polite tone.\n"
+                "This is a place to express your real thoughts and uncertainty, not to argue with the counselor.\n"
             ),
             "ambivalent": (
-                "あなたは、変わりたい気持ちと『どうせ無理かも』という迷いが混ざったクライアントです。\n"
-                "前向きな気持ちと不安やためらいの両方を、丁寧な口調で率直に言葉にしてください。\n"
-                "反射には自然に反応しつつ、時には尻込みしたり、決めきれない様子も出してかまいません。\n"
+                "You are a client whose desire to change is mixed with the feeling that it might not work anyway.\n"
+                "Put both hopeful feelings and anxiety or hesitation into words honestly and politely.\n"
+                "Respond naturally to reflections, and it is okay to sometimes show hesitation or indecision.\n"
             ),
             "resistant": (
-                "あなたは、少し構え気味で、変化に疑問や不信感を持つクライアントです。\n"
-                "丁寧さは保ちつつも『でも』『どうせ』『前も失敗した』など、抵抗や懐疑がにじむ返答を織り交ぜてください。\n"
-                "ただし攻撃的にはならず、本音ベースでの反応に留めてください。\n"
+                "You are a client who is somewhat guarded and has doubts or distrust about change.\n"
+                "Stay polite, but mix in responses that show resistance or skepticism, such as 'but,' 'anyway,' or 'I failed before.'\n"
+                "Do not become aggressive; keep your responses grounded in your real feelings.\n"
             ),
         }
         base_persona = presets.get(style, presets["cooperative"])
         if scenario:
-            base_persona += "\n【シナリオ】\n" + str(scenario).strip() + "\n"
+            base_persona += "\n[Scenario]\n" + str(scenario).strip() + "\n"
 
-        # 追加ルール（外部ファイル）を連結
-        # - ファイルが存在すれば、その全文をそのまま追記する
-        # - 既定: config/client_prompt_rules.md
-        # - 環境変数 CLIENT_PROMPT_RULES_MD_PATH で上書き可能
+        # Append additional rules from an external file.
+        # - If the file exists, append its full contents as-is.
+        # - Default: config/client_prompt_rules.md
+        # - Can be overridden with CLIENT_PROMPT_RULES_MD_PATH
         rules_path_env = (os.getenv("CLIENT_PROMPT_RULES_MD_PATH") or "").strip()
         if rules_path_env:
             rules_path = resolve_project_path(rules_path_env)
@@ -506,13 +504,13 @@ class SimpleClientLLM(ClientAgent):
             try:
                 rules_text = rules_path.read_text(encoding="utf-8").strip()
             except OSError as e:
-                raise RuntimeError(f"client_prompt_rules.md の読み込みに失敗しました: {rules_path}") from e
+                raise RuntimeError(f"Failed to load client_prompt_rules.md: {rules_path}") from e
             if rules_text:
                 base_persona += "\n\n" + rules_text + "\n"
         return base_persona
 
     # ------------------------------
-    # プロファイル読み込み（CLI 互換）
+    # Profile loading (CLI-compatible)
     # ------------------------------
     @staticmethod
     def _find_client_profiles_path() -> Path:
@@ -525,14 +523,14 @@ class SimpleClientLLM(ClientAgent):
             p = resolve_project_path(env_path).resolve()
             if p.is_file():
                 return p
-            raise FileNotFoundError(f"client_profiles.yaml が見つかりません（環境変数指定）: {p}")
+            raise FileNotFoundError(f"client_profiles.yaml not found (specified via environment variable): {p}")
 
         candidates = [
             APP_DIR / "client_profiles.yaml",
             resolve_config_path("client_profiles.yaml"),
             PROJECT_ROOT / "client_profiles.yaml",
             Path.cwd() / "client_profiles.yaml",
-            # 互換（旧名）
+            # Compatibility (old names)
             APP_DIR / "clients.yaml",
             PROJECT_ROOT / "clients.yaml",
             Path.cwd() / "clients.yaml",
@@ -542,7 +540,7 @@ class SimpleClientLLM(ClientAgent):
                 return p
         tried = "\n".join([f"- {c}" for c in candidates])
         raise FileNotFoundError(
-            "client_profiles.yaml が見つかりません。次の場所を探しました:\n" + tried
+            "client_profiles.yaml was not found. Searched the following locations:\n" + tried
         )
 
     @staticmethod
@@ -555,14 +553,14 @@ class SimpleClientLLM(ClientAgent):
     def _get_client_profile(cfg: Dict[str, Any], client_code: str) -> Dict[str, Any]:
         clients = cfg.get("clients")
         if not isinstance(clients, dict):
-            raise KeyError("client_profiles.yaml に clients セクションがありません。")
+            raise KeyError("client_profiles.yaml does not contain a clients section.")
         code = (client_code or "").strip()
         if code not in clients:
             available = ", ".join(sorted([str(k) for k in clients.keys()]))
-            raise KeyError(f"client_profiles.yaml に client_code={code} がありません。利用可能: {available}")
+            raise KeyError(f"client_code={code} was not found in client_profiles.yaml. Available: {available}")
         profile = clients.get(code)
         if not isinstance(profile, dict):
-            raise TypeError(f"client_profiles.yaml の clients.{code} が dict ではありません。")
+            raise TypeError(f"client_profiles.yaml clients.{code} is not a dict.")
         return profile
 
     @staticmethod
@@ -573,22 +571,22 @@ class SimpleClientLLM(ClientAgent):
         defs = cfg.get("definitions") or {}
         perma_defs = defs.get("perma") or {}
         style_defs = defs.get("interpersonal_styles") or {}
-        # 新形式(perma_patterns)を優先し、旧形式(perma_focus_patterns)も後方互換で許容する
+        # Prefer the new perma_patterns format and accept the old perma_focus_patterns format for compatibility.
         pattern_defs = defs.get("perma_patterns") or defs.get("perma_focus_patterns") or {}
 
-        # pattern は "M1" だけでなく、"M1 Meaning（意味）低下" のように
-        # コード＋ラベルが入っている場合があるため、先頭トークンをコードとして解釈する。
+        # pattern may include both a code and a label, such as "M1 Meaning (meaning) decline",
+        # so interpret the first token as the code.
         raw_pattern = _s(profile.get("pattern"))
         pattern_code = raw_pattern.split()[0] if raw_pattern else ""
         pattern_info = pattern_defs.get(pattern_code) or {}
         if not isinstance(pattern_info, dict):
             pattern_info = {}
-        # ラベルは定義があればそれを、無ければ raw 値をそのまま使う
+        # Use the defined label if present; otherwise fall back to the raw value.
         pattern_label = _s(pattern_info.get("label")) or (raw_pattern or pattern_code)
 
         primary_focus_code = _s(pattern_info.get("primary_focus"))
         primary_focus_label = _s(perma_defs.get(primary_focus_code)) or primary_focus_code
-        # perma_patterns 形式では primary_focus が無い場合があるため、最小スコア軸を主焦点として補完
+        # perma_patterns may omit primary_focus, so infer the primary focus from the lowest-scoring axis.
         if not primary_focus_code:
             perma_score_items: List[Tuple[str, float]] = []
             for key in ("P", "E", "R", "M", "A"):
@@ -607,7 +605,7 @@ class SimpleClientLLM(ClientAgent):
                         primary_focus_code = key
                         primary_focus_label = _s(perma_defs.get(key)) or key
                         break
-        # 定義に無い場合のフォールバック（コード先頭の P/E/R/M/A から推測）
+        # Fallback when no definition exists (infer from the first code letter: P/E/R/M/A).
         if not primary_focus_code and pattern_code:
             head = (pattern_code[0] if pattern_code else "").upper()
             if head in perma_defs:
@@ -618,7 +616,7 @@ class SimpleClientLLM(ClientAgent):
         style_info = style_defs.get(interpersonal_style_code) or {}
         interpersonal_label = _s(style_info.get("label")) or interpersonal_style_code
 
-        # 背景・属性の拾い上げ
+        # Collect background and attributes.
         bg = profile.get("background") or {}
         age_range = _s(bg.get("age_range")) if isinstance(bg, dict) else ""
         sex = _s(profile.get("sex"))
@@ -661,16 +659,16 @@ class SimpleClientLLM(ClientAgent):
             if rendered:
                 return rendered
 
-        # 既に case_overview が整形済みであれば優先して採用
+        # Prefer case_overview if it has already been prepared.
         overview = profile.get("case_overview")
         if isinstance(overview, str) and overview.strip():
             return overview.strip()
 
-        # 最低限の構成でテキストを合成
+        # Compose text with the minimum required structure.
         b = []
         pc = str(profile.get("presenting_concern") or "").strip()
         if pc:
-            b.append(f"来談理由: {pc}")
+            b.append(f"Presenting concern: {pc}")
         bg = profile.get("background") or {}
         if isinstance(bg, dict):
             age = str(bg.get("age_range") or "").strip()
@@ -678,25 +676,25 @@ class SimpleClientLLM(ClientAgent):
             living = str(bg.get("living_situation") or "").strip()
             info = " / ".join([x for x in (age, occ, living) if x])
             if info:
-                b.append(f"背景: {info}")
+                b.append(f"Background: {info}")
         baseline = profile.get("baseline_perma") or {}
         if isinstance(baseline, dict):
             keys = ["P", "E", "R", "M", "A"]
             vals = [f"{k}:{baseline.get(k)}" for k in keys if k in baseline]
             if vals:
-                b.append("事前PERMA: " + ", ".join(vals))
+                b.append("Pre-session PERMA: " + ", ".join(vals))
         strengths = profile.get("strengths_resources") or []
         if isinstance(strengths, list) and strengths:
             joined = "; ".join([str(s) for s in strengths])
-            b.append(f"強み・資源: {joined}")
+            b.append(f"Strengths / resources: {joined}")
         mc = str(profile.get("maintaining_cycle") or "").strip()
         if mc:
-            b.append(f"維持サイクル: {mc}")
+            b.append(f"Maintaining cycle: {mc}")
         sg = str(profile.get("session_goal") or "").strip()
         if sg:
-            b.append(f"面接の焦点: {sg}")
+            b.append(f"Interview focus: {sg}")
         if not b:
-            return f"クライアント {client_code} の基本情報。"
+            return f"Basic information for client {client_code}."
         return "\n".join(b)
 
     @staticmethod
@@ -733,7 +731,7 @@ class SimpleClientLLM(ClientAgent):
         max_state_step_env: Optional[str] = None,
         default_first_utterance: str = DEFAULT_FIRST_CLIENT_UTTERANCE,
     ) -> Tuple["SimpleClientLLM", "SimpleClientLLM.ClientBundle"]:
-        # YAML からプロフィールを取得
+        # Load the profile from YAML.
         profiles_path = cls._find_client_profiles_path()
         cfg = cls._load_client_profiles_yaml(profiles_path)
         profile = cls._get_client_profile(cfg, client_code)
@@ -742,11 +740,11 @@ class SimpleClientLLM(ClientAgent):
 
         scenario = cls._build_client_scenario_text(client_code, profile, cfg, derived_meta)
 
-        # クライアントの応答スタイルを決定
+        # Determine the client's response style.
         style = cls._resolve_client_llm_style(env_style, derived_meta.get("interpersonal_style_code", ""))
 
-        # 状態変化幅の制限
-        # 改善: 既定で上限（0.8）を適用。明示的に "none" を指定した場合のみ無制限。
+        # Limit the magnitude of state changes.
+        # Improvement: apply a default ceiling of 0.8. Only an explicit "none" makes it unlimited.
         DEFAULT_MAX_STEP = 0.8
         max_state_step: Optional[float]
         try:
@@ -759,27 +757,27 @@ class SimpleClientLLM(ClientAgent):
         except (TypeError, ValueError):
             max_state_step = DEFAULT_MAX_STEP
 
-        # インスタンス生成
+        # Instantiate the client.
         client = cls(
             llm=llm_reply,
             style=style,
             scenario=scenario,
             max_state_step=max_state_step,
         )
-        # 二段パイプライン用の状態LLMを保持
+        # Keep the state LLM for the two-stage pipeline.
         try:
             client.llm_state = llm_state  # type: ignore[attr-defined]
         except Exception:
             pass
         client.prompt_profile = prompt_profile or None
-        # 特性（出やすさ）を反映
+        # Apply trait tendencies.
         cls._apply_trait_expression_to_client(client, profile)
 
-        # 初期クライアント発話の決定
+        # Determine the initial client utterance.
         first_env = (first_client_utterance_env or "").strip()
         presenting = str(profile.get("presenting_concern") or "").strip()
 
-        # 生成ポリシー: env > auto（LLM生成試行→失敗時は presenting）
+        # Generation policy: env > auto (try LLM generation, then fall back to presenting concern).
         mode = str(os.getenv("CLIENT_FIRST_UTTERANCE_MODE", "auto")).strip().lower()
         generate = True if mode in ("llm", "on", "true") else False if mode in ("presenting", "off", "false") else True
 
@@ -809,7 +807,7 @@ class SimpleClientLLM(ClientAgent):
         return client, bundle
 
     # ------------------------------
-    # 初回発話のLLM生成
+    # LLM generation for the first utterance
     # ------------------------------
     @staticmethod
     def _generate_first_utterance(
@@ -822,22 +820,22 @@ class SimpleClientLLM(ClientAgent):
         temperature: float = 0.3,
     ) -> str:
         """
-        presenting_concern を素材に、来談初回の自然な「最初の一言」を 1〜3文で生成する。
-        失敗時は空文字（呼び出し側でフォールバック）。
+        Generate a natural first utterance for the initial intake, using presenting_concern as input.
+        Returns an empty string on failure so the caller can fall back.
         """
         try:
             sys = (
                 (persona or "").strip()
-                + "\n\n【タスク】\n"
-                "あなたは初回面接のクライアントです。以下の困りごとを背景に、\n"
-                "来談時の『最初の一言』として自然な日本語の発話を 1〜3文で、短く生成してください。\n"
-                "- 評価・助言・要約・自己解決の提示はしない\n"
-                "- セラピストを褒めない／指示しない\n"
-                "- 戸惑いや曖昧さを含んでもよい\n"
-                "- 抽象的な困りごとだけで終わらせず、可能なら生活事実か具体場面を1つだけ自然に含める\n"
-                "- 出力はテキストのみ（JSONや説明は不要）\n"
-                "- 出力本文は自然な日本語のみ。固有名詞・一般的な略語を除き、英単語・ローマ字・プレースホルダを混ぜない\n"
-                "- 入力に英単語混入や崩れた語があっても、その表記をそのまま繰り返さず、意味が分かる範囲で自然な日本語に言い換える\n"
+                + "\n\n[Task]\n"
+                "You are the client in an initial intake session. Based on the difficulties below,\n"
+                "generate a short 1-3 sentence opening utterance in natural English.\n"
+                "- Do not give evaluations, advice, summaries, or self-solved solutions\n"
+                "- Do not praise or instruct the therapist\n"
+                "- It is okay to include hesitation or ambiguity\n"
+                "- Do not stop at abstract concerns; if possible, naturally include one concrete life fact or scene\n"
+                "- Output text only (no JSON or explanation)\n"
+                "- Write only natural English in the body. Do not mix in slang, placeholders, or untranslated tokens except proper nouns or common abbreviations\n"
+                "- Even if the input contains mixed or broken wording, do not repeat it verbatim; rephrase naturally in English when possible\n"
             )
             seed_lines: List[str] = []
             if isinstance(first_utterance_seed, Mapping):
@@ -847,21 +845,21 @@ class SimpleClientLLM(ClientAgent):
                 )
                 scenes = SimpleClientLLM._string_list(first_utterance_seed.get("scene_candidates"))
                 if concern_core:
-                    seed_lines.append("困りごとの核: " + " / ".join(concern_core[:2]))
+                    seed_lines.append("Core concern: " + " / ".join(concern_core[:2]))
                 if concrete_facts:
                     seed_lines.append(
-                        "混ぜてよい生活事実は1つまで: " + " / ".join(concrete_facts[:3])
+                        "At most one life fact to include: " + " / ".join(concrete_facts[:3])
                     )
                 if scenes:
                     seed_lines.append(
-                        "混ぜてよい具体場面は1つまで: " + " / ".join(scenes[:2])
+                        "At most one concrete scene to include: " + " / ".join(scenes[:2])
                     )
-                seed_lines.append("1回の発話で事実を詰め込みすぎない")
+                seed_lines.append("Do not cram too many facts into one utterance")
             user_parts = [
-                "困りごと（presenting_concern）: " + (presenting_concern or ""),
+                "Presenting concern: " + (presenting_concern or ""),
             ]
             if seed_lines:
-                user_parts.append("【初回発話のヒント】\n" + "\n".join(seed_lines))
+                user_parts.append("[First-utterance hints]\n" + "\n".join(seed_lines))
             user = "\n".join(user_parts).strip()
             messages = [
                 {"role": "system", "content": sys},
@@ -869,12 +867,12 @@ class SimpleClientLLM(ClientAgent):
             ]
             text = llm.generate(messages, temperature=temperature)
             text = (text or "").strip()
-            # 余計な引用符やマークダウンの削除（軽微）
+            # Remove stray quotes and markdown wrappers (minor cleanup).
             if text.startswith("\"") and text.endswith("\""):
                 text = text[1:-1].strip()
             if text.startswith("`") and text.endswith("`"):
                 text = text.strip("`")
-            # 1〜3文に軽く丸める（単純分割）
+            # Lightly trim to 1-3 sentences (simple splitting).
             parts = [p.strip() for p in re.split(r"[\n]+", text) if p.strip()]
             if len(parts) >= 1:
                 text = parts[0]
@@ -899,12 +897,12 @@ class SimpleClientLLM(ClientAgent):
 
     def _get_sensitivity(self, state_key: str) -> float:
         """
-        指標ごとの『変わりやすさ』係数を返す。
-        - 1.0: 基準
-        - 0.0: 変化しない
-        - >1.0: より変わりやすい
+        Return the per-metric ease-of-change coefficient.
+        - 1.0: baseline
+        - 0.0: no change
+        - >1.0: easier to change
 
-        ※ 負の値は逆方向の変化になってしまうため 0.0 に丸めます。
+        Negative values are clipped to 0.0 because they would invert the direction of change.
         """
         mapping = {
             "pos_affect": "sensitivity_pos",
@@ -928,10 +926,10 @@ class SimpleClientLLM(ClientAgent):
     @staticmethod
     def _calc_relationship_deltas(counselor_text: str) -> Tuple[float, float, List[str]]:
         """
-        counselor_text の口調・内容から、like/tension の微小な変化を推定する。
-        （LLM が like/tension を動かさないときの保険）
+        Estimate small like/tension changes from the tone and content of counselor_text.
+        This is a fallback when the LLM does not move like/tension.
 
-        返り値:
+        Returns:
           (delta_like, delta_tension, hits)
         """
         t = str(counselor_text or "").strip()
@@ -939,7 +937,7 @@ class SimpleClientLLM(ClientAgent):
             return 0.0, 0.0, []
 
         rules: List[Tuple[str, float, float, str]] = [
-            # 共感・受容（like↑ tension↓）
+            # Empathy / acceptance (like up, tension down)
             ("大変", +0.60, -0.30, "empathy"),
             ("つら", +0.60, -0.30, "empathy"),
             ("しんど", +0.60, -0.30, "empathy"),
@@ -952,7 +950,7 @@ class SimpleClientLLM(ClientAgent):
             ("素晴らしい", +0.90, -0.40, "affirm"),
             ("工夫", +0.50, -0.20, "affirm"),
             ("頑張", +0.50, -0.20, "affirm"),
-            # 否定・批判・見下し（like↓ tension↑）
+            # Negation / criticism / condescension (like down, tension up)
             ("努力が足り", -1.40, +1.00, "blame"),
             ("言い訳", -1.10, +0.80, "blame"),
             ("迷惑", -1.60, +1.20, "hostile"),
@@ -962,7 +960,7 @@ class SimpleClientLLM(ClientAgent):
             ("理解できない", -1.30, +1.00, "reject"),
             ("バカ", -2.00, +2.00, "insult"),
             ("甘えるな", -1.60, +1.40, "insult"),
-            # 命令・押しつけ（軽めに tension↑）
+            # Commands / imposition (light tension increase)
             ("すべき", -0.60, +0.40, "directive"),
             ("しかない", -0.40, +0.30, "directive"),
             ("しなさい", -0.80, +0.60, "directive"),
@@ -977,11 +975,11 @@ class SimpleClientLLM(ClientAgent):
                 dt += r_dt
                 hits.append(tag + ":" + phrase)
 
-        # 記号で少し補正（強い言い方になりやすい）
+        # Slight punctuation-based adjustment (tends to intensify wording)
         if "!" in t or "！" in t:
             dt += 0.20
             hits.append("punct:!")
-        # 「？」は中立〜圧がある場合もあるので極小だけ
+        # "?" can still carry a little pressure, so apply only a tiny adjustment.
         if "?" in t or "？" in t:
             dt += 0.05
             hits.append("punct:?")
@@ -995,13 +993,13 @@ class SimpleClientLLM(ClientAgent):
         meta: Dict[str, Any],
     ) -> Dict[str, float]:
         """
-        like/tension が「全く動かない」状況への保険。
-        LLM が動かした場合は尊重し、動いていない場合にだけ小さく補正する。
+        Safety net for cases where like/tension do not move at all.
+        Respect changes made by the LLM and only apply a small correction when unchanged.
         """
         if not self.relationship_heuristic:
             return new_state_dict
 
-        # 現在値（更新前）
+        # Current values (before the update).
         try:
             old_like = float(self.internal_state.like_counselor)
         except (TypeError, ValueError):
@@ -1011,7 +1009,7 @@ class SimpleClientLLM(ClientAgent):
         except (TypeError, ValueError):
             old_tension = 0.0
 
-        # LLM 反映後（parse済み）値
+        # Values after LLM parsing.
         like_val = new_state_dict.get("like_counselor", old_like)
         tension_val = new_state_dict.get("tension_counselor", old_tension)
         try:
@@ -1023,12 +1021,12 @@ class SimpleClientLLM(ClientAgent):
         except (TypeError, ValueError):
             tension_val = old_tension
 
-        # 変化判定（LLM が動かしたなら尊重）
+        # Change detection (respect changes made by the LLM).
         eps = 1e-9
         like_changed = abs(like_val - old_like) > eps
         tension_changed = abs(tension_val - old_tension) > eps
 
-        # only_if_unchanged の場合、動いた方は補正しない
+        # If only_if_unchanged is set, do not correct fields that already moved.
         if self.relationship_heuristic_only_if_unchanged:
             apply_like = not like_changed
             apply_tension = not tension_changed
@@ -1057,7 +1055,7 @@ class SimpleClientLLM(ClientAgent):
             sens_tension = self._get_sensitivity("tension_counselor")
             dt = (adjusted_tension - tension_val) * scale * sens_tension
 
-        # 1ターン上限を尊重
+        # Respect the per-turn ceiling.
         max_step = self.max_state_step
         if max_step is not None:
             try:
@@ -1098,7 +1096,7 @@ class SimpleClientLLM(ClientAgent):
         return new_state_dict
 
     # ------------------------------
-    # 二段パイプライン: 状態→応答
+    # Two-stage pipeline: state -> reply
     # ------------------------------
     def _infer_state_from_trigger(
         self,
@@ -1112,8 +1110,8 @@ class SimpleClientLLM(ClientAgent):
         max_state_step_override: Optional[float] = None,
     ) -> tuple[Dict[str, float], Dict[str, str], Dict[str, Any], str]:
         """
-        指定したトリガー（カウンセラー発話 or 自分の発話）を受けて
-        internal_state を1回更新する。
+        Update internal_state once in response to the specified trigger
+        (counselor utterance or self utterance).
         """
         raw_state = "{}"
         if self.llm_state is None:

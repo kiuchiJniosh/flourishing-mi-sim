@@ -26,7 +26,7 @@ import yaml
 from .paths import resolve_config_path, resolve_project_path
 
 if TYPE_CHECKING:
-    # 実行時にはインポートしない（循環依存を避けるため）
+    # Do not import at runtime to avoid circular dependencies.
     from .conversation_environment import ConversationTurn
     from .mi_counselor_agent import LLMClient
 
@@ -43,10 +43,10 @@ class SupportsConversationTurn(Protocol):
 
 class SupportsSessionLog(Protocol):
     """
-    session_log_tools が受け付ける最小限のインタフェース。
-    - log: ConversationTurn 互換の配列（speaker/text/meta があればOK）
-    - session_meta: セッション共通メタデータ（任意のMapping）
-    - to_json_serializable(): JSON保存用のレコード配列を返す
+    Minimum interface accepted by session_log_tools.
+    - log: a ConversationTurn-compatible sequence (speaker/text/meta are enough)
+    - session_meta: session-wide metadata (any Mapping is fine)
+    - to_json_serializable(): returns a list of records for JSON persistence
     """
 
     log: Sequence[SupportsConversationTurn]
@@ -69,20 +69,20 @@ _REFLECT_ACTION_NAMES = {
 }
 _REFLECT_ENDING_FAMILY_DETECTOR: Any = None
 _REFLECT_ENDING_FAMILY_DETECTOR_LOADED = False
-_DEFAULT_CLIENT_FEEDBACK_PROMPT_TEMPLATE = """あなたは、以下の CLIENT_CODE で設定されたクライアント本人です。
-セッション直後に自分の体験を振り返り、自然な日本語で1段落だけ書いてください。
-ratings は今の自己評価、session log は実際のやり取りです。両方を踏まえてください。
-約400字で、目安は320〜480字です。
-必ず含めること:
-- このセッションがどんな体験だったか
-- 良かった点
-- 物足りなかった点、まだ残る不安や迷い
-- このあと自分がどうなりそうか、何を試しそうか
-箇条書き・見出しは禁止です。日本語の本文だけを JSON に入れてください。
+_DEFAULT_CLIENT_FEEDBACK_PROMPT_TEMPLATE = """You are the client identified by the following CLIENT_CODE.
+Right after the session, reflect on your experience and write exactly one paragraph in natural English.
+Take both the ratings and the session log into account.
+Write about 400 Japanese characters equivalent in length, with a target of roughly 320-480 characters.
+Include all of the following:
+- what the session felt like
+- what was helpful
+- what felt lacking, and what concerns or uncertainty remain
+- how you expect to feel or what you might try next
+Do not use bullet points or headings. Put only the body text into the JSON.
 
-出力は必ず次の JSON 形式だけ:
+Output must be exactly this JSON format:
 {{
-  "client_feedback": "約400字の日本語本文"
+  "client_feedback": "roughly 400 characters of English text"
 }}
 
 === CLIENT_CONTEXT ===
@@ -97,22 +97,22 @@ ratings は今の自己評価、session log は実際のやり取りです。両
 === SESSION_LOG ===
 {session_log_text}
 """
-_DEFAULT_SUPERVISOR_FEEDBACK_PROMPT_TEMPLATE = """あなたは動機づけ面接（MI）の熟練スーパーバイザーです。
-以下のセッションをレビューし、カウンセラーへのフィードバックを自然な日本語の1段落で書いてください。
-約400字で、目安は320〜480字です。
-必ず含めること:
-- カウンセラーの良い点
-- 課題点
-- 次回に向けた改善の示唆
-MIの観点から、反映・是認・焦点化・自律性支援・喚起の質を具体的に見てください。
-箇条書き・見出しは禁止です。日本語の本文だけを JSON に入れてください。
+_DEFAULT_SUPERVISOR_FEEDBACK_PROMPT_TEMPLATE = """You are an experienced motivational interviewing (MI) supervisor.
+Review the following session and write one paragraph of feedback for the counselor in natural English.
+Write about 400 Japanese characters equivalent in length, with a target of roughly 320-480 characters.
+Include all of the following:
+- what the counselor did well
+- what needs improvement
+- guidance for the next session
+From an MI perspective, assess reflections, affirmations, focus, support for autonomy, and evocation in concrete terms.
+Do not use bullet points or headings. Put only the body text into the JSON.
 
-出力は必ず次の JSON 形式だけ:
+Output must be exactly this JSON format:
 {{
-  "supervisor_feedback": "約400字の日本語本文"
+  "supervisor_feedback": "roughly 400 characters of English text"
 }}
 
-以下の MI 知識全文を文脈知識として参照し、判断の土台にしてください。セッションの実際の文脈と矛盾する場合は、セッション本文を優先してください。
+Use the full MI knowledge below as contextual reference and as the basis for your judgment. If it conflicts with the actual session context, prioritize the session text.
 
 === MI_KNOWLEDGE ===
 {mi_knowledge_text}
@@ -129,10 +129,10 @@ MIの観点から、反映・是認・焦点化・自律性支援・喚起の質
 
 
 def _to_json_records(env: SupportsSessionLog) -> List[Dict[str, Any]]:
-    """to_json_serializable() の実行と簡易検証を一元化。"""
+    """Centralize to_json_serializable() execution and basic validation."""
     records = env.to_json_serializable()
     if not isinstance(records, list):
-        raise TypeError("to_json_serializable() は list を返す必要があります。")
+        raise TypeError("to_json_serializable() must return a list.")
     return records
 
 
@@ -182,9 +182,9 @@ def _format_session_eval_prompt(template: str, **kwargs: Any) -> str:
 
 def _normalize_csv_cell(value: Any) -> Any:
     """
-    CSV をスプレッドシート/行指向ツールで扱いやすくするため、
-    セル内改行を可視化文字列 "\\n" に正規化し、
-    長すぎるセルは安全な長さまで切り詰める。
+    Make CSVs easier to use in spreadsheets and row-oriented tools by
+    normalizing in-cell newlines to the visible string "\\n" and truncating
+    overly long cells to a safe length.
     """
     if not isinstance(value, str):
         return value
@@ -779,14 +779,14 @@ def _flatten_layer2_phase_snapshot_columns(*, debug: Mapping[str, Any]) -> Dict[
 
 
 # ==============================
-# 保存系：JSONL / CSV
+# Persistence: JSONL / CSV
 # ==============================
 
 def save_log_jsonl(env: SupportsSessionLog, path: str) -> None:
     """
-    SupportsSessionLog 互換のセッションログを JSONL 形式で保存します。
-    - 1行1発話（ConversationTurn）となるように json を書き出します。
-    - 文字コードは UTF-8（BOM なし）です。
+    Save a SupportsSessionLog-compatible session log as JSONL.
+    - Writes one utterance (ConversationTurn) per line.
+    - Uses UTF-8 without BOM.
     """
     records = _to_json_records(env)
     with open(path, "w", encoding="utf-8") as f:
@@ -797,11 +797,12 @@ def save_log_jsonl(env: SupportsSessionLog, path: str) -> None:
 
 def save_log_csv(env: SupportsSessionLog, path: str) -> None:
     """
-    SupportsSessionLog 互換のセッションログを CSV 形式で保存します。
-    - 文字コードは BOM 付き UTF-8（Excel などで文字化けしにくくするため）。
-    - 各行は 1発話（ConversationTurn）です。
-    - counselor 発話のときだけ phase / main_action / add_affirm / debug 情報が入ります。
-    - session_meta（session_id / mode / model / planner_config など）があれば各行に付与します。
+    Save a SupportsSessionLog-compatible session log as CSV.
+    - Uses UTF-8 with BOM to reduce mojibake in Excel and similar tools.
+    - Each row corresponds to one utterance (ConversationTurn).
+    - counselor rows include phase / main_action / add_affirm / debug information.
+    - If session_meta contains values such as session_id / mode / model / planner_config,
+      they are attached to each row.
     """
     records = _to_json_records(env)
 
@@ -845,7 +846,7 @@ def save_log_csv(env: SupportsSessionLog, path: str) -> None:
         "client_primary_focus",
         "client_primary_focus_label",
         "client_interpersonal_style",
-        # ラベル列は削除。代わりに属性（年代/性別/婚姻）を出力
+        # Drop label columns. Instead, output attributes (age/sex/marital status).
         "client_age_range",
         "client_sex",
         "client_marital_status",
@@ -1372,8 +1373,8 @@ def finalize_session(
     artifact_id: Optional[str] = None,
 ) -> Dict[str, str]:
     """
-    CSV ログとクライアント視点評価 JSON をまとめて保存する共通関数。
-    戻り値: {"csv": <path>, "client_eval": <path>}
+    Save the CSV log and client-perspective evaluation JSON together.
+    Returns: {"csv": <path>, "client_eval": <path>}
     """
     if not getattr(env, "log", None):
         return {}
@@ -1388,18 +1389,18 @@ def finalize_session(
     )
     csv_path = base_dir / f"{log_prefix}_{resolved_artifact_id}.csv"
     save_log_csv(env, str(csv_path))
-    print(f"ログを保存しました: {csv_path}")
+    print(f"Saved log: {csv_path}")
 
     client_eval = evaluate_session_from_client_pov(env, llm)
     eval_path = base_dir / f"{log_prefix}_{resolved_artifact_id}_client_eval.json"
     save_client_evaluation_json(client_eval, str(eval_path))
-    print(f"クライアント評価を保存しました: {eval_path}")
+    print(f"Saved client evaluation: {eval_path}")
 
     return {"csv": str(csv_path), "client_eval": str(eval_path)}
 
 
 # ==============================
-# 解析系：フェーズ・アクション・ストリーク
+# Analysis: phase / action / streak
 # ==============================
 
 @dataclass
@@ -1420,8 +1421,8 @@ class ActionAnalysis:
 
 @dataclass
 class ReflectStreakAnalysis:
-    streaks: List[int]                  # 各ストリークの長さ（1,2,3,...）
-    distribution: Dict[int, int]        # 長さ -> 出現回数
+    streaks: List[int]                  # Length of each streak (1, 2, 3, ...)
+    distribution: Dict[int, int]        # streak length -> occurrence count
     max_streak: int
     mean_streak: float
 
@@ -1429,21 +1430,21 @@ class ReflectStreakAnalysis:
 @dataclass
 class ConditionalActionAnalysis:
     """
-    「ある条件を満たすターンに対して、どの main_action が選ばれているか」
-    を集計した結果（チェンジトークあり/抵抗あり のとき用）。
+    Aggregated results for which main_action is chosen when a condition is met
+    (used for change talk / resistance cases).
     """
-    label: str                  # "change_talk" など
-    threshold: float            # この値以上を「あり」とみなした閾値
-    total_turns: int            # 条件を満たした counselor ターン数
+    label: str                  # e.g. "change_talk"
+    threshold: float            # Threshold at or above which the condition counts as present
+    total_turns: int            # Number of counselor turns that met the condition
     action_counts: Dict[str, int]
     action_ratios: Dict[str, float]
 
 
 def analyze_phases(env: SupportsSessionLog) -> PhaseAnalysis:
     """
-    ログからフェーズ推移を解析します。
-    - 各フェーズの出現回数
-    - フェーズ遷移 (A -> B) の回数
+    Analyze phase transitions from the log.
+    - Count occurrences of each phase
+    - Count phase transitions (A -> B)
     """
     phases: List[str] = []
     for turn in env.log:
@@ -1473,9 +1474,8 @@ def analyze_phases(env: SupportsSessionLog) -> PhaseAnalysis:
 
 def analyze_actions(env: SupportsSessionLog) -> ActionAnalysis:
     """
-    ログから main_action（REFLECT_* / QUESTION / SUMMARY / ASK_PERMISSION_TO_SHARE_INFO /
-    PROVIDE_INFO など）の頻度と、
-    反射 vs 質問 の比率を解析します。
+    Analyze the frequency of main_action values (REFLECT_* / QUESTION / SUMMARY /
+    ASK_PERMISSION_TO_SHARE_INFO / PROVIDE_INFO, etc.) and the reflect-vs-question ratio.
     """
     actions: List[str] = []
     for turn in env.log:
@@ -1515,17 +1515,17 @@ def analyze_actions(env: SupportsSessionLog) -> ActionAnalysis:
 
 def analyze_reflect_streaks(env: SupportsSessionLog) -> ReflectStreakAnalysis:
     """
-    ログから「REFLECT が何回連続するか」のストリーク分布を解析します。
-    例：
+    Analyze the streak distribution for consecutive REFLECT turns.
+    Example:
       REFLECT, REFLECT, QUESTION, REFLECT, SUMMARY
-      -> ストリーク長 [2, 1]
+      -> streak lengths [2, 1]
     """
     streaks: List[int] = []
     current = 0
 
     for turn in env.log:
         if turn.speaker != "counselor" or not turn.meta:
-            # counselor 以外 or meta なしのときはストリークを切る
+            # Break the streak when the speaker is not counselor or meta is missing.
             if current > 0:
                 streaks.append(current)
                 current = 0
@@ -1556,20 +1556,19 @@ def analyze_reflect_streaks(env: SupportsSessionLog) -> ReflectStreakAnalysis:
 
 
 # ==============================
-# クライアント内部状態ログ → 時系列データ
+# Client internal-state log -> time series data
 # ==============================
 
 def collect_client_internal_trajectory(env: SupportsSessionLog) -> List[Dict[str, Any]]:
     """
-    セッションログから「クライアント発話ごとの内部状態」の時系列を取り出します。
+    Extract a time series of client internal states from the session log.
 
-    戻り値の各要素は
+    Each returned element has the form
       {
-        "index": 発話インデックス（env.log 内の位置）,
-        "text": そのときのクライアント発話,
-        "internal_state": { ... } または None
+        "index": utterance index (position in env.log),
+        "text": the client utterance at that point,
+        "internal_state": { ... } or None
       }
-    の形になります。
     """
     trajectory: List[Dict[str, Any]] = []
 
@@ -1594,7 +1593,7 @@ def _summarize_client_internal_state_series(
     state_series: Sequence[Mapping[str, float]],
 ) -> Dict[str, Any]:
     """
-    クライアント内部状態の時系列から、開始値・終了値・差分・平均を計算する。
+    Compute start, end, delta, and mean from a client internal-state time series.
     """
     if not state_series:
         return {}
@@ -1647,8 +1646,8 @@ def _build_session_eval_llm_bundle(
     default_temperature: float,
 ) -> Dict[str, Dict[str, Any]]:
     """
-    セッション評価用の LLM 設定を model_settings.yaml から解決する。
-    失敗時は既存の llm 引数へフォールバックする。
+    Resolve the LLM configuration for session evaluation from model_settings.yaml.
+    Fall back to the provided llm argument if resolution fails.
     """
     fallback_spec = {
         "ratings": {
@@ -1768,7 +1767,7 @@ def _generate_session_eval_json(
 
 
 # ==============================
-# 解析系：チェンジトーク／抵抗 → 次アクション
+# Analysis: change talk / resistance -> next action
 # ==============================
 
 def _collect_conditional_actions(
@@ -1778,11 +1777,10 @@ def _collect_conditional_actions(
     label: str,
 ) -> ConditionalActionAnalysis:
     """
-    feature_key（'change_talk' / 'resistance'）の値が threshold 以上の
-    counselor ターンについて、main_action の分布を集計します。
+    Aggregate the main_action distribution for counselor turns whose feature_key
+    ('change_talk' / 'resistance') value is at least the threshold.
 
-    - feature は MIRhythmBot の Decision.meta["debug"]["features"] に
-      格納されている前提です。
+    - The feature is expected to live in MIRhythmBot Decision.meta["debug"]["features"].
     """
     actions: List[str] = []
 
@@ -1826,8 +1824,8 @@ def analyze_change_talk_responses(
     threshold: float = 0.6,
 ) -> ConditionalActionAnalysis:
     """
-    チェンジトーク（features['change_talk']）が threshold 以上のターンで、
-    カウンセラーがどの main_action を選んでいるかを集計します。
+    Aggregate which main_action the counselor chooses on turns where
+    features['change_talk'] is at least the threshold.
     """
     return _collect_conditional_actions(
         env=env,
@@ -1842,8 +1840,8 @@ def analyze_resistance_responses(
     threshold: float = 0.6,
 ) -> ConditionalActionAnalysis:
     """
-    抵抗（features['resistance']）が threshold 以上のターンで、
-    カウンセラーがどの main_action を選んでいるかを集計します。
+    Aggregate which main_action the counselor chooses on turns where
+    features['resistance'] is at least the threshold.
     """
     return _collect_conditional_actions(
         env=env,
@@ -1854,14 +1852,13 @@ def analyze_resistance_responses(
 
 
 # ==============================
-# 結果をざっくり表示するユーティリティ
+# Utility for printing a quick summary
 # ==============================
 
 def print_basic_analysis(env: SupportsSessionLog) -> None:
     """
-    フェーズ・アクション・反射ストリークに加えて、
-    「チェンジトーク／抵抗が強いターンで次に何をしているか」
-    も含めてざっくり統計をコンソールに出力します。
+    Print a rough summary to the console, including phases, actions, reflect streaks,
+    and what happens next on turns with strong change talk / resistance.
     """
     pa = analyze_phases(env)
     aa = analyze_actions(env)
@@ -1889,7 +1886,7 @@ def print_basic_analysis(env: SupportsSessionLog) -> None:
             f"(ratio: {aa.reflect_ratio:.2f} / {aa.question_ratio:.2f})"
         )
     else:
-        print("  REFLECT / QUESTION がほとんどありません。")
+        print("  There are almost no REFLECT / QUESTION turns.")
 
     print("\n=== Reflect Streaks ===")
     print(f"  streaks (per run): {ra.streaks}")
@@ -1897,27 +1894,27 @@ def print_basic_analysis(env: SupportsSessionLog) -> None:
     print(f"  max_streak: {ra.max_streak}")
     print(f"  mean_streak: {ra.mean_streak:.2f}")
 
-    # ---- チェンジトークに対する応答 ----
+    # ---- Responses to change talk ----
     print("\n=== Responses to Change Talk ===")
     print(
         f"  condition: change_talk >= {ct_analysis.threshold:.2f}, "
         f"turns: {ct_analysis.total_turns}"
     )
     if ct_analysis.total_turns == 0:
-        print("  該当ターンがありません。")
+        print("  No matching turns.")
     else:
         for act, count in ct_analysis.action_counts.items():
             r = ct_analysis.action_ratios.get(act, 0.0)
             print(f"  {act}: {count} (ratio: {r:.2f})")
 
-    # ---- 抵抗に対する応答 ----
+    # ---- Responses to resistance ----
     print("\n=== Responses to Resistance ===")
     print(
         f"  condition: resistance >= {rs_analysis.threshold:.2f}, "
         f"turns: {rs_analysis.total_turns}"
     )
     if rs_analysis.total_turns == 0:
-        print("  該当ターンがありません。")
+        print("  No matching turns.")
     else:
         for act, count in rs_analysis.action_counts.items():
             r = rs_analysis.action_ratios.get(act, 0.0)
@@ -1925,7 +1922,7 @@ def print_basic_analysis(env: SupportsSessionLog) -> None:
 
 
 # ==============================
-# クライアント視点のセッション評価（LLM 使用）
+# Client-perspective session evaluation (LLM-powered)
 # ==============================
 
 def evaluate_session_from_client_pov(
@@ -1935,12 +1932,12 @@ def evaluate_session_from_client_pov(
     temperature: float = 0.2,
 ) -> Dict[str, Any]:
     """
-    クライアントの内部状態ログとセッション全体のやり取りを LLM に渡して、
-    「クライアント本人の主観的評価（数値＋フィードバック）」を JSON で生成してもらう関数。
+    Send the client's internal-state log and the full session transcript to an LLM,
+    and have it generate the client's subjective evaluation as JSON.
 
-    - ratings: 0〜10 の評価値（必要に応じて拡張可）
-    - client_feedback: クライアント本人の振り返り（約400字）
-    - supervisor_feedback: MI専門家からのレビュー（約400字）
+    - ratings: 0-10 ratings (extendable if needed)
+    - client_feedback: the client's own reflection (roughly 400 characters)
+    - supervisor_feedback: MI expert review (roughly 400 characters)
     """
     session_id = env.session_meta.get("session_id", "")
     lines, state_series, client_context = _build_session_eval_context(env)
@@ -1952,22 +1949,22 @@ def evaluate_session_from_client_pov(
     llm_bundle = _build_session_eval_llm_bundle(llm, default_temperature=float(temperature))
 
     ratings_prompt = (
-        "あなたはカウンセリング研究者です。\n"
-        "以下は、クライアントとカウンセラーの1セッション分の対話ログです。\n"
-        "クライアント発話には、そのときの内部状態を表す 0〜10 のスコアが付与されている場合があります。"
-        "上部の INTERNAL_STATE_SUMMARY（開始/終了/平均/差分）を主たる根拠として、数値傾向と整合的な評価を返してください。\n\n"
-        "出力は必ず次の JSON 形式「だけ」で返してください:\n"
+        "You are a counseling researcher.\n"
+        "The following is a transcript of one session between a client and a counselor.\n"
+        "Client utterances may include 0-10 scores that represent their internal state at the time."
+        "Use the INTERNAL_STATE_SUMMARY above (start/end/mean/delta) as the primary basis and return an evaluation consistent with the numeric trend.\n\n"
+        "Output must be only the following JSON format:\n"
         "{\n"
         '  "ratings": {\n'
-        '    "overall_satisfaction": 0〜10の数値,\n'
-        '    "goal_importance": 0〜10の数値,\n'
-        '    "goal_confidence": 0〜10の数値,\n'
-        '    "alliance_bond": 0〜10の数値,\n'
-        '    "positive_affect": 0〜10の数値,\n'
-        '    "negative_affect": 0〜10の数値\n'
+        '    "overall_satisfaction": 0-10 number,\n'
+        '    "goal_importance": 0-10 number,\n'
+        '    "goal_confidence": 0-10 number,\n'
+        '    "alliance_bond": 0-10 number,\n'
+        '    "positive_affect": 0-10 number,\n'
+        '    "negative_affect": 0-10 number\n'
         "  }\n"
         "}\n\n"
-        "=== セッションログ ===\n"
+        "=== SESSION LOG ===\n"
         + "\n".join(lines)
     )
 
@@ -2052,22 +2049,21 @@ def evaluate_session_from_client_pov(
 
 def save_client_evaluation_json(evaluation: Dict[str, Any], path: str) -> None:
     """
-    evaluate_session_from_client_pov の結果を JSON ファイルに保存する簡易ユーティリティ。
+    Save the result of evaluate_session_from_client_pov to a JSON file.
     """
     with open(path, "w", encoding="utf-8") as f:
         json.dump(evaluation, f, ensure_ascii=False, indent=2)
 
 
 # ==============================
-# 簡単なデモ
+# Simple demo
 # ==============================
 
 def _demo() -> None:
     """
-    conversation_environment.demo_two_agents() などで作られた env を想定して、
-    解析と保存を一通り走らせるミニデモです。
-    実際には、あなたの環境で対話を終えた ConversationEnvironment を
-    渡して使ってください。
+    Mini demo that runs analysis and persistence end-to-end on an env created by
+    conversation_environment.demo_two_agents() or similar.
+    In practice, pass in a ConversationEnvironment after your own dialogue run.
     """
     from .mi_counselor_agent import MIRhythmBot, DummyLLM
     from .conversation_environment import ConversationEnvironment
@@ -2077,16 +2073,16 @@ def _demo() -> None:
     client = SimpleClientLLM(llm=DummyLLM())
     env = ConversationEnvironment(counselor=counselor, client=client)
 
-    # 簡単なシミュレーション
+    # Simple simulation
     env.simulate(
-        first_client_utterance="最近、生活リズムが崩れてしまって、気持ちも落ち込んでいます。",
+        first_client_utterance="Lately my daily rhythm has fallen apart, and my mood has been low.",
         max_turns=5,
     )
 
-    # 解析結果を表示
+    # Show analysis results
     print_basic_analysis(env)
 
-    # JSONL / CSV に保存（ファイル名は例ですので、適宜変更してください）
+    # Save to JSONL / CSV (the filenames are examples; change them as needed)
     save_log_jsonl(env, "session_example.jsonl")
     save_log_csv(env, "session_example.csv")
 

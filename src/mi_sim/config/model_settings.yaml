@@ -1,6 +1,6 @@
 # model_settings.yaml
-# レイヤー構造に沿った LLM 設定定義。
-# app/env_utils.py がこのネスト構造を既存 mode キーへ解決する。
+# LLM configuration definitions aligned with the layer structure.
+# app/env_utils.py resolves this nested structure into the existing mode keys.
 
 schema_version: 1
 

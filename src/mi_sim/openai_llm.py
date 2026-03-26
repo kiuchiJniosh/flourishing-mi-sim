@@ -57,7 +57,7 @@ def _resolve_bool_option(value: Optional[bool], *, env_key: str, default: bool) 
 
 
 def _extract_status_code(exc: Exception) -> Optional[int]:
-    # APIStatusError 互換を想定（バージョン差異があっても壊れないように緩く取得）。
+    # Be APIStatusError-compatible and keep the lookup loose across SDK versions.
     code = getattr(exc, "status_code", None)
     if isinstance(code, int):
         return code
@@ -113,7 +113,7 @@ def _call_with_retry(
         try:
             result = request_fn()
             if attempt > 1 and retry_log:
-                print(f"✅ OpenAI {request_label} が復帰しました（{attempt}/{total_attempts} 回目）。")
+                print(f"✅ OpenAI {request_label} recovered ({attempt}/{total_attempts}).")
             return result
         except Exception as e:
             should_retry = _is_retryable_exception(e)
@@ -132,17 +132,17 @@ def _call_with_retry(
                 if len(short_error) > 160:
                     short_error = short_error[:157] + "..."
                 print(
-                    f"⚠️ OpenAI {request_label} 失敗（{attempt}/{total_attempts} 回目）: "
+                    f"⚠️ OpenAI {request_label} failed ({attempt}/{total_attempts}): "
                     f"{e.__class__.__name__}: {short_error}"
                 )
-                print(f"   {wait_seconds:.1f} 秒後にリトライします。")
+                print(f"   Retrying in {wait_seconds:.1f} seconds.")
             time.sleep(wait_seconds)
 
 
 def _extract_output_text_from_response(response: Any) -> str:
     """
-    responses.create の返り値からテキストを抽出。
-    SDKが提供する output_text があればそれを優先し、無ければ output を走査して連結する。
+    Extract text from a `responses.create` result.
+    Prefer `output_text` when the SDK provides it; otherwise walk `output` and join chunks.
     """
     out_text = getattr(response, "output_text", None)
     if isinstance(out_text, str):
@@ -163,7 +163,7 @@ def _extract_output_text_from_response(response: Any) -> str:
 
 
 def _should_use_json_mode(messages: List[Dict[str, str]]) -> bool:
-    """本文に 'json' が含まれていれば JSON モードに寄せる簡易判定。"""
+    """Use a lightweight check to prefer JSON mode when the body mentions `json`."""
     try:
         for m in messages:
             content = str(m.get("content", "") or "").lower()
@@ -176,9 +176,9 @@ def _should_use_json_mode(messages: List[Dict[str, str]]) -> bool:
 
 def _model_disallows_temperature(model: str) -> bool:
     """
-    GPT-5 系（gpt-5 / gpt-5.1 / gpt-5-mini / gpt-5-nano など）では
-    temperature を送らない方が安全。
-    "openai/gpt-5.1" のような provider 接頭辞付き表記も許容する。
+    For GPT-5 family models (`gpt-5`, `gpt-5.1`, `gpt-5-mini`, `gpt-5-nano`, etc.),
+    it is safer not to send `temperature`.
+    Provider-prefixed forms such as `openai/gpt-5.1` are also accepted.
     """
     m = (model or "").strip().lower()
     if "/" in m:
@@ -187,7 +187,7 @@ def _model_disallows_temperature(model: str) -> bool:
 
 
 class OpenAIChatCompletionsLLM:
-    """v1 OpenAI Python SDK の chat.completions を使う単純な LLMClient。"""
+    """A simple LLM client that uses `chat.completions` from the v1 OpenAI Python SDK."""
 
     def __init__(
         self,
@@ -216,7 +216,7 @@ class OpenAIChatCompletionsLLM:
             _resolve_float_option(retry_max_seconds, env_key="OPENAI_RETRY_MAX_SECONDS", default=20.0),
         )
         self.retry_log = _resolve_bool_option(retry_log, env_key="OPENAI_RETRY_LOG", default=True)
-        # SDK の暗黙リトライは無効化し、こちらで待機秒を可視化しながら再試行する。
+        # Disable the SDK's implicit retries and surface wait times in our own retry loop.
         self.client = OpenAI(api_key=api_key, timeout=self.timeout_seconds, max_retries=0)
         self.model = model
 
@@ -250,12 +250,12 @@ class OpenAIChatCompletionsLLM:
 
 class OpenAIResponsesLLM:
     """
-    OpenAI Responses API 用の LLMClient。
-    - system_handling="as_input"（既定）: system ロールも input に含める（現行互換）
-      "instructions": system ロールを instructions に集約
-    - json_mode: auto / always / never
-    - temperature_policy: auto（gpt-5* は送らない）/ always / never
-    - 余計な kwargs は安全側で捨てる
+    LLM client for the OpenAI Responses API.
+    - `system_handling="as_input"` (default): include the system role in `input` for compatibility
+    - `system_handling="instructions"`: aggregate system role messages into `instructions`
+    - `json_mode`: `auto` / `always` / `never`
+    - `temperature_policy`: `auto` (omit for GPT-5 family) / `always` / `never`
+    - Drop extra kwargs conservatively
     """
 
     def __init__(
@@ -293,7 +293,7 @@ class OpenAIResponsesLLM:
             _resolve_float_option(retry_max_seconds, env_key="OPENAI_RETRY_MAX_SECONDS", default=20.0),
         )
         self.retry_log = _resolve_bool_option(retry_log, env_key="OPENAI_RETRY_LOG", default=True)
-        # SDK の暗黙リトライは無効化し、こちらで待機秒を可視化しながら再試行する。
+        # Disable the SDK's implicit retries and surface wait times in our own retry loop.
         self.client = OpenAI(api_key=api_key, timeout=self.timeout_seconds, max_retries=0)
         self.model = model
         self.reasoning_effort = reasoning_effort
@@ -323,7 +323,7 @@ class OpenAIResponsesLLM:
                 "input": input_items if input_items else "",
             }
 
-        # as_input: そのまま渡す
+        # as_input: pass through as-is
         return {"instructions": None, "input": messages}
 
     def generate(
@@ -335,7 +335,7 @@ class OpenAIResponsesLLM:
     ) -> str:
         extra: Dict[str, Any] = dict(kwargs) if kwargs else {}
         request_label = str(extra.pop("request_label", "") or "responses.create")
-        # Responses API 互換のために不要/危険な引数を除去
+        # Remove arguments that are unnecessary or risky for Responses API compatibility
         extra.pop("seed", None)
         extra.pop("messages", None)
         extra.pop("response_format", None)
@@ -349,7 +349,7 @@ class OpenAIResponsesLLM:
         }
         req.update(self._split_messages(messages))
 
-        # JSON モード判定
+        # JSON mode detection
         text_format: Dict[str, Any] = {"type": "text"}
         if self.json_mode == "always" or (self.json_mode == "auto" and _should_use_json_mode(messages)):
             text_format = {"type": "json_object"}
@@ -375,7 +375,7 @@ class OpenAIResponsesLLM:
         if send_temperature:
             req["temperature"] = float(temperature)
 
-        # 残りのオプションをマージ（model/input/store/text を上書きしない）
+        # Merge the remaining options without overriding `model`, `input`, `store`, or `text`
         for k, v in extra.items():
             if k in ("model", "input", "store", "text"):
                 continue

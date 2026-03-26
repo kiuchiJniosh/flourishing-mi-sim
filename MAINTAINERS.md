@@ -1,6 +1,6 @@
 # Maintainers
 
-このディレクトリは monorepo から public repo へ `git subtree` で同期します。
+This directory is synchronized from the monorepo to the public repository using `git subtree`.
 
 ## Source Of Truth
 
@@ -25,7 +25,7 @@ git push mi-sim-public mi-sim-public-main:main
 
 ## Pull Back Public Changes
 
-public repo 側で直接変更した場合だけ使います。
+Use this only if changes were made directly in the public repository.
 
 ```bash
 git subtree pull --prefix=sharing/mi_sim_public mi-sim-public main --squash
@@ -33,6 +33,6 @@ git subtree pull --prefix=sharing/mi_sim_public mi-sim-public main --squash
 
 ## Safety
 
-- `.env`, API キー, 秘密鍵, 個人情報, ログ, 生成物は含めない
-- push 前に `sharing/mi_sim_public/` 配下だけを確認する
-- 公開用 README は利用者向け、運用メモはこのファイルに置く
+- Do not include `.env`, API keys, private keys, personal data, logs, or generated artifacts
+- Before pushing, review only the contents under `sharing/mi_sim_public/`
+- Keep user-facing documentation in the public `README`; keep operational notes in this file
