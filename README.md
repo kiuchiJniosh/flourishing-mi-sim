@@ -1,51 +1,102 @@
-# mi-sim
+# flourishing-mi-sim
 
-`mi_sim` は、MI ベースのカウンセラーとクライアントの self-play シミュレーションを実行するための Python package です。
+`mi_sim` は、動機づけ面接（MI）ベースのカウンセラーとクライアントによる self-play シミュレーションを実行するための Python package です。
 
-## 含まれるもの
+現状の公開範囲は self-play 実行コアです。人間カウンセラー向け CLI、学習用スクリプト、研究用補助コードは含みません。
 
-- `pyproject.toml`
-- `.env.example`
+## Contents
+
 - `src/mi_sim/`
 - `src/mi_sim/config/`
+- `pyproject.toml`
+- `.env.example`
 
-この subtree には、公開してよい package 本体と公開向け README だけを含めます。`app/`, `utility/`, `vendor/`, `results/`, `.github/` など monorepo 固有のものは含めません。
+## Requirements
 
-## クイックスタート
+- Python 3.11+
+- OpenAI API key
+
+## Installation
 
 ```bash
 python -m pip install -e .
-cp .env.example .env  # 必要なら自分で作成
+```
+
+## Setup
+
+`.env.example` を参考に `.env` を作成し、少なくとも `OPENAI_API_KEY` を設定してください。
+
+```bash
+cp .env.example .env
+```
+
+```dotenv
+OPENAI_API_KEY=your_api_key_here
+```
+
+必要に応じて次の環境変数も上書きできます。
+
+- `CLIENT_CODE`
+- `CLIENT_STYLE`
+- `PHASE_SLOT_QUALITY_MIN_THRESHOLD`
+
+## Quick Start
+
+単発の self-play:
+
+```bash
+mi-sim self-play --max-turns 5
+```
+
+または:
+
+```bash
 python -m mi_sim self-play --max-turns 5
 ```
 
-`.env` には少なくとも `OPENAI_API_KEY` が必要です。
-
-## maintainer メモ
-
-monorepo 側では先に同期スクリプトを実行してから subtree を push します。
+15ケース一括実行:
 
 ```bash
-bash utility/sync_mi_sim_public.sh
-git diff --stat -- sharing/mi_sim_public
-git subtree push --prefix=sharing/mi_sim_public mi-sim-public main
+mi-sim self-play --all-cases --max-turns 8
 ```
 
-初回は remote 登録後に split/push を使います。
+## Outputs
+
+既定では実行結果をカレントディレクトリ配下の `logs/mi_sim/` に保存します。
+
+- 単発実行: CSV と `client_eval.json`
+- 一括実行: `logs/mi_sim/self_play_batch/` 配下にケースごとの成果物
+
+出力先は `--logs-dir` で変更できます。
+
+## CLI
+
+主なオプション:
+
+- `--max-turns`
+- `--max-turns-completion {hard_stop,phase_to_closing}`
+- `--max-total-turns`
+- `--client-style {auto,cooperative,ambivalent,resistant}`
+- `--client-code <CLIENT_CODE>`
+- `--all-cases`
+- `--logs-dir <DIR>`
+- `--artifact-id <ID>`
+- `--first-client-utterance <TEXT>`
+- `--no-print-full-log`
+
+詳細は次で確認できます。
 
 ```bash
-git remote add mi-sim-public git@github.com:<org>/<repo>.git
-git subtree split --prefix=sharing/mi_sim_public -b mi-sim-public-main
-git push mi-sim-public mi-sim-public-main:main
+mi-sim self-play --help
 ```
 
-public 側の変更を monorepo に取り込む場合だけ pull を使います。
+## Scope
 
-```bash
-git subtree pull --prefix=sharing/mi_sim_public mi-sim-public main --squash
-```
+この公開 repo には次を含めません。
 
-## 注意事項
+- API キーや `.env`
+- 個人情報や非公開データ
+- `app/`, `utility/`, `vendor/`, `results/`, `.github/` など monorepo 固有ファイル
+- 学習用の DSPy コードや archive
 
-- `.env`、API キー、秘密鍵、個人情報、ログ、生成物は含めません。
-- push 前に `sharing/mi_sim_public/` 配下の差分だけを確認してください。
+maintainer 向けの subtree 運用手順は `MAINTAINERS.md` を参照してください。
