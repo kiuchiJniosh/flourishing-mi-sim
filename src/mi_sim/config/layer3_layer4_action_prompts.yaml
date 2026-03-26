@@ -1,0 +1,678 @@
+schema_version: 1
+description: >
+  Layer3 Writerで使うアクション別プロンプト文言定義。
+  アクションルールの文面をコードから切り離し、設定ファイルとして管理する。
+
+common_prompts:
+  task_section_template: |-
+    【今回のタスク（行動ルール）】
+    - 直近だけでなく、これまでのやり取りも踏まえる。
+    - 説教・押しつけ・断定を避ける。
+    - 1ターンで扱う命題は1つに絞り、説明を足しすぎない。
+    - 提案・助言・具体策の提示は PROVIDE_INFO のときだけ行う。PROVIDE_INFO 以外では提案しない。
+    - 禁止表現: 「〜にしますね」「〜しておきますね」「今週は〜しますね」のように、支援者主導で決める言い方は使わない。
+    - 主導権はユーザに。必要に応じてカウンセラーの理解が正しいか確認する。
+    - PROVIDE_INFO以外では「～しましょう」などの提案は行わない。FOCUSING_TARGET_BEHAVIORやNEXT_STEP_DECISIONでも、カウンセラー側から提案するのではなく、ユーザの考えを引き出す。REFLECTでは、質問化せず叙述の反映で返す。相手の体験を日常語で短く映し、複雑反射では言外の意味を1点だけ足して喚起につなげる。
+    {action_rule}
+  output_format_constraints: |-
+    【出力フォーマット制約】
+    - 1文は長くなりすぎない。1文あたりの読点（、）は2回以内を目安にする。
+    - 読点（、）を減らす必要があるときは、記号だけを削らず、不要語の削除・語順調整・主語述語の簡素化で自然な文にする。
+    - 文分割で読点制約を回避しない。応答全体を短くしつつ、自然さを最優先する。
+    - 中高生にも理解できる平易な言葉を使う。
+    - 専門用語は避けるか、必要なら短く説明する。
+    - 返答本文は自然な日本語のみを基本とする。固有名詞・一般的な略語を除き、英単語・ローマ字・プレースホルダ・壊れたASCIIトークンを残さない。
+    - 出力直前に自然さを最終確認する。文脈にない急な指示語、同語反復、くどい前置きがあれば簡潔に言い換える。
+    - 最終文は、会話の流れに自然につながる、自然な日本語で表現することを優先する。
+
+session_evaluation_prompts:
+  client_feedback_prompt_template: |-
+    あなたは、以下の CLIENT_CODE で設定されたクライアント本人です。
+    セッション直後に自分の体験を振り返り、自然な日本語で1段落だけ書いてください。
+    ratings は今の自己評価、session log は実際のやり取りです。両方を踏まえてください。
+    約400字で、目安は320〜480字です。
+    必ず含めること:
+    - このセッションがどんな体験だったか
+    - 良かった点
+    - 物足りなかった点、まだ残る不安や迷い
+    - このあと自分がどうなりそうか、何を試しそうか
+    箇条書き・見出しは禁止です。日本語の本文だけを JSON に入れてください。
+
+    出力は必ず次の JSON 形式だけ:
+    {{
+      "client_feedback": "約400字の日本語本文"
+    }}
+
+    === CLIENT_CONTEXT ===
+    {client_context_json}
+
+    === RATINGS ===
+    {ratings_json}
+
+    === FINAL_CLIENT_INTERNAL_STATE ===
+    {final_client_internal_state_json}
+
+    === SESSION_LOG ===
+    {session_log_text}
+
+  supervisor_feedback_prompt_template: |-
+    あなたは動機づけ面接（MI）の熟練スーパーバイザーです。
+    以下のセッションをレビューし、カウンセラーへのフィードバックを自然な日本語の1段落で書いてください。
+    約400字で、目安は320〜480字です。
+    必ず含めること:
+    - カウンセラーの良い点
+    - 課題点
+    - 次回に向けた改善の示唆
+    MIの観点から、反映・是認・焦点化・自律性支援・喚起の質を具体的に見てください。
+    箇条書き・見出しは禁止です。日本語の本文だけを JSON に入れてください。
+
+    出力は必ず次の JSON 形式だけ:
+    {{
+      "supervisor_feedback": "約400字の日本語本文"
+    }}
+
+    以下の MI 知識全文を文脈知識として参照し、判断の土台にしてください。セッションの実際の文脈と矛盾する場合は、セッション本文を優先してください。
+
+    === MI_KNOWLEDGE ===
+    {mi_knowledge_text}
+
+    === RATINGS ===
+    {ratings_json}
+
+    === FINAL_CLIENT_INTERNAL_STATE ===
+    {final_client_internal_state_json}
+
+    === SESSION_LOG ===
+    {session_log_text}
+
+layer4_writer_prompts:
+  layer3_action_rule_section_template: |-
+    【Layer3 action_rules（参照）】
+    - 下記はLayer3で確定した行動ルール。意味を維持したまま、最終文面に整える。
+    {action_rule}
+  minimal_mode_rules: |-
+    【Layer4 polishing mode】
+    - 目的は Layer3完成ドラフトを主アンカーとして、固定制約と編集対象ブリーフを守りながら自然な最終応答に磨くこと。
+    - polishing よりも、命題を減らして自然にする編集を優先する。
+    - 最優先は、draft_response_text より短く、会話として自然な最終文にすること。迷ったら、解釈の豊かさを足すより、短さと自然さを優先する。ただし主動作と変化方向は壊さない。
+    - draft_response_text の意味・主題・構成意図を保持する。別案を新規生成しない。
+    - draft_response_text は意味アンカーであり、語彙アンカーではない。意味と主動作を保ったまま、語彙は last_user_text の原語またはごく近い日常語へ寄せてよい。
+    - fixed_main_action は変更しない。ドラフトの主行為を維持する。
+    - fixed_affirm_mode / fixed_reflection_style に従って是認と文体を調整する。
+    - writer_plan は変更しない。文数目安と質問上限を守る。
+    - Layer3 の編集対象ブリーフで確定した primary_focus / utterance_target / evocation_move / must_include / must_avoid は再判断しない。
+    - 基本の編集は、言い換え・冗長削減・語順調整・句読点調整・自然な文結合/文分割に限る。
+    - 1文の追加・削除は、action_rules や writer_plan を満たすために必要な最小限の場合だけ許可する。
+    - 新規論点追加・新規提案追加・新規質問追加・履歴再解釈・強みラベルの新規付与は禁止。
+    - add_affirm != NONE のとき、是認そのものを消さない。強すぎる性格ラベルや抽象評価を削る場合も、観察できる発話・選択・行動を短く認める形へ圧縮して残す。
+    - 1ターンで3つ以上の機能を入れない。原則1機能、最大でも2機能までに整える。
+    - 編集の優先順位は、1) 主動作の保持 2) 直前ユーザの明示希望 3) draft_response_text / evocation_move の芯保持 4) 否定されない・急かされない受け取りやすさ 5) 履歴整合 6) 冗長削減。
+    - 短くするときの保持優先順位は、1) 相手固有の言葉 2) いま選ぼうとしている方向 3) 迷いの両極。3点が残る案を優先する。
+    - 同じ主動作と変化方向を保てる候補が複数あるなら、より短く、より自然で、より生活語に近い文を選ぶ。
+    - 削るときは、抽象評価・同義反復・説明句から先に削る。安全な一般論を足して整えない。
+    - 長いユーザ表現を丸ごと写さず、時間/場所/道具/行動の具体語を1つ残して短い日常語へたたむ。例: 「今日の依頼内容と分担を自分の言葉で短く伝える一文」→「依頼と分担を伝える一文」。
+    - writer_plan.preferred_ending_family がある場合は、その終わり方の温度を優先する。ただし不自然な説明口調や造語にはしない。
+    - writer_plan.avoid_recent_ending_families がある場合は、そのfamilyと同系統の語尾連投を避ける。意味保持が優先で、無理なら意味を守る。
+    - 主体・視点・所有権は変更禁止。ユーザ側の「あなた」「ご自身」「自分で決める」「あなたの感覚」などの自律性アンカーを、Layer4で「私」「こちら」へ置き換えない。
+    - draft_response_text に時間/場所/数量/道具/手順の具体語がある場合、自然化のために一般化しない。
+    - ユーザの具体語は最低1つ保持する。must_include や slot_quality_target_examples.detail に具体語があるときは、そのうち少なくとも1つを自然な形で残す。
+    - must_include が空でも、last_user_text に身体感覚・行動・場面・音・時間帯の具体語がある場合は、そのうち少なくとも1つを本文に残す。
+    - must_include に具体語がある場合は、その語またはごく近い自然な言い換えを残し、「準備」「やり方」「感触」などの抽象語だけに丸めない。
+    - last_user_text や draft_response_text に英単語混入・プレースホルダ・壊れたASCIIトークンがあっても、その表記をそのまま反射しない。意味が明確なら自然な日本語へ正規化し、不明ならその語を使わず周辺意味だけで自然に言い換える。
+    - 具体語保持は表記一致ではなく意味保持を優先する。混入語やプレースホルダは具体アンカーとして保持対象にしない。
+    - 「言語化」「整理」「見つめ直す」「意味」「きっかけ」「姿勢」「気づき」「学び」「持ち帰り」などの抽象名詞は、ユーザ自身がその語を使っていない限り、そのまま残さず動詞や感覚・行動・場面の語へ戻す。
+    - Layer4 は「弱める」だけでなく「生活語へ戻す」役割を持つ。抽象語を残すくらいなら、意味を少し削っても場面・感覚・行動の語を優先する。
+    - 文末を「やり方」「動き」「流れ」「中身」などの抽象名詞だけで閉じない。最後は場面・感覚・選択・行動の語で着地させる。
+    - 指示が衝突した場合の優先順位: 主動作ガードレール/出力前チェック > 是認ルール > 冗長性の抑制。
+    - layer4_repair_issue_codes.hard_contract は必須修正、layer4_repair_issue_codes.soft_hint は改善ヒント。コード名は本文に出さない。
+    - 過剰な意味づけや先回りした物語化がある場合は、直前ユーザ発話により近い反映へ1段戻す（small gentle steps）。
+    - draft_response_text にユーザ明示より強い解釈がある場合は、まず可逆表現へ弱め、それでも強ければ明示内容に近い記述へ戻す。
+    - change talk の具体焦点は削らない。ct_anchors / utterance_target / evocation_move が示す具体的な方向や対比は、短くしても残す。
+    - 過剰さを下げるときも、ct_anchors / utterance_target / evocation_move が示す変化方向は残す。安全な一般論へ戻さない。
+    - A/Bの選択肢や両価性があり、last_user_text ですでに一方への傾きが示されている場合は、その側を主役に残す。未選択の側を前景化しない。
+    - SCALING_QUESTION では、尺度の対象を「この練習」「この方法」のように抽象化せず、直前に出た具体行動名で保つ。
+    - macro_bridge_anchor がある場合も、その文言を本文にそのまま出す必要はない。micro focus と macro theme の接続が切れないことだけ守る。
+    - ct_anchors / ct_operation_goal / evocation_move / slot_goal / success_criterion は意味の保存用メモであり、その抽象語を本文にそのまま出す必要はない。本文は last_user_text に近い日常語で書く。
+    - macro_bridge_anchor は整合メモであり、本文でそのまま言い換えない。必要なら具体場面や行動のつながりで残す。
+    - 直近の counselor 発話と同じ核語を繰り返すより、同じ意味でも別の言い方へずらす。とくに「自分のペース」「安全」「少しずつ」「土台」「一歩」「練習」「不安」の反復に注意する。
+    - last_user_text に「もう少し話したい」「続けたい」などの明示希望があるときは、draft_response_text にない終了明示や次回送りを新規追加しない。
+    - REVIEW_REFLECTION / CLOSING では、ユーザが使っていない「気づき」「学び」「持ち帰り」を増やさず、「一番残っていること」「次に意識したいこと」などの日常語を優先する。
+    - 応援や理解の温度は保つが、褒めすぎ・言い切り・未来保証にはしない。
+    - 直前ユーザ入力と対話履歴に整合する表現に整え、冗長性を抑える。
+    - 出力直前に、主体反転・視点反転・具体語の脱落・抽象化しすぎが残っていないか確認し、見つけたら短く自然なまま修正する。
+    - 返答本文のみを出力し、JSON・見出し・箇条書き・role prefix は出さない。
+  hard_constraints_template: |-
+    【固定制約（再判定禁止）】
+    - phase: {phase_value} [{phase_name}]
+    - turn_index: {turn_index}
+    - fixed_main_action: {action_value}
+    - fixed_affirm_mode: {affirm_mode}
+    - fixed_reflection_style: {reflection_style}
+  editor_brief_template: |-
+    【Layer4 の編集対象ブリーフ】
+    - last_user_text: {last_user_text}
+    - primary_focus.topic: {primary_focus_topic}
+    - primary_focus.meaning: {primary_focus_meaning}
+    - ct_anchors: {ct_anchors}
+    - ct_operation_goal: {ct_operation_goal}
+    - utterance_target: {utterance_target}
+    - question_reflect_seed: {question_reflect_seed}
+    - evocation_move: {evocation_move}
+    - macro_bridge_anchor: {macro_bridge_anchor}
+    - phase_goal_this_turn: {phase_goal_this_turn}
+    - writer_plan: {writer_plan}
+    - must_include: {must_include}
+    - must_avoid: {must_avoid}
+    - slot_goal: {slot_goal}
+    - repair_goal_text: {repair_goal_text}
+    - success_criterion: {success_criterion}
+    - clarify_preference_mode: {clarify_preference_mode}
+    - clarify_preference_options: {clarify_preference_options}
+    - slot_quality_target_examples.detail: {slot_quality_target_examples_detail}
+    - draft_response_text: {draft_response_text}
+    - layer4_repair_issue_codes.hard_contract: {layer4_repair_issue_codes_hard_contract}
+    - layer4_repair_issue_codes.soft_hint: {layer4_repair_issue_codes_soft_hint}
+    - must_include は優先保持対象。とくに時間/場所/数量/道具/手順の具体語は残す。
+    - slot_quality_target_examples.detail は具体アンカー候補。自然な範囲で本文に残す。
+    - hard_contract は必ず解消し、soft_hint は自然さを崩さない範囲で反映する。
+    - 上記は Layer3 で確定した編集対象ブリーフ。Layer4 は再判断せず、draft_response_text を主アンカーに polishing する。
+    - 参照可能な文脈は対話履歴全体。直前入力との接続を優先する。
+    - draft_response_text は意味の主アンカーであり、語彙は last_user_text に近い日常語へ戻してよい。
+    - last_user_text / draft_response_text に表層ノイズが含まれていても、意味保持を優先し、日本語として不自然な混入語は最終文に残さない。
+    - ct_anchors / ct_operation_goal / evocation_move / slot_goal / success_criterion は、何を消さずに残すかを示す意味保存用メモとして扱い、その抽象語を本文にそのまま出さない。
+    - macro_bridge_anchor は接続メモであり、本文でそのまま言い換えない。必要なら具体場面や行動のつながりで残す。
+  edit_task: |-
+    【編集タスク】
+    0. 最優先は、draft_response_text より短く、自然にすること。迷ったら、情報を足すより削る。主動作と change talk の方向は残す。
+    1. draft_response_text を主アンカーにして、layer4_repair_issue_codes.hard_contract の不整合を優先して解消し、layer4_repair_issue_codes.soft_hint を改善ヒントとして使う。
+    2. utterance_target / evocation_move / must_include / must_avoid / writer_plan を守りつつ、主動作ガードレールと是認ルールに一致させる（衝突時は主動作を優先）。
+    3. 基本は polishing に徹しつつ、意味と構成意図を保ったまま「命題を減らす」方向で言い換え・冗長削減・語順調整・文結合/文分割を行う。
+    3.1. 短くするときも、「相手固有の言葉」「いま選ぼうとしている方向」「迷いの両極」の3点は優先保持する。
+    3.2. draft_response_text は意味アンカーとして扱い、語彙は last_user_text の原語またはごく近い日常語を優先する。抽象名詞の連続は避ける。
+    3.3. draft_response_text や last_user_text に英単語混入・プレースホルダ・壊れたASCIIトークンがある場合、その表記をオウム返ししない。意味が明確なら自然な日本語へ直し、不明ならその語を使わずに周辺意味だけで自然に言い換える。
+    3.4. 抽象語を残すくらいなら、意味を少し削っても場面・感覚・行動の語へ戻す。Layer4 は生活語へ戻す編集を優先する。
+    3.45. 文末を「やり方」「動き」「流れ」「中身」などの抽象名詞だけで閉じず、最後は場面・感覚・選択・行動の語で着地させる。
+    3.46. 長いユーザ表現は丸ごと写さず、具体語を1つ残して短い日常語へたたむ。例: 「今日の依頼内容と分担を自分の言葉で短く伝える一文」→「依頼と分担を伝える一文」。
+    3.47. writer_plan.preferred_ending_family がある場合は、その方針に沿う終止に寄せる。writer_plan.avoid_recent_ending_families がある場合は、そのfamilyの反復を避ける。
+    4. 削るときは、抽象評価・重複した言い換え・説明句を先に削る。反射 + 意味づけ + 是認 + 見通しの4点盛りにしない。
+    4.1. 「言語化」「整理」「見つめ直す」「意味」「きっかけ」「姿勢」「気づき」「学び」「持ち帰り」などの抽象名詞は、ユーザ自身が使っていない限り、まず「言葉にする」「少しつかむ」などの動詞や感覚・行動・場面の語へ言い換える。
+    4.2. add_affirm != NONE の場合、性格ラベルを弱めるときは是認を削除せず、そのターンで確認できる発話・選択・行動への短い是認に圧縮する。
+    4.3. draft_response_text にユーザ明示より強い解釈がある場合は、まず可逆表現へ弱め、それでも強ければ明示内容に近い記述へ戻す。
+    4.5. 主体・視点・所有権は変更しない。「あなた」「ご自身」「自分で決める」「あなたの感覚」などの自律性アンカーを「私」「こちら」へ置き換えない。
+    5. draft_response_text や must_include にある具体アンカー（時間/場所/数量/道具/手順）は、会話として不自然でない限り残す。自然化のための一般化はしない。
+    5.5. ユーザの具体語は最低1つ保持する。must_include や slot_quality_target_examples.detail に具体語がある場合は、そのうち少なくとも1つを本文に残す。
+    5.6. must_include が空でも、last_user_text に身体感覚・行動・場面・音・時間帯の具体語がある場合は、そのうち少なくとも1つを本文に残す。
+    5.7. macro_bridge_anchor がある場合は、その接続は保つが、「XはYの入口」「Xの意味はY」型の説明文を draft_response_text にない形で新規追加しない。
+    5.8. A/Bの選択肢や両価性があり、last_user_text で一方への傾きが示されている場合は、その側を主役に残す。未選択の側を前景化しない。
+    5.9. SCALING_QUESTION では、尺度の対象を「この練習」「この方法」などへ抽象化せず、直前に出た具体行動名で保つ。
+    6. 過剰な意味づけや未来の言い切りは1段下げるが、draft_response_text の喚起の核や change talk の方向は消さない。AよりBの対比、実行意図、守りたいものは危険でない限り別表現でも残す。
+    6.5. change talk の具体焦点は削らない。ct_anchors / utterance_target / evocation_move が示す焦点は、短くしても残す。
+    6.6. 直近の counselor 発話と同じ核語の反復は避け、同じ意味でも別の言い方へずらす。とくに「自分のペース」「安全」「少しずつ」「土台」「一歩」「練習」「不安」の反復に注意する。
+    7. QUESTION の基本構成は固定する。fixed_affirm_mode != NONE なら「是認1文 + utterance_target に関する質問1文」、fixed_affirm_mode == NONE なら「question_reflect_seed に沿った simple reflection 1文 + utterance_target に関する質問1文」にする。前置きに説明や見通しを重ねない。
+    7.5. REVIEW_REFLECTION / CLOSING では、ユーザが使っていない「気づき」「学び」「持ち帰り」を増やさず、「一番残っていること」「次に意識したいこと」などの日常語を優先する。
+    8. SUMMARY以外では1ターン1機能を原則とし、最大でも2機能までに整える。1文の追加・削除が必要なら、action_rules や writer_plan を満たすための最小限にとどめる。新規論点・新規提案・新規質問・履歴再解釈・強みラベル追加は行わない。
+    9. last_user_text にある明示希望は draft_response_text より優先して整合させる。続けたい意向があるのに終了へ上書きしない。
+    10. 出力直前に「主体反転」「視点反転」「具体語の脱落」「抽象化しすぎ」が含まれていないか確認し、含まれていたら短く自然な形のまま修正する。
+    11. 最終応答本文のみを1件出力する。issue code や内部ラベルは本文に出さない。
+  draft_length_contract_template: |-
+    【Draft Length Contract】
+    - draft_status: {draft_status}
+    - draft_length_cap_chars: {draft_length_cap_chars}
+    - draft_response_text がある場合、Layer4 は意味を増やさず削る方向で整え、最終文は draft_response_text より短くする。
+    - 短さと自然さは最優先。迷ったら、細かな解釈や補足を足すより削る。
+    - draft_response_text がない場合だけ、utterance_target / evocation_move / must_include を使って最小限の自然文を1件だけ組み直す。
+  validation_checks:
+    header: "【出力前チェック（必須）】"
+    common: |-
+      - 返答本文のみを1件出力する。JSON・role名・コードブロックは出さない。
+      - 内部ラベルや英語スネークケース識別子（内部ID・内部キー名）を本文に出さない。
+      - 日常語（です・ます基調）で書き、敬語を重ねすぎない。スラング（w / www / 笑）は使わない。
+      - 返答本文は日本語のみを基本とする。固有名詞・一般的な略語を除き、英単語・ローマ字・プレースホルダ・壊れたASCIIトークンを残さない。
+      - 「お気持ち」「ご様子」「〜ように感じます」「叶えられたら」などのカウンセリング定型は避け、日常語に言い換える。
+      - 直前ユーザ発話で明示されていない価値判断・成長物語・将来予測を完成させない。必要なら「近い反映」に言い換える。
+      - 「伝わってきます」「受け取りました」「大事な動き」「丁寧さ」「力強さ」などの抽象的なメタ評価は原則使わない。
+      - 1文あたりの読点（、）は2回以内にする。
+      - 読点制約に合わせるときは「、」を機械的に削除せず、不要語の削除と語順調整で1文を短く整える。
+      - 禁止表現: 「〜にしますね」「〜しておきますね」「今週は〜しますね」。
+      - Layer3完成ドラフトの主題から外れる新規論点を追加しない。
+      - 主体・視点・所有権は変更しない。「あなた」「ご自身」「自分で決める」「あなたの感覚」などの自律性アンカーを「私」「こちら」へ置き換えない。
+      - draft_response_text は意味アンカーであり、語彙アンカーではない。抽象名詞が残っている場合は、意味を保ったまま last_user_text に近い日常語へ言い戻す。
+      - last_user_text に混入語があっても、その表記をそのまま反射しない。意味が明確なら自然な日本語へ直し、不明ならその語を使わずに言い換える。
+      - draft_response_text にある数字・時間・場所・道具・行動手順の具体語を、「準備」「やり方」「感触」などの抽象語へ丸めない。
+      - ユーザの具体語を最低1つ保持する。must_include や slot_quality_target_examples.detail に具体語がある場合は、そのうち少なくとも1つを残す。
+      - must_include が空でも、last_user_text に身体感覚・行動・場面・音・時間帯の具体語がある場合は、そのうち少なくとも1つを残す。
+      - change talk の具体焦点を削らない。ct_anchors / utterance_target / evocation_move が示す具体方向を一般論に戻さない。
+      - 抽象語への置換は禁止寄り。短くするためでも、具体語を消して抽象語だけにしない。
+      - 長いユーザ表現を丸ごと残さず、具体語を1つ残して短い日常語へたたむ。
+      - 「言語化」「整理」「見つめ直す」「意味」「きっかけ」「姿勢」「気づき」「学び」「持ち帰り」などの抽象名詞は、ユーザ自身がその語を使っていない限り優先的に動詞や感覚・行動・場面の語へ言い換える。
+      - 抽象語が必要でも1ターン1個までを目安にし、抽象語を連ねない。
+      - A/Bの選択肢や両価性がある場合、ユーザがすでに選び始めた側を主役にし、未選択の側を前景化しない。
+      - 文末を「やり方」「動き」「流れ」「中身」などの抽象名詞だけで閉じない。
+      - 最終文に、主体反転・視点反転・具体語の脱落・抽象化しすぎが残っていないか確認し、見つけたら短く自然な文のまま直す。
+    reflect_closing: |-
+      - REFLECT系の文数・構成・質問配置は Layer3 action_rules に従う（Layer4で独自追加しない）。
+    reflect_non_closing: |-
+      - REFLECT系の文数・構成・質問配置は Layer3 action_rules に従う（Layer4で独自追加しない）。
+    reflect_common: |-
+      - REFLECT系の文数・構成・質問配置は Layer3 action_rules に従う（Layer4で独自追加しない）。
+      - 「～のですね」ばかりに固定せず、「～ということ。」「～と。」「～。」「～という…」などを文脈に応じて使い分け、同じ語尾を連続させない。
+      - 語尾例: 「今夜は会議前に一文を試したいのですね。」「今夜は会議前に一文を試したいということ。」「今夜は会議前に一文を試したいと。」「今夜は会議前に一文を試したい。」
+    question_allow_questionless: |-
+      - QUESTION系の文数・構成・質問配置は Layer3 action_rules に従う（Layer4で独自追加しない）。
+    question_general: |-
+      - QUESTION系の文数・構成・質問配置は Layer3 action_rules に従う（Layer4で独自追加しない）。
+    question_target: |-
+      - QUESTION系の文数・構成・質問配置は Layer3 action_rules に従う（Layer4で独自追加しない）。
+    question_followup_intro: |-
+      - QUESTION系の文数・構成・質問配置は Layer3 action_rules に従う（Layer4で独自追加しない）。
+    question_followup_plus_one_template: |-
+      - QUESTION系の文数・構成・質問配置は Layer3 action_rules に従う（Layer4で独自追加しない）。
+    question_followup_reason_template: |-
+      - QUESTION系の文数・構成・質問配置は Layer3 action_rules に従う（Layer4で独自追加しない）。
+    question_followup_default: |-
+      - QUESTION系の文数・構成・質問配置は Layer3 action_rules に従う（Layer4で独自追加しない）。
+    scaling_question: |-
+      - SCALING_QUESTIONの文数・構成・質問配置は Layer3 action_rules に従う（Layer4で独自追加しない）。
+      - 尺度の対象を「この練習」「この方法」などへ抽象化せず、直前の具体行動を保つ。
+    review_first_turn: |-
+      - REVIEW_REFLECTION初回の構成は Layer3 action_rules に従う（Layer4で独自追加しない）。
+      - 最後の質問は、「一番残っていること」「次に意識したいこと」などの日常語で開く。
+    summary: |-
+      - SUMMARYの文数・構成・締め方は Layer3 action_rules に従う（Layer4で独自追加しない）。
+    closing_final_turn: |-
+      - CLOSING最終ターンは、質問を入れない（？は0）。
+      - 終了明示（例: ここで終える/これで終わり）を1文で含める。
+    clarify_preference: |-
+      - CLARIFY_PREFERENCEの文数・構成・選択肢提示は Layer3 action_rules に従う（Layer4で独自追加しない）。
+    clarify_preference_focus_choice: |-
+      - 話題選択モードでは、進め方の選好確認へ戻さず、どの話題から入るかを選ぶ質問に保つ。
+    ask_permission: |-
+      - ASK_PERMISSION_TO_SHARE_INFOの文数・構成・語彙は Layer3 action_rules に従う（Layer4で独自追加しない）。
+      - add_affirm != NONE なら、1文目は是認、2文目は情報共有の可否だけを確認する質問にする。
+      - add_affirm == NONE なら、1文目は question_reflect_seed に沿った simple reflection、2文目は情報共有の可否だけを確認する質問にする。
+      - 質問は最後の1つのみ。
+    provide_info: |-
+      - PROVIDE_INFOの文数・構成・語彙は Layer3 action_rules に従う（Layer4で独自追加しない）。
+    affirm_none: |-
+      - 基本構成は action のみ。今回は是認文を入れない。
+      - 是認なしでは、努力/称賛語（例: 素晴らしい・頑張る・努力・工夫・向き合う・続ける）を避ける。
+    affirm_simple: |-
+      - 基本構成は「短い是認1文 + fixed_main_action」。
+      - 短い是認を1文入れる。
+      - そのターンで観察できる発話・選択・行動の1点に接地させる。
+      - 基本形の例は「不安や迷いがありながらも、〇〇しようとしているのですね。」「不安や迷いはありつつ、〇〇しようとしているということ。」のように語尾を固定しない。
+    affirm_complex: |-
+      - 基本構成は「文脈に根ざした是認1文 + fixed_main_action」。
+      - 文脈に根ざした是認を1文入れる。
+      - まず観察された事実を書く。
+      - その後に、その行動が向いている方向や大事にしたいことを1句だけ添える。
+      - 持続的な強み・価値の名詞化は必須にしない。迷うときは性格ラベルより行動ベースの是認を優先する。
+      - 「私は〜と思う/感じる」「伝わってきます」などの主観表現は避け、相手の行動・発言を主語にして書く。
+  action_guardrails:
+    closing_reflect_template: |-
+      【主動作ガードレール（Layer3準拠）】
+      - CLOSING初回の構成・文数・質問配置は Layer3 action_rules を優先し、Layer4で独自追加しない。
+      - main_action の目的を崩さない。
+      {style_line}
+    closing_final_turn: |-
+      【主動作ガードレール（Layer3準拠）】
+      - CLOSING最終ターンは Layer3 action_rules の終了明示構成を優先し、Layer4で独自追加しない。
+      - 質問を入れない。
+      - main_action の目的を崩さない。
+    reflect_template: |-
+      【主動作ガードレール（Layer3準拠）】
+      - REFLECT系の構成・文数・質問配置は Layer3 action_rules を優先し、Layer4で独自追加しない。
+      - main_action の目的を崩さない。
+      - 「～のですね」ばかりに固定せず、「～ということ。」「～と。」「～。」「～という…」などを文脈に応じて使い分け、同じ語尾を連続させない。
+      - 語尾例: 「今夜は会議前に一文を試したいのですね。」「今夜は会議前に一文を試したいということ。」「今夜は会議前に一文を試したいと。」「今夜は会議前に一文を試したい。」
+      {style_line}
+    question_followup_plus_one_template: |-
+      【主動作ガードレール（Layer3準拠）】
+      - QUESTION系の構成・文数・質問配置は Layer3 action_rules を優先し、Layer4で独自追加しない。
+      - main_action の目的を崩さない。
+    question_followup_reason_template: |-
+      【主動作ガードレール（Layer3準拠）】
+      - QUESTION系の構成・文数・質問配置は Layer3 action_rules を優先し、Layer4で独自追加しない。
+      - main_action の目的を崩さない。
+    question_followup_default: |-
+      【主動作ガードレール（Layer3準拠）】
+      - QUESTION系の構成・文数・質問配置は Layer3 action_rules を優先し、Layer4で独自追加しない。
+      - main_action の目的を崩さない。
+    question_default: |-
+      【主動作ガードレール（Layer3準拠）】
+      - QUESTION系の構成・文数・質問配置は Layer3 action_rules を優先し、Layer4で独自追加しない。
+      - fixed_affirm_mode != NONE なら、1文目は是認、2文目は utterance_target に関する質問だけにする。
+      - fixed_affirm_mode == NONE なら、1文目は question_reflect_seed に沿った simple reflection、2文目は utterance_target に関する質問だけにする。
+      - 質問は最後の1つのみ。
+      - main_action の目的を崩さない。
+    scaling_question: |-
+      【主動作ガードレール（Layer3準拠）】
+      - SCALING_QUESTIONの構成・文数・質問配置は Layer3 action_rules を優先し、Layer4で独自追加しない。
+      - main_action の目的を崩さない。
+      - 尺度の対象を「この練習」「この方法」などへ抽象化せず、直前の具体行動を保つ。
+    summary: |-
+      【主動作ガードレール（Layer3準拠）】
+      - SUMMARYの構成・文数・締め方は Layer3 action_rules を優先し、Layer4で独自追加しない。
+      - main_action の目的を崩さない。
+    clarify_preference: |-
+      【主動作ガードレール（Layer3準拠）】
+      - CLARIFY_PREFERENCEの構成・文数・選択肢提示は Layer3 action_rules を優先し、Layer4で独自追加しない。
+      - main_action の目的を崩さない。
+      - すでに一方への傾きがある場合は、その側を1文目で映し、2文目でも先に置く。
+    clarify_preference_focus_choice: |-
+      - 話題選択モードでは、{focus_choice_options} のような話題候補を短く並べ、どの話題から入るかを選べる形にする。
+    ask_permission: |-
+      【主動作ガードレール（Layer3準拠）】
+      - ASK_PERMISSION_TO_SHARE_INFOの構成・文数・語彙は Layer3 action_rules を優先し、Layer4で独自追加しない。
+      - main_action の目的を崩さない。
+    provide_info: |-
+      【主動作ガードレール（Layer3準拠）】
+      - PROVIDE_INFOの構成・文数・語彙は Layer3 action_rules を優先し、Layer4で独自追加しない。
+      - main_action の目的を崩さない。
+    unknown: |-
+      【主動作ガードレール】
+      - 今回の主動作に一致する形式で、返答本文のみを出力する。
+  affirmation_rules:
+    none: |-
+      【是認（affirmation）】
+      - 基本構成は action のみ。今回は是認文を入れない。
+      - 努力や強みを評価する定型句（素晴らしい/頑張っている/工夫している等）は入れない。
+    simple: |-
+      【是認（affirmation: SIMPLE）】
+      - 基本構成は「短い是認1文 + fixed_main_action」。
+      - 短い是認を1文入れる。
+      - 努力・工夫・継続・向き合いのうち、観察できる発話・選択・行動に接地した1点だけを認める。
+      - 基本形は「不安や迷いがありながらも、〇〇しようとしているんですね」。
+      - 過度な称賛や断定は避ける。
+      - 「認めます」「評価します」などと伝えるのではなく、叙述で短く反映する。
+      - 「私は〜と思う/感じる」「伝わってきます」を避け、観察された行動・発言をそのまま言語化する。
+      - 「丁寧さ」「力強さ」「大事な動き」などの抽象評価に逃げず、具体的な言葉や行動をそのまま足場にする。
+      - QUESTION / ASK_PERMISSION_TO_SHARE_INFO の場合は、2文目で質問を1つだけ置く。
+    complex: |-
+      【是認（affirmation: COMPLEX）】
+      - 基本構成は「文脈に根ざした是認1文 + fixed_main_action」。
+      - 文脈に根ざした是認を1文入れる。
+      - 2段構成を基本にする（前半=観察された事実 / 後半=その行動が向いている方向・大事にしたいことを1句）。
+      - いきなり人格評価を置かず、必ず観察事実から書き始める。
+      - 持続的な強み・価値の名詞化は必須にしない。迷うときは性格ラベルより行動ベースの是認を優先する。
+      - 強すぎるラベルを弱めるときは、削除せず「〜しようとしている」「〜を続けようとしている」の形へ圧縮する。
+      - お世辞ではなく、発話に現れた具体的根拠を示す。
+      - 「認めます」「評価します」などと伝えるのではなく、叙述で短く反映する。
+      - 「私は〜と思う/感じる」「伝わってきます」を避け、相手主語で記述する。
+      - 「丁寧さ」「力強さ」などの抽象ラベルだけで締めず、最後まで観察事実に接地させる。
+      - QUESTION / ASK_PERMISSION_TO_SHARE_INFO の場合は、2文目で質問を1つだけ置く。
+  issue_repair:
+    header: "【Layer3違反コード別 修正ガイド】"
+    intro_line: "- 下記コードに該当する違反を先に修正する。未該当の修正は足さない。"
+    fallback_ask_permission: "- ASK_PERMISSIONは『是認またはsimple reflection 1文 + 許可確認1問』の構成を維持する。"
+    fallback_reflect: "- REFLECT系は質問化・提案化・選択要求化を避ける。"
+    fallback_question_like: "- 質問アクションは質問を1つに保ち、混合質問を避ける。"
+    fallback_summary: "- SUMMARYの文数・構成・締め方は Layer3 action_rules に合わせる。"
+    guidance:
+      ask_permission_not_single_sentence: "- ask_permission_not_single_sentence: 2文構成（是認またはsimple reflection 1文 + 許可確認1問）に直す。"
+      ask_permission_not_question: "- ask_permission_not_question: 可否確認の疑問文に直す。"
+      ask_permission_missing_keyword: "- ask_permission_missing_keyword: 「情報/共有/提案/方法/選択肢」のいずれかを必ず含める。"
+      scale_followup_question_missing_plus_one_probe: "- scale_followup_question_missing_plus_one_probe: 0〜10の数値は聞き直さず、「何があると1点上がりそうか」の1問に直す。理由質問は混ぜない。"
+      reflect_contains_choice_prompt: "- reflect_contains_choice_prompt: 「どちら/どっち」を使わず、「一方で/同時に/両面で」に言い換える。"
+      reflect_contains_question_mark: "- reflect_contains_question_mark: 疑問符を外し、叙述の反射文に直す。"
+      reflect_ending_repetition: "- reflect_ending_repetition: 直近履歴で同じ語尾が続いている。『〜のですね。』を連続させず、『〜ということ。』『〜と。』『〜。』『〜という…』などへ言い換える。"
+      reflect_ending_family_bias: "- reflect_ending_family_bias: 直近の assistant 反射と同系統の語尾が続いている。writer_plan.avoid_recent_ending_families を優先し、同じfamilyの連投を避ける。難しければ『〜のですね』『〜ということ』『〜ように聞こえます』『〜かもしれません』の別familyへずらす。"
+      reflect_missing_change_talk_focus: "- reflect_missing_change_talk_focus: 変化方向を示す語や行動の焦点を1つ戻し、反射の主題をぼかさない。"
+      reflect_change_talk_not_strengthened: "- reflect_change_talk_not_strengthened: 直前発話に近い語を保ったまま、変化に向かう意味を1段だけ整理する。新しい物語は足さない。"
+      overinterpretation_risk: "- overinterpretation_risk: 解釈を1段下げる。直前ユーザ発話で明示された語に寄せ、価値判断・将来予測・強みラベルの先回りを削る。"
+      sentence_too_many_commas: "- sentence_too_many_commas: 読点を消すだけで直さず、主述を保ったまま1文を短く言い換える。不要語を削り、読みやすさを優先する。"
+      affirmation_simple_missing: "- affirmation_simple_missing: 短い是認を1文だけ補い、観察可能な努力・工夫・継続・向き合いの1点に限定する。"
+      affirmation_complex_missing: "- affirmation_complex_missing: 性格ラベルを足すのではなく、観察された行動 + その行動が向いている方向を1文で補う。"
+      affirmation_unexpected: "- affirmation_unexpected: 是認語・称賛語を削除し、事実/感情の受け止めのみ残す。"
+      question_preface_missing: "- question_preface_missing: QUESTION / ASK_PERMISSION(add_affirm=NONE) は1文目に question_reflect_seed を短く反映し、最後の文だけを質問にする。"
+      question_preface_not_grounded_in_change_talk: "- question_preface_not_grounded_in_change_talk: QUESTION / ASK_PERMISSION(add_affirm=NONE) の1文目を question_reflect_seed の change talk に戻し、別の焦点へずらさない。"
+      contract_question_count_exceeded: "- contract_question_count_exceeded: 質問は最大1つに減らす。"
+      summary_contains_question: "- summary_contains_question: 疑問文を叙述文に置換し、問いかけを削除する。"
+      summary_sentence_count_out_of_range: "- summary_sentence_count_out_of_range: SUMMARYは Layer3 action_rules の文数条件に調整する。"
+      summary_missing_value_layer: "- summary_missing_value_layer: 大事にしていること・意味・理由の層を短く1句補う。"
+      summary_missing_ambivalence_layer: "- summary_missing_ambivalence_layer: 一方で / 同時に / 揺れの両面を1句補う。"
+      summary_missing_change_talk_focus: "- summary_missing_change_talk_focus: 変化に向かう語や行動の焦点を1つ入れ、要約の主題を明確にする。"
+      summary_change_talk_not_strengthened: "- summary_change_talk_not_strengthened: 変化方向を保ったまま、一段だけ前向きな整理を足す。新しい解釈は広げない。"
+      focusing_missing_observable_target_behavior: "- focusing_missing_observable_target_behavior: 観察可能な行動と場面を1つ入れ、焦点を具体化する。"
+      next_step_missing_concrete_step: "- next_step_missing_concrete_step: 観察可能な行動 + 場面/時間のアンカーに直す。"
+      next_step_missing_autonomy_support: "- next_step_missing_autonomy_support: 本人が選べる言い方に戻す。"
+
+action_rules:
+  safety_override: |-
+    出力要件（安全確保モード）:
+    - まず安全確保と専門窓口（緊急ダイヤル、医療機関、産業保健スタッフ等）への連絡を丁寧に案内する。
+    - 危機対応に専念し、通常のMI進行は一旦止める。
+    - 責めずに安心感を伝えつつ、話せるかどうかを1つだけ短く尋ねる。
+
+  first_turn:
+    greeting_only: |-
+      出力要件（初回: 挨拶のみのケース）:
+      - こちらからも丁寧に挨拶を返す。
+      - 相談に来てくれたことへの感謝を1文で伝える。
+      - 質問は入れない。可能なら短い反射を1文添える。
+      - 合計1〜2文で簡潔に。
+    greeting_with_topic: |-
+      出力要件（初回: 挨拶＋相談のケース）:
+      - 冒頭で短く挨拶を返す。
+      - 相談を打ち明けてくれたことへの感謝を伝える。
+      - まず短い反射を1つだけ添える（言い切りで？は付けない）。
+      - 合計2〜3文で簡潔に。
+    topic_only: |-
+      出力要件（初回: 相談のみで挨拶がないケース）:
+      - こちらから丁寧に挨拶を入れる。
+      - 相談してくれたことへの感謝を伝える。
+      - まず短い反射を1つだけ添える（質問はまだしない）。
+      - その後、自律性を尊重する言葉（例：ここでは、何をどのように話すか、あなたが決めて大丈夫です）を1文添える。
+      - 合計3～4文程度で簡潔に。
+
+  reflect:
+    base: |-
+      出力要件（反映/言い換え）:
+      - shared inputs のうち primary_focus_seed / change_talk_seed / last_substantive_user_text / slot_quality_target_example_detail_seed を見て設計する。
+      - 本文で扱うのは utterance_target の1点だけ。
+      - add_affirm != NONE のときだけ、是認1文の後に反映を置く。add_affirm == NONE なら反映だけにする。
+      - 1ターン1命題を守り、反映 + 説明 + 是認 + 見通しを同時に盛り込まない。
+      - 質問しない。
+      - 助言しない。
+      - 反映は叙述の文（statement）で返す。
+      - 相手の体験を相手の視点で短く映す（です・ます基調の日常語）。
+      - ただし語句の単純反復にはせず、utterance_target の焦点化を保つ。
+      - 「お気持ち」「ご様子」「〜ように感じます」「叶えられたら」などの定型表現は避ける。
+      - 維持トークを本文の中心にしない。変化に向かう側を前に出す。
+      - 可能なら change_talk_seed の変化側を最低1点は可視化する。場づくりや安心づけだけで終えない。
+      - 長いユーザ表現は丸ごと写さず、時間/場所/道具/行動の具体語を1つ残して短い日常語へたたむ。例: 「今日の依頼内容と分担を自分の言葉で短く伝える一文」→「依頼と分担を伝える一文」。
+      - draft_response_text には、そのまま出せる自然な反映文（叙述）を書く。
+      - must_include には、この反映の核になる語句を1つ以上入れる。
+      - 「～のですね」ばかりではなく、「～ということ。」「～と。」「～。」「～という…」など、多様な文末表現を用いる。
+      - 語尾例: 「今夜は会議前に一文を試したいのですね。」「今夜は会議前に一文を試したいということ。」「今夜は会議前に一文を試したいと。」「今夜は会議前に一文を試したい。」
+    review_feedback_append: |-
+      - 振り返りフェーズでは、相手が一番残っていることや次に意識したいこととして触れた内容を足場にする。
+      - 前向きな意味づけや励ましを足しすぎず、具体語に接地した短い反映を優先する。
+    short_user_append: |-
+      - 直前のクライアント発話が短い/あいづちの場合は、それ単体を言い換えない。直近の具体的な内容を思い出して、それに基づいて反射する。
+    style_simple: |-
+      スタイル別必須（簡単反射）:
+      - utterance_target の1点だけを短く聞き返す。
+      - change_talk_seed から、変化に向かう明示部分を1点だけ拾って返す。
+      - 言外の推測は足さない。
+      - 明示内容1点だけを短く言い換え、意味づけを重ねすぎない。
+      - 単なるオウム返しにせず、焦点語を保った短い言い換えにする。
+      - 長さは原則1文。
+    style_complex: |-
+      スタイル別必須（複雑反射）:
+      - utterance_target の1点だけを聞き返す。
+      - change_talk_seed のうち、最も前向きな1点だけを選ぶ。
+      - last_substantive_user_text または primary_focus.evidence_quotes の具体場面をもとにして、半歩先の意味を1つだけ足す。
+      - 反映するのは、明示内容1点 + 半歩先の意味1点までにする。
+      - 強めの仮説は1つまでにし、解釈 + 是認 + 方向づけを同じ文に重ねない。
+      - 相手の体験を映しつつ、言葉の表面だけを繰り返さない。
+      - 長い原文は、核の具体語を1つ残して短い日常語にたたむ。
+      - 半歩先の意味は、感情 / 価値 / 意図 / 状況の意味 / 深い意味 / 言葉にされていない想い / 希望 のどれか1種類だけにする。
+      - 半歩先の意味は可逆表現にする（例: 〜ようにも聞こえる / 〜輪郭が少し出てきている）。言い切りや決めつけにしない。
+      - 維持トークは背景としてのみ使い、本文では対比として書かない。
+      - slot_quality_target_example_detail_seed があれば、その変化を少し深める方向で意味を足す。なければ change_talk_seed だけで半歩先を作る。
+      - 短い是認を入れるなら、観察できた努力や工夫を1点だけ自然に添える。抽象評価や称賛にしない。
+      - 単なる言い換えで終わらない。
+      - 長さは原則1文。
+      - must_include には、added meaning の核になる語句を1つ入れる。
+      - note_for_debug には anchor=... | added=... | move=... を短く残す。
+    style_double: |-
+      スタイル別必須（両面反射）:
+      - 迷いの両側を同時に扱うときだけ使う。
+      - utterance_target に関係する維持トーク寄りの側を前半に短く置く。
+      - 後半では utterance_target をそのまま主題にし、変化に向かう側で終える。
+      - すでに少し選び始めている側がある場合は、その側を変化側として後ろに置く。
+      - 前半と後半で論点を増やさず、どちらも utterance_target 周辺の1件に結ぶ。
+      - 長さは原則1文。
+    change_talk_append: |-
+      - 下記のチェンジトークのうち1〜2点に焦点を絞る。
+      {change_talk_hint}
+
+  question:
+    short_reply: |-
+      出力要件（質問：短答時のシンプル版）:
+      - 基本構成は最大2文。
+      - add_affirm != NONE なら、1文目は短い是認、2文目は utterance_target に関する質問だけにする。
+      - add_affirm == NONE なら、1文目は question_reflect_seed に沿った簡単反射、2文目は utterance_target に関する質問だけにする。
+      - 1文目には説明や見通しを足さない。
+      - slot_target_label / selected_target_information_seed / slot_quality_target_example_detail_seed に沿って、最小の1点だけ尋ねる。
+      - 情報回収だけでなく、change_talk_seed が少し前に出る聞き方を優先する。
+      - 文末に「？」を付ける。
+    default: |-
+      出力要件（質問）:
+      - 基本構成は最大2文。
+      - add_affirm != NONE なら、1文目は短い是認、2文目は utterance_target に関する質問だけにする。
+      - add_affirm == NONE なら、1文目は question_reflect_seed に沿った簡単反射、2文目は utterance_target に関する質問だけにする。
+      - 1文目には説明や見通しを足さない。
+      - slot_target_label / missing_info_seed / selected_target_information_seed / slot_quality_target_example_detail_seed を見て、今ターンで埋める1点を決める。
+      - 原則1つの質問。
+      - はい/いいえで終わりにくい聞き方を優先する。
+      - 1文目を置く場合でも、焦点は utterance_target の1点だけにする。
+      - 質問で聞くのは1点だけにし、同じ意味の言い換えを前置きに重ねない。
+      - 情報回収より evoking を優先し、意味 / 理由 / 守りたいもの / 0ではない理由 / 1点上がる条件 のいずれか1点を聞く。
+      - change_talk_seed と slot_quality_target_example_detail_seed が両方ある場合は、その交差点を聞く。
+      - 誘導しない。
+      - 文末に「？」を付ける。
+    change_talk_append: |-
+      - 下記のチェンジトークのうち1〜2点に焦点を絞る。
+      {change_talk_hint}
+
+  scaling_question:
+    base: |-
+      出力要件（スケーリング質問）:
+      - slot_target_label と current_phase_required_slots に沿って、0〜10の尺度を1つだけ聞く。
+      - 尺度の対象は、直前に出た具体行動・具体表現を保つ。「この練習」「この方法」などへ抽象化しない。
+      - このターンでは数値だけを尋ねる（理由質問や1点アップ質問は重ねない）。
+      - 文末に「？」を付ける。
+    by_phase:
+      IMPORTANCE_PROMOTION: |-
+        - IMPORTANCE_PROMOTIONでは、importance_scale（重要度）を対象にする。
+        - 「どれくらい大事か」を0〜10で1つだけ聞く。
+      CONFIDENCE_PROMOTION: |-
+        - CONFIDENCE_PROMOTIONでは、confidence_scale（自信度）を対象にする。
+        - 「どれくらいやれそうか」を0〜10で1つだけ聞く。
+    change_talk_append: |-
+      - 下記のチェンジトークのうち1〜2点に焦点を絞る。
+      {change_talk_hint}
+
+  summary:
+    base: |-
+      出力要件（要約）:
+      - 2〜3文で整理する。
+      - change_talk_seed を2束まで選び、花束のようにまとめる。
+      - 維持トークは必要なら1句だけ短く添える。
+      - 時系列の全部回収にしない。
+      - 各文の役割を重ねすぎず、同じ意味の言い換えを繰り返さない。
+      - 具体アンカーがある場合は、自然な範囲で残す。
+      - 質問や次の一歩の提案は入れない。
+    change_talk_append: |-
+      - 下記のチェンジトークのうち1〜2点に焦点を絞る。
+      {change_talk_hint}
+
+  clarify_preference:
+    base: |-
+      出力要件（選好確認：反射＋選択肢質問）:
+      - 許可を再度求める質問はしない。
+      - 1文目で、いまのためらい/迷いを短く反射する。
+      - すでに一方への傾きがある場合は、その傾きを1文目で映し、未選択の側を主役にしない。
+      - 2文目で、選択肢質問を1つだけ行う（例: ～ と ～ のどちらが ～ か）。
+      - 2文目でも、すでに傾いている側を先に置く。
+      - 2〜3個までの選択肢を明示的に示し、比較しやすい形で提示する。
+      - 「〜のと…のとでは」のような重い並列表現は避け、AかBかの形で簡潔に聞く。
+      - 二択ラベルは修飾語を削って短く要約し、一読で選べる長さにする。
+      - 全体で1〜2文、質問は1つまで。
+      - 文末に「？」を付ける。
+    focus_choice: |-
+      - 今回は進め方ではなく、どの話題から入るかを確かめる。
+      - 選択肢質問では、{focus_choice_options} のうち2〜3件を短く並べる。
+      - 「どれもつながっていそうですが」など、選ばれなかった話題も残っていてよい含みは保ってよい。
+    change_talk_append: |-
+      - 下記のチェンジトークのうち1〜2点に焦点を絞る。
+      {change_talk_hint}
+
+  ask_permission:
+    base: |-
+      出力要件（許可取り）:
+      - EPEのElicitとして、情報共有の可否だけを簡潔に確認する（提案内容の詳細はここで述べない）。
+      - 基本構成は最大2文。
+      - add_affirm != NONE なら、1文目は短い是認、2文目は情報共有の可否だけを確かめる質問にする。
+      - add_affirm == NONE なら、1文目は question_reflect_seed に沿った簡単反射、2文目は情報共有の可否だけを確かめる質問にする。
+      - 文中に「情報 / 共有 / 提案 / 方法 / 選択肢」のいずれかを含める。
+      - 「進めて」「許可をいただ」「〜にしますね」「決めますね」のような主導的・断定的表現を避ける。
+      - 質問は最後の1つのみ。押しつけない。
+    short_reply: |-
+      出力要件（許可取り：短答時のシンプル版）:
+      - 基本構成は最大2文。
+      - add_affirm != NONE なら、1文目は短い是認、2文目は情報共有の可否だけを確かめる質問にする。
+      - add_affirm == NONE なら、1文目は question_reflect_seed に沿った簡単反射、2文目は情報共有の可否だけを確かめる質問にする。
+      - 文中に「情報 / 共有 / 提案 / 方法 / 選択肢」のいずれかを含める。
+      - 情報共有の詳細はまだ書かない。
+
+  provide_info:
+    base: |-
+      出力要件（情報共有：EPEのProvide→Elicit）:
+      - 中立的に短く情報を共有し、選択肢提示（A/B/C等・箇条書き可）または「一つの方法として」の枠づけを入れる。
+      - 具体的な提案内容はこのアクションで初めて提示する。
+      - 最後に、反応を聞く質問を1つだけ置く（例: どう感じますか / どれならできそうですか）。
+      - 押しつけない。
+    change_talk_append: |-
+      - 下記のチェンジトークのうちいくつかに焦点を絞る。
+      {change_talk_hint}
+
+  review_first_turn:
+    base: |-
+      出力要件（振り返りフェーズ1ターン目: 固定構成）:
+      - main_actionや是認判定の結果にかかわらず、構成は次の順で固定する。
+      - 1文目: REFLECT_COMPLEX（言外の意味を1段推測した短い反射）。
+      - 2文目: SUMMARY（ここまでのセッション要点を短く整理）。
+      - 3文目: セッションの振り返りを促すオープン質問を1つだけ置く。
+      - 最後の質問は『今日の話で一番残っていること』『次に意識したいこと』などの日常語で尋ねる。
+      - 是認文（称賛・強み評価）は入れない。
+      - 質問は最後の1問のみ（？は1つまで）。
+    change_talk_append: |-
+      - 下記のチェンジトークのうち1〜2点を、反射か要約のどちらかに織り込む。
+      {change_talk_hint}
+
+  closing_first_turn:
+    base: |-
+      出力要件（クロージング1ターン目: 固定構成）:
+      - main_action は ranker が REFLECT_SIMPLE / REFLECT_COMPLEX のどちらかを選ぶ。
+      - 選ばれた反射スタイル（{style_name}）で、まず短い反射を1文置く。
+      - その後に、今日のセッションをここで終えるかを確認する質問を1つ置く。
+      - 質問は最後の1問のみ（？は1つまで）。
+      - 是認文（称賛・強み評価）は入れない。
+      - 提案・助言はしない。
+    change_talk_append: |-
+      - 下記のチェンジトークのうち1点を反射文に織り込む。
+      {change_talk_hint}
+
+  closing_final_turn:
+    base: |-
+      出力要件（クロージング最終ターン: 固定構成）:
+      - 選ばれた反射スタイル（{style_name}）で短い受け止めを1文置く。
+      - 続けて、今日のセッションをここで終える旨を1文で明示する。
+      - 質問は入れない（？は0）。
+      - 感謝を短く含める。
+      - 提案・助言はしない。
+
+  unknown: "出力要件: 不明"

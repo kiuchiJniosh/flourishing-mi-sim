@@ -1,0 +1,153 @@
+schema_version: 1
+description: >
+  Layer2 Slot Reviewer 向けのフェーズ別スロット品質評価基準。
+  各スロットで minimum / maximum の判定条件と具体例を定義する。
+  IMPORTANCE_PROMOTION 以降は、FOCUSING_TARGET_BEHAVIOR.target_behavior（確定済みならその内容）との整合を重視する。
+
+GREETING:
+  greeting_exchange:
+    min_condition: "挨拶の往復が示されるが、相手文脈への接続がない。"
+    min_example: "挨拶を交わして会話を始める。"
+    max_condition: "挨拶に加えて、相手の開始文脈（緊張/話しやすさ）へ自然に接続できる。"
+    max_example: "話しにくさもありつつ始められた、という導入を確認する。"
+  rapport_cue:
+    min_condition: "安心・労いの意図があるが抽象的。"
+    min_example: "安心できる雰囲気を作る。"
+    max_condition: "具体的な言い回しで安心感の根拠を示し、関係形成に寄与する。"
+    max_example: "ここでは急いで結論を出さず、今の気持ちをそのまま言葉にして大丈夫だと確認する。"
+
+PURPOSE_CONFIRMATION:
+  presenting_problem_raw:
+    min_condition: "困りごとの断片はあるが、初回主訴として後続フェーズで参照できる形になっていない。"
+    min_example: "何となくしんどい。"
+    max_condition: "初期主訴が本人語彙に近い一文で保持され、焦点化の参照点として使える（この条件で quality_score 0.8 以上の目安）。"
+    max_example: "何のために生きているのか分からず、家と職場の往復で楽しさが薄れている。"
+  today_focus_topic:
+    min_condition: "今日扱う中身の方向はあるが、主訴との接続が弱く焦点が広い、進め方希望と混ざっている、または面接者が出した方向に本人が乗って話しているだけで受け入れ確認が弱い。『どちらから扱うか』の選択だけに留まる場合もここに含む。"
+    min_example: "少し整理したい。"
+    max_condition: "今日扱う中身が1つに絞られ、初期主訴と接続した焦点として共有できる。加えて、本人が自発的にその話題を扱いたいと述べるか、直前要約への明示承諾で受け入れが確認できる。話すペース・進め方・安心条件・提案の要否は process_need に含めない（この条件で quality_score 0.8 以上の目安）。"
+    max_example: "今日は、会議直後に部下へ任せる判断基準を整理したい。"
+  process_need:
+    min_condition: "話し方や進め方の希望が未確認、または『特にない』程度に留まる。"
+    min_example: "進め方は特にないです。"
+    max_condition: "話しやすさの希望、または進行上の選好が一言で分かる。ペース・安心条件・確認の長さ・先に具体策/整理のどちらから入るか等の『進め方』が示され、今日扱う中身そのものは today_focus_topic に分けて保持する。直前要約への明示同意で確認できる場合は、短い承諾から復元した進め方希望でも quality_score 0.8 以上の目安とする。"
+    max_example: "同じ確認は短めにして、まず具体的な対処から話したい。"
+
+CURRENT_STATUS_CHECK:
+  current_situation:
+    min_condition: "現状の記述はあるが時期・頻度・文脈が不足。"
+    min_example: "最近つらい。"
+    max_condition: "いつ・どこで・どの程度起きるかが具体化される。"
+    max_example: "平日より休日夜に『何のためか分からない』感覚が週2-3回強く出る。"
+  problem_scene:
+    min_condition: "問題場面が一般論で、単一場面を特定できない。"
+    min_example: "忙しいときにしんどい。"
+    max_condition: "再現可能な1場面が特定される。"
+    max_example: "日曜21時、翌週準備を始める直前に手が止まり、30分動けなくなる。"
+  emotion_state:
+    min_condition: "感情名のみで強度や混合が不明。"
+    min_example: "不安。"
+    max_condition: "主要感情と強度・揺れ方が記述される。"
+    max_example: "戸惑い7/10と空虚感6/10が同時に出て、自己否定が強まる。"
+  background_context:
+    min_condition: "背景要因が抽象的で、現状との関連が弱い。"
+    min_example: "仕事が大変。"
+    max_condition: "背景要因と現在の困りごとの因果的つながりが示される。"
+    max_example: "評価指標の変更で達成感が下がり、休日に意味感の低下が起きやすくなっている。"
+
+FOCUSING_TARGET_BEHAVIOR:
+  target_behavior:
+    min_condition: "価値や意味の探索テーマに留まる、観察可能な行動として粗い、または面接者の先行提案に本人が乗っているだけで『これを標的にする』受け入れ確認が弱い。focus_agreement との対応も不明。"
+    min_example: "長期目標の見え方を明確化する。"
+    max_condition: "今日扱う標的が1つに絞られ、次のいずれかで表現される: ①目に見える行動 ②再現可能な場面での対処 ③状態改善のための近位行動。加えて、本人が自分の言葉で述べるか、直前要約への明示承諾で受け入れが確認でき、focus_agreement が同じ内容または近い言い換えを指している。"
+    max_example: "次のミーティング後、部下が2〜3分説明できるときは、私が先にまとめず一度説明を聞く。"
+  change_direction:
+    min_condition: "方向性はあるが、維持/増減の軸が曖昧。"
+    min_example: "良くしたい。"
+    max_condition: "何を減らし何を増やしたいかの方向が大まかに見えている。"
+    max_example: "考え込みを減らし、回復につながる行動を増やしたい。"
+  focus_agreement:
+    min_condition: "方向性の一致や話題選好は見えるが、『今日は何を扱うか』への明示確認がない。『どちらから扱うか』の選択や、内容の薄い同意表現だけでは不十分。target_behavior があるのにその内容への言及がない場合もここに含む。"
+    min_example: "その方向でいく。"
+    max_condition: "今日この場で何を扱うかが短く要約され、本人の yes・自発的再表明・直前要約への明示承諾で確認されている。target_behavior が未確定なら today_focus_topic または change_direction を含み、target_behavior があるならその行動または近い言い換えを明示的に含む。必要に応じて途中で再確認できる。"
+    max_example: "今日は、次のミーティング後に部下へ任せる判断基準を整理する方向で進める、で合っています。はい。"
+
+IMPORTANCE_PROMOTION:
+  importance_reasons:
+    min_condition: "重要と言うが理由が一般的で、FOCUSING_TARGET_BEHAVIOR.target_behaviorとの接続が弱い。"
+    min_example: "大事だから。"
+    max_condition: "本人固有の理由が複数提示され、FOCUSING_TARGET_BEHAVIOR.target_behavior（確定済みならその内容）を扱う重要性に直接つながる。"
+    max_example: "朝のだるさを減らすと仕事の集中と自己効力感が戻るため重要。"
+  core_values:
+    min_condition: "価値語が単発で、FOCUSING_TARGET_BEHAVIOR.target_behaviorとの接続が弱い。"
+    min_example: "健康。"
+    max_condition: "価値とFOCUSING_TARGET_BEHAVIOR.target_behaviorの接続が明確。"
+    max_example: "家族との時間を大切にしたい価値があり、夜の消耗を減らしたい。"
+  importance_scale:
+    min_condition: "数値がない、または理由説明がなく、FOCUSING_TARGET_BEHAVIOR.target_behaviorとの関連が不明。"
+    min_example: "高いと思う。"
+    max_condition: "0-10数値と理由がセットで提示され、理由がFOCUSING_TARGET_BEHAVIOR.target_behaviorの重要性に結びつく。"
+    max_example: "重要度は8/10。続けないと休日の回復が難しいと感じるため。"
+
+CONFIDENCE_PROMOTION:
+  barrier_coping_strategy:
+    min_condition: "障壁への対処が抽象的で、FOCUSING_TARGET_BEHAVIOR.target_behavior実行時に次に何をするか不明。"
+    min_example: "気合いで何とかする。"
+    max_condition: "FOCUSING_TARGET_BEHAVIOR.target_behavior実行時の主要障壁に対する対処方法が具体場面つきで定義される。"
+    max_example: "22時以降にSNSを開きたくなったら、まず3分タイマーをかけて机から離れる。"
+  supports_strengths:
+    min_condition: "強みの言及はあるが、FOCUSING_TARGET_BEHAVIOR.target_behaviorへの再利用方法が不明。"
+    min_example: "真面目。"
+    max_condition: "既存資源と、FOCUSING_TARGET_BEHAVIOR.target_behavior実行への再利用方法が明示される。"
+    max_example: "記録習慣があるので、既存のメモアプリで3分記録に転用できる。"
+  past_success_experience:
+    min_condition: "過去の成功体験が一般論で、FOCUSING_TARGET_BEHAVIOR.target_behaviorへの再現・転用条件が不明。"
+    min_example: "前にうまくいったことはある。"
+    max_condition: "過去にうまくいった具体場面と、そのとき機能した要素が明示され、FOCUSING_TARGET_BEHAVIOR.target_behaviorへ転用可能に整理される。"
+    max_example: "昨年は就寝前にスマホを別室に置いた週だけ、平日5日中4日は0時前に寝られた。"
+  confidence_scale:
+    min_condition: "数値がない、または根拠がなく、FOCUSING_TARGET_BEHAVIOR.target_behavior実行への自信として読めない。"
+    min_example: "少し自信がある。"
+    max_condition: "0-10数値と上下要因が言語化され、FOCUSING_TARGET_BEHAVIOR.target_behavior実行の見込みに結びつく。"
+    max_example: "自信は6/10。開始時間を固定できれば7に上がる見込み。"
+
+NEXT_STEP_DECISION:
+  next_step_action:
+    min_condition: "次の一歩が抽象的で着手行動になっておらず、FOCUSING_TARGET_BEHAVIOR.target_behaviorと結びつかない。"
+    min_example: "頑張る。"
+    max_condition: "最初の行動が具体で即実行可能で、FOCUSING_TARGET_BEHAVIOR.target_behaviorに直結する。"
+    max_example: "今週は休日夜に気分が落ちたら3分タイマーで感情メモを書く。"
+  execution_context:
+    min_condition: "いつ/どこが曖昧で、FOCUSING_TARGET_BEHAVIOR.target_behaviorを実行する場面が特定できない。"
+    min_example: "時間があるとき。"
+    max_condition: "時間・場所・トリガー条件が明確で、FOCUSING_TARGET_BEHAVIOR.target_behavior実行場面に一致する。"
+    max_example: "日曜21時に机で、気分低下を感じたら開始する。"
+  commitment_level:
+    min_condition: "実行意思は示されるが、数値または非数値（定性）表現の意味が曖昧で、上げ下げ要因や実行条件が不足し、FOCUSING_TARGET_BEHAVIOR.target_behaviorへのコミットとして再現しにくい。"
+    min_example: "mediumくらい。"
+    max_condition: "非数値表現でも可。0-10数値または定性ラベル（low/medium/high, 低/中/高）に加えて、上げ下げ要因や実行条件が示され、FOCUSING_TARGET_BEHAVIOR.target_behavior実行確度の説明になっている（数値の高低自体は評価対象ではない）。"
+    max_example: "実行確度は3/10。前日リマインドがあれば5/10まで上げられそう。"
+
+REVIEW_REFLECTION:
+  session_learning:
+    min_condition: "学びが一般論で本人文脈が薄く、FOCUSING_TARGET_BEHAVIOR.target_behaviorとの関係が曖昧。"
+    min_example: "無理しないことが大事。"
+    max_condition: "今回対話で得た本人固有の気づきが明確で、FOCUSING_TARGET_BEHAVIOR.target_behaviorの理解/実行にどう効くかが示される。"
+    max_example: "意味感低下は怠けではなく、休日夜の認知負荷で強まると分かった。"
+  key_takeaway:
+    min_condition: "要点が多すぎる、または曖昧で、FOCUSING_TARGET_BEHAVIOR.target_behaviorへの収束がない。"
+    min_example: "色々分かった。"
+    max_condition: "1-2点の核が短く再現可能に整理され、FOCUSING_TARGET_BEHAVIOR.target_behaviorへ再接続できる。"
+    max_example: "『初動を小さくする』『できた証拠を残す』の2点が核。"
+  carry_forward_intent:
+    min_condition: "今後意図が抽象的で行動に落ちず、FOCUSING_TARGET_BEHAVIOR.target_behaviorに関する継続方針が不明。"
+    min_example: "続けたい。"
+    max_condition: "次回までの持ち越し意図が行動と結びつき、FOCUSING_TARGET_BEHAVIOR.target_behaviorに関する検証計画として機能する。"
+    max_example: "次回までに3回試し、やれた条件と難しかった条件を記録して持参する。"
+
+CLOSING:
+  closing_end_signal:
+    min_condition: "別れの挨拶も終了への合意を示唆する表現も不明確で、区切り合意に使えない。"
+    min_example: "まあこんな感じです。"
+    max_condition: "別れの挨拶がある、または終了への合意を示唆する表現があり、終結合意の根拠になる。"
+    max_example: "今日はここまでで、次回までにその一歩をどんな場面でどう試せそうか、もう少し具体的に考えてみたいです。"

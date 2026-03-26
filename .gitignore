@@ -1,0 +1,27 @@
+# local and editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+*.log
+
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+htmlcov/
+coverage.xml
+
+# environment files
+.env
+.env.*
+
+# secrets and keys
+*.key
+*.pem
+*.p12
+*.pfx
+
+# local outputs
+logs/

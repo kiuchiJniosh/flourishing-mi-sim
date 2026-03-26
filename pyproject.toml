@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mi-sim"
+version = "0.0.0"
+description = "MI counselor/client self-play simulation package."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "openai>=1.51.0,<2.0.0",
+  "python-dotenv>=1.0.0",
+  "pyyaml>=6.0.1",
+]
+
+[project.scripts]
+mi-sim = "mi_sim.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["mi_sim*"]
+
+[tool.setuptools.package-data]
+mi_sim = ["config/*.yaml", "config/*.md"]

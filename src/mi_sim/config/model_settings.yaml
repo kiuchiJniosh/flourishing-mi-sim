@@ -1,0 +1,154 @@
+# model_settings.yaml
+# レイヤー構造に沿った LLM 設定定義。
+# app/env_utils.py がこのネスト構造を既存 mode キーへ解決する。
+
+schema_version: 1
+
+client:
+  base_llm: &client_base
+    api: responses
+    model: gpt-5-nano
+    reasoning_effort: low
+    verbosity: low
+    temperature_policy: auto
+    system_handling: as_input
+    timeout_seconds: 75
+
+  profile_llm:
+    <<: *client_base
+    json_mode: auto
+
+  state_llm:
+    <<: *client_base
+    json_mode: auto
+
+  reply_llm:
+    <<: *client_base
+    json_mode: never
+
+counselor:
+  base_aux_llm: &counselor_aux_base
+    api: responses
+    model: gpt-5-nano
+    reasoning_effort: low
+    verbosity: low
+    json_mode: auto
+    temperature_policy: auto
+    system_handling: as_input
+    timeout_seconds: 75
+
+  base_writer_llm: &counselor_writer_base
+    api: responses
+    model: gpt-5.1 # gpt-5-nano, gpt-5.1, gpt-5.2
+    reasoning_effort: medium # minimal, low, medium, high
+    verbosity: low
+    json_mode: never
+    temperature_policy: auto
+    system_handling: as_input
+    timeout_seconds: 75
+
+  layer1:
+    feature_extractor:
+      <<: *counselor_aux_base
+      enabled: true
+      temperature: 0.0
+      max_history_turns: 6
+
+    phase_slot_filler:
+      <<: *counselor_aux_base
+      enabled: true
+      temperature: 0.0
+      max_history_turns: 8
+      timeout_seconds: 120
+
+  layer2:
+    slot_reviewer:
+      <<: *counselor_aux_base
+      enabled: true
+      temperature: 0.0
+      max_history_turns: 8
+      quality_pass_threshold: 0.62
+      timeout_seconds: 90
+
+    slot_reviewer_non_current:
+      <<: *counselor_aux_base
+      enabled: true
+      temperature: 0.0
+      max_history_turns: 8
+      quality_pass_threshold: 0.62
+      timeout_seconds: 90
+
+    action_ranker:
+      <<: *counselor_aux_base
+      enabled: true
+      timeout_seconds: 90
+
+    change_talk_inferer:
+      <<: *counselor_aux_base
+      enabled: true
+      temperature: 0.0
+      max_history_turns: 6
+      timeout_seconds: 90
+
+    affirmation_decider:
+      <<: *counselor_aux_base
+      enabled: true
+      temperature: 0.0
+      max_history_turns: 6
+      timeout_seconds: 90
+
+  layer3:
+    response_integrator:
+      <<: *counselor_writer_base
+      enabled: true
+      temperature: 0.1
+      max_history_turns: 8
+      timeout_seconds: 120
+      retry_once_on_schema_error: false
+
+  layer4:
+    response_writer:
+      <<: *counselor_writer_base
+      enabled: true
+      temperature: 0.15
+      max_history_turns: 120
+      timeout_seconds: 120
+
+  session_evaluation:
+    ratings:
+      <<: *counselor_writer_base
+      enabled: true
+      json_mode: auto
+      temperature: 0.1
+      max_history_turns: 120
+      timeout_seconds: 120
+
+    client_feedback:
+      <<: *counselor_writer_base
+      enabled: true
+      json_mode: never
+      temperature: 0.2
+      max_history_turns: 120
+      timeout_seconds: 120
+
+    supervisor_feedback:
+      <<: *counselor_writer_base
+      enabled: true
+      json_mode: never
+      temperature: 0.1
+      max_history_turns: 120
+      timeout_seconds: 120
+
+  safety:
+    risk_detector:
+      <<: *counselor_aux_base
+      enabled: false
+      temperature: 0.0
+      max_history_turns: 8
+
+    mi_evaluator:
+      <<: *counselor_aux_base
+      enabled: false
+      temperature: 0.0
+      max_history_turns: 6
+      rewrite_threshold: null
